@@ -1,0 +1,107 @@
+K 25
+svn:wc:ra_dav:version-url
+V 30
+/svn/!svn/ver/126/trunk/common
+END
+lbfgs.f
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/2/trunk/common/lbfgs.f
+END
+common.f90
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/126/trunk/common/common.f90
+END
+common_lekf.f90
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/2/trunk/common/common_lekf.f90
+END
+common_obs.f90
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/11/trunk/common/common_obs.f90
+END
+common_enkf.f90
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/2/trunk/common/common_enkf.f90
+END
+common_mpi.f90
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/11/trunk/common/common_mpi.f90
+END
+mt95.f90
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/!svn/ver/2/trunk/common/mt95.f90
+END
+timeinc.sh
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/37/trunk/common/timeinc.sh
+END
+netlib.f
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/116/trunk/common/netlib.f
+END
+netlibblas.f
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/116/trunk/common/netlibblas.f
+END
+minimizelib.f90
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/2/trunk/common/minimizelib.f90
+END
+netlibrs.f
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/2/trunk/common/netlibrs.f
+END
+SFMT.f90
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/48/trunk/common/SFMT.f90
+END
+common_letkf.f90
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/119/trunk/common/common_letkf.f90
+END
+svn_tag.sh
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/63/trunk/common/svn_tag.sh
+END
+common_mtx.f90
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/11/trunk/common/common_mtx.f90
+END
+mt19937ar.f90
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/2/trunk/common/mt19937ar.f90
+END
