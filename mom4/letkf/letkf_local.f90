@@ -6,7 +6,7 @@ MODULE letkf_local
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0, and nobsgrd
 
-! Designed by Dr. Stephen G. Penny
+! Designed by Prof. Stephen G. Penny
 ! University of Maryland, College Park
 ! This module is an offshoot of letkf_tools, which previously contained
 ! all localization routines. The purpose of isolating these routines in
@@ -93,14 +93,13 @@ MODULE letkf_local
 
 CONTAINS
 
-!-----------------------------------------------------------------------
+!------------------------------------------------------------------------------
 ! Project global observations to local
 !     (hdxf_g,dep_g,rdiag_g) -> (hdxf,dep,rdiag)
-!-----------------------------------------------------------------------
-!SUBROUTINE obs_local(ij,ilev,nvar,hdxf,rdiag,rloc,dep,nobsl)
+!------------------------------------------------------------------------------
 SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   IMPLICIT NONE
-  INTEGER,INTENT(IN) :: ij,ilev,nobstotal !,nvar
+  INTEGER,INTENT(IN) :: ij,ilev,nobstotal
   REAL(r_size),INTENT(IN) :: var_local(nid_obs)
   REAL(r_size),INTENT(OUT) :: hdxf(nobstotal,nbv)
   REAL(r_size),INTENT(OUT) :: rdiag(nobstotal)
@@ -123,8 +122,8 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   REAL(r_size) :: dist_zero_a,dist_zero_b,dist_min
   REAL(r_size) :: sigma_a,sigma_b
   REAL(r_size) :: minr,maxr,xdis,fcc0,fcc1,maxdN,maxdS,xrad
-  REAL(r_size), PARAMETER :: cmpersec2kmperday=0.864d0, days = 5.0d0
-  !STEVE: for initializing splits:
+  REAL(r_size), PARAMETER :: cmpersec2kmperday=0.864d0 !, days = 5.0d0
+  !STEVE: for initializing splits of model grid:
   LOGICAL :: splitlon = .false. ! initialize
   LOGICAL :: splitlonL = .false., splitlonR = .false. ! initialize
   LOGICAL :: splitlat = .false. ! initialize
@@ -138,24 +137,28 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
 !
 ! INITIALIZE
 !
-  IF( nobs > 0 ) THEN
+  if( nobs > 0 ) then
     ALLOCATE(nobs_use(nobs))
-  END IF
+  endif
   nn = 0
 
 ! TEST
-! For comparison (and debugging) call old version:
+  !-----------------------------------------------------------------------------
+  ! For comparison (and debugging) call old version:
+  !-----------------------------------------------------------------------------
   if (dodebug) CALL obs_local_setup_old(ij,nn_old,minlon_old,maxlon_old,minlat_old,maxlat_old,imin_old,imax_old,jmin_old,jmax_old)
 
-! Set model coordinates
+  !-----------------------------------------------------------------------------
+  ! Set model coordinates
+  !-----------------------------------------------------------------------------
   xlat = lat1(ij)
   xlon = lon1(ij)
   if (dodebug) WRITE(6,*) "---------------------------------- ij = ", ij
   
-!
-! data search (NOTE: this only wraps in the longitude direction)
-! Use bounding box first to reduce obs considered.
-!
+  !
+  ! data search (NOTE: this only wraps in the longitude direction)
+  ! Use bounding box first to reduce obs considered.
+  !
   minlon = xlon - dlon_zero(ij)
   maxlon = xlon + dlon_zero(ij)
   minlat = xlat - dlat_zero !STEVE: this should be changed to be (ij) dependent
@@ -179,7 +182,11 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     WRITE(6,*) "jmax_old = ", jmax_old
   endif
 
-  !STEVE: rewrite
+  !-----------------------------------------------------------------------------
+  ! Handle the case when the bounding box is split of the edge of the grid
+  !-----------------------------------------------------------------------------
+  !STEVE: ISSUE
+  !STEVE: we need handling of the fold in the arctic due to the Murray tripolar grid.
   fulllon = .false.
   splitlonL = .false.
   splitlonR = .false.
@@ -194,46 +201,47 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     minlon = lon0
     maxlon = lonf
   else
-    if (minlon < lon0) then
-      ! Local region overlaps on left
+
+    if (minlon < lon0) then ! Local region overlaps on left
       if (dodebug) WRITE(6,*) "split minlon = ", minlon
       splitlonL = .true.
       minlon = REAL(lonf - abs(lon0 - minlon) + wrapgap,r_size)
     endif
-    if (maxlon > lonf) then
-      ! Local region overlaps on right
+
+    if (maxlon > lonf) then ! Local region overlaps on right
       if (dodebug) WRITE(6,*) "split maxlon = ", maxlon
       if (splitlonL) WRITE(6,*) "WARNING: lon already split. ij = ", ij
       splitlonR = .true.
       maxlon = REAL(lon0 + abs(maxlon - lonf) - wrapgap,r_size)
     endif 
-    if (minlat < lat0) then
-      ! Local region overlaps on bottom
+
+    if (minlat < lat0) then ! Local region overlaps on bottom
       splitlat= .true.
       minlat = lat0
     endif
-    if (maxlat > latf) then
-      ! Local region overlaps on top
+
+    if (maxlat > latf) then ! Local region overlaps on top
       if (splitlat) WRITE(6,*) "WARNING: lat already split. ij = ", ij
       splitlat = .true.
       maxlat = latf
     endif 
+
   endif
 
   if (splitlat) then
     ! Too close to pole, need to work out the details of this
     ! For now, cut off the local region at the pole 
-!   WRITE(6,*) "letkf_local.f90::obs_local: Grid point is close to pole."
+    WRITE(6,*) "letkf_local.f90::obs_local: Grid point is close to pole."
   endif
-! else
-  DO jmin=1,nlat-2
-    IF(minlat < lat(jmin+1)) EXIT
-  END DO
-  DO jmax=1,nlat-2
-    IF(maxlat < lat(jmax+1)) EXIT
-  END DO
+
+  ! Find jmin and jmax
+  do jmin=1,nlat-2
+    if(minlat < lat(jmin+1)) exit
+  enddo
+  do jmax=1,nlat-2
+    if(maxlat < lat(jmax+1)) exit
+  enddo
   nn = 1
-! endif
 
   if ( (splitlonL .or. splitlonR) .and. .not. fulllon) then
     if (dodebug) WRITE(6,*) "splitlonL = ", splitlonL
@@ -241,9 +249,9 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
 
     ! Do left
     imin = 1
-    DO imax=1,nlon-1
-      IF(maxlon < lon(imax+1)) EXIT
-    END DO
+    do imax=1,nlon-1
+      if(maxlon < lon(imax+1)) exit
+    enddo
     if (dodebug) then
       WRITE(6,*) "splitlon left: nn = ", nn
       WRITE(6,*) "xlon = ", xlon
@@ -254,12 +262,12 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
       WRITE(6,*) "jmin = ", jmin
       WRITE(6,*) "jmax = ", jmax
     endif
-    IF( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
+    if( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 
     ! Do right
-    DO imin=1,nlon-1
-      IF(minlon < lon(imin+1)) EXIT
-    END DO
+    do imin=1,nlon-1
+      if(minlon < lon(imin+1)) exit
+    enddo
     imax = nlon
     if (dodebug) then
       WRITE(6,*) "splitlon right: nn = ", nn
@@ -271,57 +279,62 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
       WRITE(6,*) "jmin = ", jmin
       WRITE(6,*) "jmax = ", jmax
     endif
-    IF( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
+    if( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 
   elseif ( .not. fulllon ) then
     ! The local range is entirely contained within the global domain
     ! Find the min and max latitudes
-    DO jmin=1,nlat-2
-      IF(minlat < lat(jmin+1)) EXIT
-    END DO
-    DO jmax=jmin,nlat-2
-      IF(maxlat < lat(jmax+1)) EXIT
-    END DO
+    do jmin=1,nlat-2
+      if(minlat < lat(jmin+1)) exit
+    enddo
+    do jmax=jmin,nlat-2
+      if(maxlat < lat(jmax+1)) exit
+    enddo
+
     ! Find the min and max longitudes
-    DO imin=1,nlon-1
-      IF(minlon < lon(imin+1)) EXIT
-    END DO
-    DO imax=imin,nlon-1
-      IF(maxlon < lon(imax+1)) EXIT
-    END DO
-    IF( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
+    do imin=1,nlon-1
+      if(minlon < lon(imin+1)) exit
+    enddo
+    do imax=imin,nlon-1
+      if(maxlon < lon(imax+1)) exit
+    enddo
+
+    if( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
+
   else
     ! The domain is the entire circle around the globe (zonally)
     ! Find the min and max latitudes
-    DO jmin=1,nlat-2
-      IF(minlat < lat(jmin+1)) EXIT
-    END DO
-    DO jmax=jmin,nlat-2
-      IF(maxlat < lat(jmax+1)) EXIT
-    END DO
+    do jmin=1,nlat-2
+      if(minlat < lat(jmin+1)) exit
+    enddo
+    do jmax=jmin,nlat-2
+      if(maxlat < lat(jmax+1)) exit
+    enddo
 
     if (dodebug) then
       WRITE(6,*) "Doing FullLon..."
     endif
     imin=1
     imax=nlon
-    IF( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
+    if( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
   endif
   nn = nn-1
   !STEVE: end rewrite
 
   ! If no observations remain, then we're done.
-  IF(nn < 1) THEN
+  if(nn < 1) then
     nobsl = 0
     RETURN
-  END IF
-!
-! CONVENTIONAL
-!
+  endif
+
+  !----------------------------------------------------------------------------
+  ! Cycle through all observations to identify which should be kept
+  !----------------------------------------------------------------------------
   !STEVE: most of the localization section has been completely edited for (OCEAN)
+  !STEVE: This should eventually be replaced with a tree-based search algorithm (e.g. R-Tree, kd-tree)
+  !STEVE: (future) use custom localization with CGAL/BOOST algorithms
   nobsl = 0
-  DO n=1,nn
-    !STEVE: (future) use custom localization with CGAL/BOOST algorithms
+  do n=1,nn
     !
     ! Observational localization Distance Cutoff
     !
@@ -330,23 +343,11 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     olev = obslev(nobs_use(n))
     oelm = obselm(nobs_use(n))
 
-    !STEVE: debug
-   !if ( i1(ij) .eq. 456 .and. j1(ij) .eq. 319 .and. ilev .eq. 5) then
-!   if ( (((i1(ij)) .eq. 456 .AND. (j1(ij)) .eq. 319) .OR.  (ij .eq. 478)) .AND. ilev .eq. 5) then
-!     ! Skipping salinity obs for this grid point to see if it fixes weird analysis result
-!     WRITE(6,*) "letkf_local.f90:: i=456,j=319,k=5 :: oelm, NINT(oelm) = ", oelm, NINT(oelm)
-!     if ( NINT(oelm) .eq. id_s_obs ) then
-!       WRITE(6,*) "letkf_local.f90:: removing salinity observation..."
-!       CYCLE
-!     elseif ( NINT(oelm) .eq. id_sst_obs ) then
-!       WRITE(6,*) "letkf_local.f90:: removing SST observation..."
-!       CYCLE
-!     endif
-!   endif
-
     !
     ! variable localization
     !
+    !STEVE: ISSUE: this should be handled in a more generic way so new
+    !              observations don't requrie editing here.
     SELECT CASE(NINT(oelm))
     CASE(id_u_obs)
         iobs=1
@@ -366,152 +367,92 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
         iobs=8
     CASE DEFAULT
         WRITE(6,*) "letkf_local.f90 :: there is no variable localization for obs-type :: ", oelm
-        WRITE(6,*) "letkf_local.f90 :: EXITING..."
+        WRITE(6,*) "letkf_local.f90 :: exitING..."
         STOP(95)
     END SELECT
-    IF(var_local(iobs) < TINY(var_local)) CYCLE 
-    !STEVE: skip obs that are set to "0" impact on this model variable.
+    if(var_local(iobs) < TINY(var_local)) CYCLE  ! Skip obs that are set to "0" impact on this model variable.
+    
 
-    !
+    !---------------------------------------------------------------------------
     ! vertical localization
-    !
+    !---------------------------------------------------------------------------
     !STEVE: make vertical localization depth dependent
     !STEVE: Could alternatively treat surface obs as if they occur at depth 0, regardless of model's top level
-    IF(NINT(oelm) == id_ssh_obs) THEN
-        !dlev = ABS(LOG(obsdat(nobs_use(n))) - logpfm(ij,ilev))        !(OCEAN)
-        !STEVE: no need for log scale, but, don't have ssh obs right now... so I'll test this later
-        !dlev = ABS( olev - lev(ilev) )
-        dlev = 0.0d0 !STEVE: allow all levels to be influenced by ssh
-    ELSE IF(NINT(oelm) == id_sst_obs) THEN
-        dlev = ABS( olev - lev(ilev) )
-        !WRITE(6,*) "obs_local:: SST ob, dlev = ",dlev
-    ELSE IF(NINT(oelm) == id_sss_obs) THEN
-        dlev = ABS( olev - lev(ilev) )
-    ELSE IF(NINT(oelm) == id_u_obs .or. &
+    !STEVE: ISSUE: need to make this more general, define vertical localization types for specific obs elsewhere
+    if(NINT(oelm) == id_ssh_obs) then
+      dlev = 0.0d0 ! allow all levels to be influenced by ssh
+    else if(NINT(oelm) == id_sst_obs) then
+      dlev = ABS( olev - lev(ilev) )
+      !WRITE(6,*) "obs_local:: SST ob, dlev = ",dlev
+    else if(NINT(oelm) == id_sss_obs) then
+      dlev = ABS( olev - lev(ilev) )
+    else if(NINT(oelm) == id_u_obs .or. &
             NINT(oelm) == id_v_obs .or. &
             NINT(oelm) == id_t_obs .or. &
-            NINT(oelm) == id_s_obs   ) THEN
-        dlev = ABS( olev - lev(ilev) )
-    ELSE
-        dlev = 0.0d0
-    END IF
-    IF(dlev > dist_zerov) CYCLE
+            NINT(oelm) == id_s_obs   ) then
+      dlev = ABS( olev - lev(ilev) )
+    else
+      dlev = 0.0d0
+    endif
+    if(dlev > dist_zerov) CYCLE
 
-    !
+    !---------------------------------------------------------------------------
     ! horizontal localization
-    !
+    !---------------------------------------------------------------------------
     horizontal_localization : if (localization_method .eq. 1) then
-        !STEVE: make horizontal localization latitude dependent
-        ! STEVE: make sigma_obs a linear/lookup function of latitude
-        dist_min = sigma_obs0 * (SQRT(10.0d0/3.0d0) * 2.0d0)
-        minr = dist_min
-        maxr = dist_zero
-        maxdN = abs( (90.0d0)*(pi/180.0d0)*re)
-        maxdS = abs((-90.0d0)*(pi/180.0d0)*re)
+      !STEVE: make horizontal localization latitude dependent
+      ! STEVE: make sigma_obs a linear/lookup function of latitude
+      dist_min = sigma_obs0 * (SQRT(10.0d0/3.0d0) * 2.0d0)
+      minr = dist_min
+      maxr = dist_zero
+      maxdN = abs( (90.0d0)*(pi/180.0d0)*re)
+      maxdS = abs((-90.0d0)*(pi/180.0d0)*re)
 
-        ! Shrink radius far from equator
-        ! Shrink foci far from equator
-        xdis = abs(xlat)*(pi/180.0d0)*re
-        if (xlat >= 0) then
-          xrad = (1 - xdis/maxdN)*maxr + (xdis/maxdN)*minr
-        else
-          xrad = (1 - xdis/maxdS)*maxr + (xdis/maxdS)*minr
-        endif
+      ! Shrink radius far from equator
+      ! Shrink foci far from equator
+      xdis = abs(xlat)*(pi/180.0d0)*re
+      if (xlat >= 0) then
+        xrad = (1 - xdis/maxdN)*maxr + (xdis/maxdN)*minr
+      else
+        xrad = (1 - xdis/maxdS)*maxr + (xdis/maxdS)*minr
+      endif
 
-        sigma_a = xrad / (SQRT(10.0d0/3.0d0) * 2.0d0)
-        sigma_b = sigma_a
-        dist_zero_a = xrad
+      sigma_a = xrad / (SQRT(10.0d0/3.0d0) * 2.0d0)
+      sigma_b = sigma_a
+      dist_zero_a = xrad
 
-        CALL com_distll_1(olon,olat,xlon,xlat,dist)
+      CALL com_distll_1(olon,olat,xlon,xlat,dist)
 
-        if (.false.) then !(modulo(n,10000) .eq. 0) then
-          !STEVE: DEBUG: print out the important values for a selection of obs
-          print *, "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=" 
-          print *, "DEBUG letkf_local.f90..."
-          print *, "n = ", n
-          print *, "dist_min = ", dist_min
-          print *, "sigma_obs0 = ", sigma_obs0
-          print *, "minr = ", minr
-          print *, "maxr = ", maxr
-          print *, "maxdN = ", maxdN
-          print *, "maxdS = ", maxdS
-          print *, "xlat = ", xlat
-          print *, "xdis = ", xdis
-          print *, "xrad = ", xrad
-          print *, "sigma_a = ", sigma_a
-          print *, "sigma_b = ", sigma_b
-          print *, "sigma_obs = ", sigma_obs
-          print *, "dist_zero_a = ", dist_zero_a
-          print *, "dist = ", dist
-!         print *, "dist > dist_zero_a = ", dist > dist_zero_a
-          print *, "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=" 
-        endif
+      if (.false.) then !(modulo(n,10000) .eq. 0) then
+        !STEVE: DEBUG: print out the important values for a selection of obs
+        print *, "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=" 
+        print *, "DEBUG letkf_local.f90..."
+        print *, "n = ", n
+        print *, "dist_min = ", dist_min
+        print *, "sigma_obs0 = ", sigma_obs0
+        print *, "minr = ", minr
+        print *, "maxr = ", maxr
+        print *, "maxdN = ", maxdN
+        print *, "maxdS = ", maxdS
+        print *, "xlat = ", xlat
+        print *, "xdis = ", xdis
+        print *, "xrad = ", xrad
+        print *, "sigma_a = ", sigma_a
+        print *, "sigma_b = ", sigma_b
+        print *, "sigma_obs = ", sigma_obs
+        print *, "dist_zero_a = ", dist_zero_a
+        print *, "dist = ", dist
+!       print *, "dist > dist_zero_a = ", dist > dist_zero_a
+        print *, "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=" 
+      endif
 
-        IF(dist > dist_zero_a) CYCLE  !Points are outside of radius
-
-    elseif (localization_method .eq. 2) then
-        !STEVE: THIS LOCALIZATION METHOD WAS AN ERROR, however the results were
-        !good, and better than a number of different horizontal localization
-        !schemes that I tried. So I am keeping it here for further study.
-        !
-        ! The input sigma_obs should be 1000km, and simga_obs0 should be 200km
-
-        !STEVE: make horizontal localization latitude dependent
-        ! STEVE: make sigma_obs a linear/lookup function of latitude
-        dist_min = sigma_obs0 !100.0 * 1000.0 !make the minimum distance 100 kilometers at 90ºN or 90ºS
-                                  !WARNING: this should be bigger than the minimum grid cell width
-!       dist_min = sigma_obs0 * (SQRT(10.0d0/3.0d0) * 2.0d0)
-        minr = dist_min
-        maxr = dist_zero
-        maxdN = abs( (90.0d0)*(pi/180.0d0)*re)
-        maxdS = abs((-90.0d0)*(pi/180.0d0)*re)
-
-        ! Shrink radius far from equator
-        ! Shrink foci far from equator
-        xdis = abs(xlat)*(pi/180.0d0)*re
-        if (xlat >= 0) then
-          xrad = (1 - xdis/maxdN)*maxr + (xdis/maxdN)*minr
-        else
-          xrad = (1 - xdis/maxdS)*maxr + (xdis/maxdS)*minr
-        endif
-
-        sigma_a = xrad
-        sigma_b = sigma_a
-        dist_zero_a = sigma_a * (SQRT(10.0d0/3.0d0) * 2.0d0)
-!       sigma_a = xrad / (SQRT(10.0d0/3.0d0) * 2.0d0)
-!       sigma_b = sigma_a
-!       dist_zero_a = xrad
-
-        CALL com_distll_1(olon,olat,xlon,xlat,dist)
-
-        if (.false.) then !(modulo(n,10000) .eq. 0) then
-          !STEVE: DEBUG: print out the important values for a selection of obs
-          print *, "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=" 
-          print *, "DEBUG letkf_local.f90..."
-          print *, "n = ", n
-          print *, "dist_min = ", dist_min
-          print *, "sigma_obs0 = ", sigma_obs0
-          print *, "minr = ", minr
-          print *, "maxr = ", maxr
-          print *, "maxdN = ", maxdN
-          print *, "maxdS = ", maxdS
-          print *, "xlat = ", xlat
-          print *, "xdis = ", xdis
-          print *, "xrad = ", xrad
-          print *, "sigma_a = ", sigma_a
-          print *, "sigma_b = ", sigma_b
-          print *, "sigma_obs = ", sigma_obs
-          print *, "dist_zero_a = ", dist_zero_a
-          print *, "dist = ", dist
-!         print *, "dist > dist_zero_a = ", dist > dist_zero_a
-          print *, "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=" 
-        endif
-
-        IF(dist > dist_zero_a) CYCLE  !Points are outside of radius
+      if(dist > dist_zero_a) CYCLE  !Points are outside of radius
 
     else !STEVE: use the original (default) localization
-        CALL com_distll_1(olon,olat,xlon,xlat,dist)
-        IF(dist > dist_zero ) CYCLE
+
+      CALL com_distll_1(olon,olat,xlon,xlat,dist)
+      if(dist > dist_zero ) CYCLE
+
     endif horizontal_localization
 
     ! STEVE: ADD CHECK FOR OBSERVATIONS THAT ARE OCCLUDED BY LAND!
@@ -525,7 +466,7 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
          ) blocked_by_land = .true.
     IF (blocked_by_land) CYCLE                   !STEVE: the two points are in atl and pac
 
-!--------- End of Observation Culling ---------!
+!--------------------------- End of Observation Culling -----------------------!
 
     nobsl = nobsl + 1
     hdxf(nobsl,:) = obshdxf(nobs_use(n),:)
@@ -535,50 +476,35 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     if (ALLOCATED(obs_useidx)) then
       obs_useidx(nobsl) = nobs_use(n)
     endif
-    !
+
+    !---------------------------------------------------------------------------
     ! Observational localization (weighting)
+    !---------------------------------------------------------------------------
     !
     ! Note: var_local scales the localization weighting based on the parameter
     ! set in letkf_tools.f90. A row corresponding to the model parameter is
     ! input to this subroutine, and the column indicates the proportion of that
     ! type of observation to use.
     observation_localization : if (localization_method .eq. 1 ) then
-!       rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_a  )**2 + (dlev/sigma_obsv)**2)) &
-!                                                    & * var_local(iobs)
-!STEVE: testing different localization functions:
-!STEVE: doubing standard deviation distance
-!       rloc(nobsl) =EXP( -0.5d0 * ( ( dist/(2.0d0*sigma_a) )**2 + ( dlev/(2.0d0*sigma_obsv) )**2 ) ) &
-!                                                    & * var_local(iobs)
-!STEVE: removing all localization other than culling as applied above based on
-!absolute distance:
-!       rloc(nobsl) = 1.0d0 * var_local(iobs)
-                                                       
-        IF (DO_NO_VERT_LOC) THEN
-          rloc(nobsl) =EXP(-0.5d0 * (dist/sigma_a)**2) * var_local(iobs)
-        ELSE
-          rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_a)**2 + (dlev/sigma_obsv)**2)) &
-                                                     & * var_local(iobs)
-        ENDIF
+      if (DO_NO_VERT_LOC) then
+        rloc(nobsl) =EXP(-0.5d0 * (dist/sigma_a)**2) * var_local(iobs)
+      else
+        rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_a)**2 + (dlev/sigma_obsv)**2)) &
+                                                   & * var_local(iobs)
+      endif
 
-    elseif (localization_method .eq. 2) then
-      
-        !STEVE: trying the original approach that seemed to work before:
-        IF (DO_NO_VERT_LOC) THEN
-          rloc(nobsl) =EXP(-0.5d0 * (dist/sigma_obs)**2) * var_local(iobs)
-        ELSE
-          rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs)**2 + (dlev/sigma_obsv)**2)) &
-                                                     & * var_local(iobs)
-        ENDIF
-                                                       
     elseif (localization_method .eq. 0) then
-        !STEVE: this is R^2 and the R localization gaussian function
-        rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs)**2 + (dlev/sigma_obsv)**2)) &
-                                                     & * var_local(iobs)
+      !STEVE: this is R^2 and the R localization gaussian function
+      rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs)**2 + (dlev/sigma_obsv)**2)) &
+                                                   & * var_local(iobs)
     else
-        print *, "ERROR:: Localization method not supported. localization_method = ", localization_method 
-        STOP(3)
+
+      print *, "ERROR:: Localization method not supported. localization_method = ", localization_method 
+      STOP(3)
+
     endif observation_localization
 
+    !STEVE: debugging error...
 !   if (dodebug .and. rloc(nobsl) > 1) then
     if (rloc(nobsl) > 1) then
       WRITE(6,*) "rloc(nobsl) > 1 !"
@@ -589,98 +515,73 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
       WRITE(6,*) "sigma_obs = ", sigma_obs
       WRITE(6,*) "var_local(iobs) = ", var_local(iobs)
       WRITE(6,*) "rloc(nobsl) = ", rloc(nobsl)
-      WRITE(6,*) "letkf_local.f90:: EXITING.."
+      WRITE(6,*) "letkf_local.f90:: exitING.."
       STOP(93)
     endif
 
-  END DO
+  enddo
 
+  !----------------------------------------------------------------------------
   !STEVE: this should never happen, if it does something went wrong
-  IF( nobsl > nobstotal ) THEN
+  !----------------------------------------------------------------------------
+  if( nobsl > nobstotal ) then
     WRITE(6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=',nobsl,' > NOBSTOTAL=',nobstotal
     WRITE(6,*) 'IJ,NN,TVNN=', ij, nn, tvnn
     STOP 99
-  END IF
+  endif
  
-  IF( nobs > 0 ) THEN
+  if( nobs > 0 ) then
     DEALLOCATE(nobs_use)
-  END IF
+  endif
 
-  RETURN
 END SUBROUTINE obs_local
 
+!------------------------------------------------------------------------------
+! obs_local_sub
+! 
+! Function:
+!   Identifies the observations within the local region
+!------------------------------------------------------------------------------
 SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
   INTEGER,INTENT(IN) :: imin,imax,jmin,jmax
   INTEGER,INTENT(INOUT) :: nn, nobs_use(nobs)
   INTEGER :: j,n,ib,ie,ip
 
   ! Cycle through each latitude
-  DO j=jmin,jmax
+  do j=jmin,jmax
     ! Find the number of accumulated obs at the bottom of the range
-    IF(imin > 1) THEN
+    if(imin > 1) then
       ib = nobsgrd(imin-1,j)+1
-    ELSE
+    else
       ! Wrap around to the previous latitude at the last longitude
-      IF(j > 1) THEN
+      if(j > 1) then
         ib = nobsgrd(nlon,j-1)+1
-      ELSE
+      else
         ib = 1
-      END IF
-    END IF
+      endif
+    endif
     ! Find the number of accumulated obs at the top of the range
     ie = nobsgrd(imax,j)
 
     ! Subtract to get the number of obs in this region
     n = ie - ib + 1
 
-    IF(n == 0) CYCLE !there are no obs here
+    if(n == 0) CYCLE !there are no obs here
 
-    DO ip=ib,ie
-      IF(nn > nobs) THEN
+    do ip=ib,ie
+      if(nn > nobs) then
         WRITE(6,*) 'FATALERROR, NN > NOBS', NN, NOBS
         stop 1  !STEVE: (added)
-      END IF
+      endif
       ! Index for observation used
       nobs_use(nn) = ip
       ! Count up the total obs used so far
       nn = nn + 1
-    END DO
-  END DO
+    enddo
+  enddo
 
   RETURN
 END SUBROUTINE obs_local_sub
-
-! Set up kd-tree with observation data
-SUBROUTINE kdtree
-
-END SUBROUTINE kdtree
-
-! Scan graph of model grid with search algorithm to avoid land in localization
-SUBROUTINE cullBlocked
-! Inputs:
-!        model grid (grid or graph form)
-!        land/sea map (or kmt data)
-!        list of observations in range
-!
-! Outputs:
-!        list of observations not blocked by land 
-!
-
-
-END SUBROUTINE cullBlocked
-
-! Link to C++ Boost library for fast A* algorithm
-SUBROUTINE Astar
-
-END SUBROUTINE Astar
-
-! Graph representation of model grid
-SUBROUTINE grid2graph
-! Just create a linked list that contains the info needed to access information on grid
-! Use grid_graph from Boost: http://www.boost.org/doc/libs/1_46_1/libs/graph/doc/grid_graph.html
-!
-
-END SUBROUTINE grid2graph
 
 !-----------------------------------------------------------------------
 ! Project global observations to local
@@ -701,9 +602,9 @@ SUBROUTINE obs_local_setup_old(ij,nn,minlon,maxlon,minlat,maxlat,imin,imax,jmin,
 !
 ! INITIALIZE
 !
-  IF( nobs > 0 ) THEN
+  if( nobs > 0 ) then
     ALLOCATE(nobs_use(nobs))
-  END IF
+  endif
 !
 ! data search
 !
@@ -712,115 +613,115 @@ SUBROUTINE obs_local_setup_old(ij,nn,minlon,maxlon,minlat,maxlat,imin,imax,jmin,
   minlat = lat1(ij) - dlat_zero
   maxlat = lat1(ij) + dlat_zero
 
-  DO jmin=1,nlat-2
-    IF(minlat < lat(jmin+1)) EXIT
-  END DO
-  DO jmax=1,nlat-2
-    IF(maxlat < lat(jmax+1)) EXIT
-  END DO
+  do jmin=1,nlat-2
+    if(minlat < lat(jmin+1)) exit
+  enddo
+  do jmax=1,nlat-2
+    if(maxlat < lat(jmax+1)) exit
+  enddo
   nn = 1
-  IF(minlon >= lon0 .AND. maxlon <= lonf) THEN
-    DO imin=1,nlon-1
-      IF(minlon < lon(imin+1)) EXIT
-    END DO
-    DO imax=1,nlon-1
-      IF(maxlon < lon(imax+1)) EXIT
-    END DO
-    IF( nobs > 0 ) &
+  if(minlon >= lon0 .AND. maxlon <= lonf) then
+    do imin=1,nlon-1
+      if(minlon < lon(imin+1)) exit
+    enddo
+    do imax=1,nlon-1
+      if(maxlon < lon(imax+1)) exit
+    enddo
+    if( nobs > 0 ) &
     & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-  ELSE IF(minlon >= lon0 .AND. maxlon > lonf) THEN
-    DO imin=1,nlon-1
-      IF(minlon < lon(imin+1)) EXIT
-    END DO
+  else if(minlon >= lon0 .AND. maxlon > lonf) then
+    do imin=1,nlon-1
+      if(minlon < lon(imin+1)) exit
+    enddo
     maxlon = maxlon - 360.0d0
-    IF(maxlon > lonf) THEN
+    if(maxlon > lonf) then
       imin = 1
       imax = nlon
-      IF( nobs > 0 ) &
+      if( nobs > 0 ) &
       & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-    ELSE
-      DO imax=1,nlon-1
-        IF(maxlon < lon(imax+1)) EXIT
-      END DO
-      IF(imax > imin) THEN
+    else
+      do imax=1,nlon-1
+        if(maxlon < lon(imax+1)) exit
+      enddo
+      if(imax > imin) then
         imin = 1
         imax = nlon
-        IF( nobs > 0 ) &
+        if( nobs > 0 ) &
         & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-      ELSE
+      else
         imin = 1
-        IF( nobs > 0 ) &
+        if( nobs > 0 ) &
         & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-        DO imin=1,nlon-1
-          IF(minlon < lon(imin+1)) EXIT
-        END DO
+        do imin=1,nlon-1
+          if(minlon < lon(imin+1)) exit
+        enddo
         imax = nlon
-        IF( nobs > 0 ) &
+        if( nobs > 0 ) &
         & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-      END IF
-    END IF
-  ELSE IF(minlon < lon0 .AND. maxlon <= lonf) THEN
-    DO imax=1,nlon-1
-      IF(maxlon < lon(imax+1)) EXIT
-  END DO
+      endif
+    endif
+  else if(minlon < lon0 .AND. maxlon <= lonf) then
+    do imax=1,nlon-1
+      if(maxlon < lon(imax+1)) exit
+  enddo
     minlon = minlon + 360.0d0
-    IF(minlon < lon0) THEN
+    if(minlon < lon0) then
       imin = 1
       imax = nlon
-      IF( nobs > 0 ) &
+      if( nobs > 0 ) &
       & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-    ELSE
-      DO imin=1,nlon-1
-        IF(minlon < lon(imin+1)) EXIT
-      END DO
-      IF(imin < imax) THEN
+    else
+      do imin=1,nlon-1
+        if(minlon < lon(imin+1)) exit
+      enddo
+      if(imin < imax) then
         imin = 1
         imax = nlon
-        IF( nobs > 0 ) &
+        if( nobs > 0 ) &
         & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-      ELSE
+      else
         imin = 1
-        IF( nobs > 0 ) &
+        if( nobs > 0 ) &
         & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-        DO imin=1,nlon-1
-          IF(minlon < lon(imin+1)) EXIT
-        END DO
+        do imin=1,nlon-1
+          if(minlon < lon(imin+1)) exit
+        enddo
         imax = nlon
-        IF( nobs > 0 ) &
+        if( nobs > 0 ) &
         & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-      END IF
-    END IF
-  ELSE
+      endif
+    endif
+  else
     maxlon = maxlon - 360.0d0
     minlon = minlon + 360.0d0
-    IF(maxlon > lonf .OR. minlon < lon0) THEN
+    if(maxlon > lonf .OR. minlon < lon0) then
       imin = 1
       imax = nlon
-      IF( nobs > 0 ) &
+      if( nobs > 0 ) &
       & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-    ELSE
-      DO imin=1,nlon-1
-        IF(minlon < lon(imin+1)) EXIT
-      END DO
-      DO imax=1,nlon-1
-        IF(maxlon < lon(imax+1)) EXIT
-      END DO
-      IF(imin > imax) THEN
+    else
+      do imin=1,nlon-1
+        if(minlon < lon(imin+1)) exit
+      enddo
+      do imax=1,nlon-1
+        if(maxlon < lon(imax+1)) exit
+      enddo
+      if(imin > imax) then
         imin = 1
         imax = nlon
-        IF( nobs > 0 ) &
+        if( nobs > 0 ) &
         & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-      ELSE
-        IF( nobs > 0 ) &
+      else
+        if( nobs > 0 ) &
         & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-      END IF
-    END IF
-  END IF
+      endif
+    endif
+  endif
   nn = nn-1
-  IF(nn < 1) THEN
+  if(nn < 1) then
     nobsl = 0
     RETURN
-  END IF
+  endif
 END SUBROUTINE obs_local_setup_old
 
 !(OCEAN) STEVE: add checks for atlantic/pacific basin boundary
@@ -828,21 +729,22 @@ subroutine atlpac (xlat, xlon, lxap)
 REAL(r_size), INTENT(IN) :: xlat, xlon
 REAL(r_size), INTENT(OUT) :: lxap
 
-!c STEVE: Stolen from SODA: use until a general method for managing land-blocked ocean basins...
-!c=================================================================
-!c X. Cao 12/9/99
-!c
-!c   to make a mark to the location of a point in Caribbean area
-!c (xlat.gt.-2..and.xlat.lt.32..and.xlon.gt.245..and.xlon.lt.295.)
-!c to indicate if it is in Atlantic ocean (1) or in Pacific ocean (2)
-!c or out of Caribbean area (0)
-!c=================================================================
-!c
+! STEVE: Stolen from SODA: 
+! ISSUE: use until we have a general method for managing land-blocked ocean basins...
+!=================================================================
+! X. Cao 12/9/99
+!
+!   to make a mark to the location of a point in Caribbean area
+! (xlat.gt.-2..and.xlat.lt.32..and.xlon.gt.245..and.xlon.lt.295.)
+! to indicate if it is in Atlantic ocean (1) or in Pacific ocean (2)
+! or out of Caribbean area (0)
+!=================================================================
+!
   lxap=0
-!c
-!c -- Atlantic ? Pacific?
-!c
-  if(xlat.gt.-2..and.xlat.le.8.5) then
+!
+! -- Atlantic? Pacific?
+!
+  if(xlat.gt.-2.0.and.xlat.le.8.5) then
     if(xlon.lt.285.) then
       lxap=2
     else
@@ -873,7 +775,7 @@ REAL(r_size), INTENT(OUT) :: lxap
       lxap=1
     endif
   endif
-  return
+
 end subroutine atlpac
 
 END MODULE letkf_local
