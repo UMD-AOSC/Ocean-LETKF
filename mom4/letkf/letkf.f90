@@ -1,15 +1,14 @@
 PROGRAM letkf
-!=======================================================================
+!==============================================================================
 !
 ! [PURPOSE:] Main program of LETKF
 !
 ! [HISTORY:]
-!   01/16/2009 Takemasa Miyoshi  created
+!   01/16/2009 Takemasa Miyoshi created for atmospheric analysis
 !   04/26/2011 Steve Penny converted to OCEAN for use with mom4
 !   03/18/2014 Steve Penny adapted to use on Gaea at NCEP/GFDL
 !
-!=======================================================================
-!$USE OMP_LIB
+!==============================================================================
   USE common
   USE common_mpi
   USE common_mom4
@@ -17,8 +16,7 @@ PROGRAM letkf
   USE common_letkf
   USE letkf_obs
   USE letkf_tools
-  !STEVE: for namelist settings:
-  USE letkf_local,                 only: DO_NO_VERT_LOC, localization_method
+  USE letkf_local,     only: DO_NO_VERT_LOC, localization_method  ! For namelist settings
 ! USE common_obs_mom4,             only: nid_obs
 
   IMPLICIT NONE
@@ -30,34 +28,38 @@ PROGRAM letkf
   INTEGER :: ierr
   CHARACTER(9) :: stdoutf='NOUT-0000'
   CHARACTER(4) :: guesf='gs00'
-  !STEVE:
+  
   INTEGER :: ij, m !STEVE: for debugging
   LOGICAL :: ex
   INTEGER :: fid=21
+  LOGICAL :: dortout=.true.   ! Force 'realtime' output (helps with parallel debugging)
+  LOGICAL :: dodebug0=.false.  ! Debug flag for various routines
+
 !STEVE: at the moment, these are setup as PARAMETERs, so can't be adjusted via namelist:
 ! NAMELIST /common_mom4_nml/ nlon,nlat,nlev,nv3d,nv2d,iv3d_u,iv3d_v,iv3d_t,iv3d_s,iv2d_ssh,iv2d_sst,iv2d_sss, &
-  NAMELIST /common_mom4_nml/ gridfile, & !gridfile1,gridfile2,gridfile3, &
-                             DO_DRIFTERS,DO_ALTIMETRY,SSHclm_file
+  NAMELIST /common_mom4_nml/ gridfile, DO_DRIFTERS, DO_ALTIMETRY, SSHclm_file
   NAMELIST /letkf_obs_nml/   nslots,nbslot,sigma_obs,sigma_obs0,sigma_obsv,sigma_obst,gross_error
   NAMELIST /letkf_local_nml/ DO_NO_VERT_LOC, localization_method
   NAMELIST /letkf_tools_nml/ cov_infl_mul,sp_infl_add,DO_INFL_RESET
 ! NAMELIST /common_obs_mom4_nml/ nid_obs
 
-!-----------------------------------------------------------------------
+!------------------------------------------------------------------------------
 ! Initial settings
-!-----------------------------------------------------------------------
+!------------------------------------------------------------------------------
   CALL CPU_TIME(rtimer00)
   CALL initialize_mpi
 
   WRITE(stdoutf(6:9), '(I4.4)') myrank
   WRITE(6,'(3A,I4.4)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
-  !STEVE: if it halts here, it probably means the nlon,nlat and nlev in common_mom4
+  !STEVE: if it halts here, it probably means the nlon, nlat and nlev in common_mom4
   !       have not been set properly for this model's grid
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I4.4,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 
-  !STEVE: read in namelist parameters
-  INQUIRE(FILE="input.nml", EXIST=ex) 
+  !----------------------------------------------------------------------------
+  ! Read in namelist parameters
+  !----------------------------------------------------------------------------
+  INQUIRE(FILE="input.nml", EXIST=ex)
   if (ex) then
     open(fid,file="input.nml", status='OLD') !, delim='APOSTROPHE')
     read(fid,nml=common_mom4_nml)
@@ -65,34 +67,35 @@ PROGRAM letkf
     read(fid,nml=letkf_local_nml)
     read(fid,nml=letkf_tools_nml)
   endif
-  WRITE(6,*) "=========================================================="
+  WRITE(6,*) "================================================================="
   WRITE(6,*) "Namelist inputs:"
-  WRITE(6,*) "=========================================================="
+  WRITE(6,*) "================================================================="
   write(6,common_mom4_nml)
   write(6,letkf_obs_nml)
   write(6,letkf_local_nml)
   write(6,letkf_tools_nml)
-  WRITE(6,*) "=========================================================="
-!
-  WRITE(6,'(A)') '============================================='
-  WRITE(6,'(A)') '  THE LOCAL ENSEMBLE TRANSFORM KALMAN FILTER '
-  WRITE(6,'(A)') '                                             '
-  WRITE(6,'(A)') '   LL      EEEEEE  TTTTTT  KK  KK  FFFFFF    '
-  WRITE(6,'(A)') '   LL      EE        TT    KK KK   FF        '
-  WRITE(6,'(A)') '   LL      EEEEE     TT    KKK     FFFFF     '
-  WRITE(6,'(A)') '   LL      EE        TT    KK KK   FF        '
-  WRITE(6,'(A)') '   LLLLLL  EEEEEE    TT    KK  KK  FF        '
-  WRITE(6,'(A)') '                                             '
-  WRITE(6,'(A)') '  Adapted for NCEP use by Steve Penny (2014) '
-  WRITE(6,'(A)') '  Adapted for the OCEAN by Steve Penny (2011)'
-  WRITE(6,'(A)') '                                             '
-  WRITE(6,'(A)') '    Originally coded by Takemasa Miyoshi     '
-  WRITE(6,'(A)') '                                             '
-  WRITE(6,'(A)') '  Based on Ott et al (2004) and Hunt (2007)  '
-  WRITE(6,'(A)') '  Tested by Miyoshi and Yamane (2006)        '
-  WRITE(6,'(A)') '============================================='
-  WRITE(6,'(A)') '              LETKF PARAMETERS               '
-  WRITE(6,'(A)') ' ------------------------------------------- '
+  WRITE(6,*) "================================================================="
+
+  !----------------------------------------------------------------------------
+  ! Print header
+  !----------------------------------------------------------------------------
+  WRITE(6,'(A)') '================================================='
+  WRITE(6,'(A)') '  THE LOCAL ENSEMBLE TRANSFORM KALMAN FILTER     '
+  WRITE(6,'(A)') '                                                 '
+  WRITE(6,'(A)') '   LL      EEEEEE  TTTTTT  KK  KK  FFFFFF        '
+  WRITE(6,'(A)') '   LL      EE        TT    KK KK   FF            '
+  WRITE(6,'(A)') '   LL      EEEEE     TT    KKK     FFFFF         '
+  WRITE(6,'(A)') '   LL      EE        TT    KK KK   FF            '
+  WRITE(6,'(A)') '   LLLLLL  EEEEEE    TT    KK  KK  FF            '
+  WRITE(6,'(A)') '                                                 '
+  WRITE(6,'(A)') '  Developed for NCEP use by Steve Penny (2014)   '
+  WRITE(6,'(A)') '  Developed for the OCEAN by Steve Penny (2011)  '
+  WRITE(6,'(A)') '                                                 '
+  WRITE(6,'(A)') '  Based on original code by T. Miyoshi,          '
+  WRITE(6,'(A)') '  and algorithms by Ott (2004) and Hunt (2007)   '
+  WRITE(6,'(A)') '================================================='
+  WRITE(6,'(A)') '              LETKF PARAMETERS                   '
+  WRITE(6,'(A)') ' ----------------------------------------------- '
   WRITE(6,'(A,I15)')   '   nbv        :',nbv
   WRITE(6,'(A,I15)')   '   nslots     :',nslots
   WRITE(6,'(A,I15)')   '   nbslot     :',nbslot
@@ -100,103 +103,112 @@ PROGRAM letkf
   WRITE(6,'(A,F15.2)') '   sigma_obs0 :',sigma_obs0
   WRITE(6,'(A,F15.2)') '   sigma_obsv :',sigma_obsv
   WRITE(6,'(A,F15.2)') '   sigma_obst :',sigma_obst
-  WRITE(6,'(A)') '============================================='
+  WRITE(6,'(A)') '================================================='
 
+  !-----------------------------------------------------------------------------
+  ! Initialize modules
+  !-----------------------------------------------------------------------------
   CALL set_common_mom4
   CALL set_common_mpi_mom4
   if (DO_DRIFTERS) then
 !   CALL set_common_drifters
   endif
 
+  !-----------------------------------------------------------------------------
   ! Allocate dynamic arrays
+  !-----------------------------------------------------------------------------
   ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
   ALLOCATE(gues2d(nij1,nbv,nv2d))
   ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
   ALLOCATE(anal2d(nij1,nbv,nv2d))
-!
+
+  !-----------------------------------------------------------------------------
+  ! Check timer for initialization
+  !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
-! call FLUSH(6) !STEVE: force output to file
-  CLOSE(6)
-  OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
-! STEVE: end
+  if (dortout) then !STEVE: force output to file
+    CLOSE(6)
+    OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+  endif
   rtimer00=rtimer
-!-----------------------------------------------------------------------
-! Observations
-!-----------------------------------------------------------------------
-  !
-  ! CONVENTIONAL OBS
-  !
+
+  !-----------------------------------------------------------------------------
+  ! Observations
+  !-----------------------------------------------------------------------------
   CALL set_letkf_obs 
   !STEVE: calls read_grd, then read_ens_mpi calls read_grd4 below. This may be an inefficiency
   !STEVE: Perhaps call once here then output v3d and v2d for use as gues3d and gues2d below.
-!
+
+  !-----------------------------------------------------------------------------
+  ! Check timer for initializing observations
+  !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
-! call FLUSH(6) !STEVE: force output to file
-  CLOSE(6)
-  OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS='OLD')
+  if (dortout) then !STEVE: force output to file
+    CLOSE(6)
+    OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+  endif
   rtimer00=rtimer
 
-!-----------------------------------------------------------------------
-! First guess ensemble
-!-----------------------------------------------------------------------
-  !
-  ! READ GUES
-  !
+  !-----------------------------------------------------------------------------
+  ! Read forecast ensemble
+  !-----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   WRITE(guesf(3:4),'(I2.2)') nbslot
   WRITE(6,*) "From letkf.f90, calling read_ens_mpi..."
   CALL read_ens_mpi(guesf,nbv,gues3d,gues2d)
   WRITE(6,*) "From letkf.f90, finished calling read_ens_mpi..."
 
-  !STEVE: debug
-! CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-! WRITE(6,*) "From letkf.f90, calling write_ens_mpi..."
-! CALL write_ens_mpi('anal',nbv,gues3d,gues2d)
-! WRITE(6,*) "From letkf.f90, finished calling write_ens_mpi..."
-! CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-! STOP 4
-  !end: debug
+  if (dodebug0) then ! Test processing of forecast ensemble, write, and quit
+    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+    WRITE(6,*) "From letkf.f90, calling write_ens_mpi..."
+    CALL write_ens_mpi('anal',nbv,gues3d,gues2d)
+    WRITE(6,*) "From letkf.f90, finished calling write_ens_mpi..."
+    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+    STOP 4
+  endif
 
-  !STEVE: adding timers:
+  !-----------------------------------------------------------------------------
+  ! Check timer for reading forecast ensemble
+  !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_ENS_MPI):',rtimer,rtimer-rtimer00
-! call FLUSH(6) !STEVE: force output to file
-  CLOSE(6)
-  OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS='OLD')
+  if (dortout) then !STEVE: force output to file
+    CLOSE(6)
+    OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+  endif
   rtimer00=rtimer
-  !STEVE: end
 
-  !
-  ! WRITE ENS MEAN and SPRD
-  !
+  !-----------------------------------------------------------------------------
+  ! Write ensemble mean and spread
+  !-----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('gues',nbv,gues3d,gues2d)
   if (DO_DRIFTERS) then
 !   CALL write_ensmspr_drifters('gues',nbv,gues4d)
   endif
+
   !STEVE: debug
-! CALL write_ens_mpi_grd('test',1,gues3d,gues2d)
+  if (dodebug0) CALL write_ens_mpi_grd('test',1,gues3d,gues2d)
   
-!
+  !-----------------------------------------------------------------------------
+  ! Check timer for writing forecast ensemble
+  !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):',rtimer,rtimer-rtimer00
-! call FLUSH(6) !STEVE: force output to file
-  CLOSE(6)
-  OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS='OLD')
+  WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_GUES):',rtimer,rtimer-rtimer00
+  if (dortout) then !STEVE: force output to file
+    CLOSE(6)
+    OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+  endif
   rtimer00=rtimer
 
-!-----------------------------------------------------------------------
-! Data Assimilation
-!-----------------------------------------------------------------------
-  !
-  ! LETKF
-  !
-  WRITE(6,'(A,F10.6)') 'Using inflation smoothing parameter sigma_b = ', sigma_b
+  !------------------------------------------------------------------------------
+  ! Data Assimilation (MAIN)
+  !------------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
-!
+
   !(DRIFTERS)
   ! Update drifter position by shifting entire modeled trajectories to the new observed
   ! position at the observed time.
@@ -204,70 +216,58 @@ PROGRAM letkf
 !   CALL das_drifters(gues4d,anal4d)
   endif
 
-!
+  !-----------------------------------------------------------------------------
+  ! Check timer for computing letkf analysis
+  !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
-! call FLUSH(6) !STEVE: force output to file
-  CLOSE(6)
-  OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS='OLD')
+  if (dortout) then !STEVE: force output to file
+    CLOSE(6)
+    OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+  endif
   rtimer00=rtimer
 
-!-----------------------------------------------------------------------
-! Analysis ensemble
-!-----------------------------------------------------------------------
-  !
-  ! WRITE ANAL
-  !
+  !----------------------------------------------------------------------------
+  ! Write analysis ensemble
+  !----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ens_mpi('anal',nbv,anal3d,anal2d)
   if (DO_DRIFTERS) then
 !   CALL write_ens_drifters('anal',anal4d)
   endif
 
-  !
-  ! WRITE ENS MEAN and SPRD
-  !
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('anal',nbv,anal3d,anal2d)
   if (DO_DRIFTERS) then
 !   write_ensmspr_drifters('anal',anal4d)
   endif
 
-!
+  !-----------------------------------------------------------------------------
+  ! Check timer for writing analysis ensemble, mean, and spread
+  !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL):',rtimer,rtimer-rtimer00
-! call FLUSH(6) !STEVE: force output to file
-  CLOSE(6)
-  OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS='OLD')
+  if (dortout) then !STEVE: force output to file
+    CLOSE(6)
+    OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+  endif
   rtimer00=rtimer
 
-!-----------------------------------------------------------------------
-! Monitor
-!-----------------------------------------------------------------------
-!!STEVE: Comment these out for faster runtime:
-!! WRITE(6,*) "Calling monitor routines..."
-!! CALL monit_mean('gues')
-!! CALL monit_mean('anal')
-!!STEVE: end
-! CALL CPU_TIME(rtimer)
-! WRITE(6,'(A,2F10.2)') '### TIMER(MONIT_MEAN):',rtimer,rtimer-rtimer00
-!! call FLUSH(6) !STEVE: force output to file
-! CLOSE(6)
-! OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS='OLD')
-! rtimer00=rtimer
-
-!-----------------------------------------------------------------------
-! Finalize
-!-----------------------------------------------------------------------
+  !----------------------------------------------------------------------------
+  ! Finalize the MPI
+  !----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL finalize_mpi
 
+  !-----------------------------------------------------------------------------
+  ! Check timer for total runtime
+  !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(FINAL):',rtimer,rtimer-rtimer00
-! call FLUSH(6) !STEVE: force output to file
-  CLOSE(6)
-  OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS='OLD')
+  if (dortout) then !STEVE: force output to file
+    CLOSE(6)
+    OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+  endif
   rtimer00=rtimer
 
-  STOP
 END PROGRAM letkf

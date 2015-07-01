@@ -1,4 +1,4 @@
-!STEVE: this is a correction to letkf_core.f90:
+!STEVE: this is a potential correction to letkf_core.f90:
 
 ! OLD:
 
@@ -47,7 +47,7 @@
 !CALL dgemm('t','n',nbv,nbv,nobsl,1.0d0,hdxb_rinv,nobsl,hdxb(1:nobsl,:),nobsl,0.0d0,work1,nbv)
 CALL dsyrk('L','T',nbv,nobsl,1.0d0,hdxb_rinv,nbv,1.0d0,work1,0.0d0)
 
-! Then fill in the strictly upper diagonal part with the etries from the lower diagonal:
+! Then fill in the strictly upper diagonal part with the entries from the lower diagonal:
 do ri=1,nbv
   do ci=ri+1,nbv
     work1(ri,ci) = work1(ci,ri)
