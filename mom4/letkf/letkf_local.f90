@@ -725,9 +725,13 @@ SUBROUTINE obs_local_setup_old(ij,nn,minlon,maxlon,minlat,maxlat,imin,imax,jmin,
 END SUBROUTINE obs_local_setup_old
 
 !(OCEAN) STEVE: add checks for atlantic/pacific basin boundary
-subroutine atlpac (xlat, xlon, lxap)
-REAL(r_size), INTENT(IN) :: xlat, xlon
+subroutine atlpac (xlat, xlon_in, lxap)
+REAL(r_size), INTENT(IN) :: xlat, xlon_in
 REAL(r_size), INTENT(OUT) :: lxap
+REAL(r_size) :: xlon
+
+! Ensure the longitude is specified on a 0-360 grid:
+xlon = modulo(xlon_in,360.0)
 
 ! STEVE: Stolen from SODA: 
 ! ISSUE: use until we have a general method for managing land-blocked ocean basins...
