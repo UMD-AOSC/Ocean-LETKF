@@ -29,7 +29,7 @@ MODULE letkf_local
   !
   !STEVE: making namelist accessible:
   LOGICAL :: DO_NO_VERT_LOC=.true. !STEVE: moved to letkf_local.f90 from letkf_tools.f90
-  INTEGER :: localization_method=1 !1 !(OCEAN) =0 for uniform radius (default), =1 for latitude-dependent , =2 for orig 'best' but incorrect
+  INTEGER :: localization_method=1 !1 !(OCEAN) =0 for uniform radius (default), =1 for latitude-dependent
 
   REAL(r_size),PARAMETER :: var_local(nv3d+nv2d,nid_obs) = 1.0d0
 
