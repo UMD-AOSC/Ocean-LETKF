@@ -1,20 +1,57 @@
 MODULE letkf_local
+!===============================================================================
+! MODULE: letkf_local
+! 
+! USES:
+!   use common
+!   use common_mpi
+!   use common_mom4
+!   use common_mpi_mom4
+!   use common_letkf
+!   use letkf_obs
+!
+! PUBLIC TYPES:
+!                 implicit none
+!                 [save]
+!
+!                 <type declaration>
+!     
+! PUBLIC MEMBER FUNCTIONS:
+!           <function>                     ! Description      
+!
+! PUBLIC DATA MEMBERS:
+!           <type> :: <variable>           ! Variable description
+
+! DESCRIPTION: 
+!   This module contains the subroutines necessary to perform localization.
+!   It is an offshoot of letkf_tools, which previously contained
+!   all localization routines. The localization algorithm has been significantly
+!   updated versus Miyoshi's original approach, and special modifications
+!   have been made specific to the ocean domain.
+!
+!   The longer-term purpose of isolating these routines in
+!   an independent module is to allow for further development of localization
+!   approaches, in particular those utilizing computational geometry tools
+!   such as:
+!   kd-tree, kNN search and range search
+!   Graph representation and A* search
+!
+! !REVISION HISTORY:
+!   04/03/2014 Steve Penny created for use with OCEAN at NCEP.
+!
+! Designed by Prof. Stephen G. Penny
+! University of Maryland, College Park
+! 
+!-------------------------------------------------------------------------------
+! $Author: Steve Penny $
+!===============================================================================
+
   USE common
   USE common_mpi
   USE common_mom4
   USE common_mpi_mom4
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0, and nobsgrd
-
-! Designed by Prof. Stephen G. Penny
-! University of Maryland, College Park
-! This module is an offshoot of letkf_tools, which previously contained
-! all localization routines. The purpose of isolating these routines in
-! an independent module is to allow for further development of localization
-! approaches, in particular those utilizing computational geometry tools
-! such as:
-! kd-tree, kNN search and range search
-! Graph representation and A* search
 
   !STEVE: Testing "Vertical Tube" localization:
   !       i.e. the localization is not applied vertically
@@ -93,11 +130,11 @@ MODULE letkf_local
 
 CONTAINS
 
-!------------------------------------------------------------------------------
-! Project global observations to local
-!     (hdxf_g,dep_g,rdiag_g) -> (hdxf,dep,rdiag)
-!------------------------------------------------------------------------------
 SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
+!===============================================================================
+! Project global observations to local
+!     (hdxf_global,dep_global,rdiag_global) -> (hdxf,dep,rdiag)
+!===============================================================================
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: ij,ilev,nobstotal
   REAL(r_size),INTENT(IN) :: var_local(nid_obs)
@@ -134,17 +171,16 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   INTEGER :: nn_old,imin_old,imax_old,jmin_old,jmax_old
   REAL(r_size) :: minlon_old,maxlon_old,minlat_old,maxlat_old
 
-!
-! INITIALIZE
-!
+  !-----------------------------------------------------------------------------
+  ! INITIALIZE
+  !-----------------------------------------------------------------------------
   if( nobs > 0 ) then
     ALLOCATE(nobs_use(nobs))
   endif
   nn = 0
 
-! TEST
   !-----------------------------------------------------------------------------
-  ! For comparison (and debugging) call old version:
+  ! TEST: For comparison (and debugging) call old Miyoshi version:
   !-----------------------------------------------------------------------------
   if (dodebug) CALL obs_local_setup_old(ij,nn_old,minlon_old,maxlon_old,minlat_old,maxlat_old,imin_old,imax_old,jmin_old,jmax_old)
 
@@ -335,17 +371,17 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   !STEVE: (future) use custom localization with CGAL/BOOST algorithms
   nobsl = 0
   do n=1,nn
-    !
+    !---------------------------------------------------------------------------
     ! Observational localization Distance Cutoff
-    !
+    !---------------------------------------------------------------------------
     olat = obslat(nobs_use(n))
     olon = obslon(nobs_use(n))
     olev = obslev(nobs_use(n))
     oelm = obselm(nobs_use(n))
 
-    !
+    !---------------------------------------------------------------------------
     ! variable localization
-    !
+    !---------------------------------------------------------------------------
     !STEVE: ISSUE: this should be handled in a more generic way so new
     !              observations don't requrie editing here.
     SELECT CASE(NINT(oelm))
@@ -371,7 +407,6 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
         STOP(95)
     END SELECT
     if(var_local(iobs) < TINY(var_local)) CYCLE  ! Skip obs that are set to "0" impact on this model variable.
-    
 
     !---------------------------------------------------------------------------
     ! vertical localization
@@ -421,6 +456,9 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
       sigma_b = sigma_a
       dist_zero_a = xrad
 
+      !-------------------------------------------------------------------------
+      ! Compute the great circle distance between the grid point and the observation 
+      !-------------------------------------------------------------------------
       CALL com_distll_1(olon,olat,xlon,xlat,dist)
 
       if (.false.) then !(modulo(n,10000) .eq. 0) then
@@ -462,12 +500,18 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     CALL atlpac(xlat,xlon,lxpa)
     CALL atlpac(olat,olon,lopa)
     IF (  lxpa .eq. 1 .and. lopa .eq. 2 &        !in caribbean, pacific and atlantic
-       .or. lxpa .eq. 2 .and. lopa .eq. 1 &        !in caribbean, atlantic and pacific
+       .or. lxpa .eq. 2 .and. lopa .eq. 1 &      !in caribbean, atlantic and pacific
          ) blocked_by_land = .true.
     IF (blocked_by_land) CYCLE                   !STEVE: the two points are in atl and pac
 
+    !STEVE: ISSUE: update this to read in a table with basin ids to 
+    !              only assimilate data in current or adjacent basin
+
 !--------------------------- End of Observation Culling -----------------------!
 
+    !---------------------------------------------------------------------------
+    ! Collect all identifed local observations into data structures for output
+    !---------------------------------------------------------------------------
     nobsl = nobsl + 1
     hdxf(nobsl,:) = obshdxf(nobs_use(n),:)
     dep(nobsl)    = obsdep(nobs_use(n))
@@ -504,8 +548,8 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
 
     endif observation_localization
 
-    !STEVE: debugging error...
-!   if (dodebug .and. rloc(nobsl) > 1) then
+    !STEVE: debugging error... keeping this around to prevent it 
+    !                          from occuring again and going unnoticed
     if (rloc(nobsl) > 1) then
       WRITE(6,*) "rloc(nobsl) > 1 !"
       WRITE(6,*) "localization_method = ", localization_method
@@ -516,7 +560,7 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
       WRITE(6,*) "var_local(iobs) = ", var_local(iobs)
       WRITE(6,*) "rloc(nobsl) = ", rloc(nobsl)
       WRITE(6,*) "letkf_local.f90:: exitING.."
-      STOP(93)
+      STOP 93 
     endif
 
   enddo
@@ -536,13 +580,10 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
 
 END SUBROUTINE obs_local
 
-!------------------------------------------------------------------------------
-! obs_local_sub
-! 
-! Function:
-!   Identifies the observations within the local region
-!------------------------------------------------------------------------------
 SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
+!===============================================================================
+! Identify the observations within the local region
+!===============================================================================
   INTEGER,INTENT(IN) :: imin,imax,jmin,jmax
   INTEGER,INTENT(INOUT) :: nn, nobs_use(nobs)
   INTEGER :: j,n,ib,ie,ip
@@ -583,11 +624,12 @@ SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
   RETURN
 END SUBROUTINE obs_local_sub
 
-!-----------------------------------------------------------------------
+SUBROUTINE obs_local_setup_old(ij,nn,minlon,maxlon,minlat,maxlat,imin,imax,jmin,jmax)
+!===============================================================================
+! Original Miyoshi code
 ! Project global observations to local
 !     (hdxf_g,dep_g,rdiag_g) -> (hdxf,dep,rdiag)
-!-----------------------------------------------------------------------
-SUBROUTINE obs_local_setup_old(ij,nn,minlon,maxlon,minlat,maxlat,imin,imax,jmin,jmax)
+!===============================================================================
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: ij
   INTEGER,INTENT(OUT) :: nn

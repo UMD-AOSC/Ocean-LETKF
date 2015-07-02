@@ -1,21 +1,45 @@
 PROGRAM obsop
-!==============================================================================
+!===============================================================================
+! PROGRAM: obsop
+! 
+! USES:
+!   use common
+!   use common_mom4
+!   use common_obs_mom4
 !
-! [PURPOSE:] Main program of observation operator
+! !PUBLIC TYPES:
+!                 implicit none
+!                 [save]
 !
+!                 <type declaration>
+!     
+! !PUBLIC MEMBER FUNCTIONS:
+!           <function>                     ! Description      
+!
+! !PUBLIC DATA MEMBERS:
+!           <type> :: <variable>           ! Variable description
+!
+! DESCRIPTION: 
+!   This program acts as the observation operator. It inputs observations (yo)
+!   and a single forecast (xf) and computes the innovations (yo-H(xf))
+!   associated with that member.
+!
+! USAGE:
 ! A separate instance is run independently for each member and timeslot
 ! All observations are typically preprocessed to the letkf obs format, then
 ! here they are read in and converted to the letkf obs2 format w/ H(x) data 
 ! for each member added in a new column.
-!
-! [HISTORY:]
+! 
+! !REVISION HISTORY:
 !   04/03/2014 Steve Penny modified for use with OCEAN at NCEP.
-!   04/03/2013 Takemasa Miyoshi created
-!
-!==============================================================================
-  USE common
-  USE common_mom4
-  USE common_obs_mom4
+!   04/03/2013 Takemasa Miyoshi created for SPEEDY atmospheric model.
+! 
+!-------------------------------------------------------------------------------
+! $Author: Steve Penny $
+!===============================================================================
+  use common
+  use common_mom4
+  use common_obs_mom4
 
   IMPLICIT NONE
   CHARACTER(slen) :: obsinfile='obsin.dat'    !IN (default)
@@ -23,18 +47,18 @@ PROGRAM obsop
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
   CHARACTER(slen) :: aoerinfile='oer_inp.grd' !IN (default)
   CHARACTER(slen) :: aoeroutfile='oer_inp.grd'!OUT(default)
-  REAL(r_size),ALLOCATABLE :: elem(:)
-  REAL(r_size),ALLOCATABLE :: rlon(:)
-  REAL(r_size),ALLOCATABLE :: rlat(:)
-  REAL(r_size),ALLOCATABLE :: rlev(:)
-  REAL(r_size),ALLOCATABLE :: odat(:)
-  REAL(r_size),ALLOCATABLE :: oerr(:)
-  REAL(r_size),ALLOCATABLE :: ohx(:)
-  INTEGER,ALLOCATABLE :: oqc(:)
-  REAL(r_size),ALLOCATABLE :: v3d(:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: v2d(:,:,:)
-  REAL(r_size),ALLOCATABLE :: o3d(:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: o2d(:,:,:)
+  REAL(r_size), ALLOCATABLE :: elem(:)
+  REAL(r_size), ALLOCATABLE :: rlon(:)
+  REAL(r_size), ALLOCATABLE :: rlat(:)
+  REAL(r_size), ALLOCATABLE :: rlev(:)
+  REAL(r_size), ALLOCATABLE :: odat(:)
+  REAL(r_size), ALLOCATABLE :: oerr(:)
+  REAL(r_size), ALLOCATABLE :: ohx(:)
+  INTEGER     , ALLOCATABLE :: oqc(:)
+  REAL(r_size), ALLOCATABLE :: v3d(:,:,:,:)
+  REAL(r_size), ALLOCATABLE :: v2d(:,:,:)
+  REAL(r_size), ALLOCATABLE :: o3d(:,:,:,:)
+  REAL(r_size), ALLOCATABLE :: o2d(:,:,:)
   REAL(r_size) :: dk,tg,qg
   INTEGER :: nobs
   REAL(r_size) :: ri,rj,rk
@@ -46,18 +70,23 @@ PROGRAM obsop
   !STEVE:
   REAL(r_size),DIMENSION(nid_obs),PARAMETER :: & !STEVE: use this to scale the input observations
               obserr_scaling=(/ 1.00d0, 1.00d0, 1.00d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0 /)
-!             obserr_scaling=(/ 1.00d0, 1.00d0, 1.00d0, 1.00d0, 1.0d0, 0.5d0, 1.0d0 /)
                               ! U       V       Temp    Salt    SSH    SST    SSS 
   REAL(r_size),DIMENSION(nid_obs),PARAMETER :: & !STEVE: use this to select random input observations
               obs_randselect=(/ 1.00d0, 1.00d0, 1.00d0, 1.00d0, 1.00d0, 1.00d0, 1.00d0 /)
-!             obs_randselect=(/ 1.00d0, 1.00d0, 1.00d0, 1.00d0, 1.00d0, 0.10d0, 1.00d0 /)
                               ! U       V       Temp    Salt    SSH     SST     SSS 
   REAL(r_size), DIMENSION(1) :: rand
 
-  INTEGER :: bdyobs=2 !STEVE: use of boundary obs. 1 = less restrictive, remove obs inside boundary; 2 = remove all observations touching a boundary
+  !-----------------------------------------------------------------------------
+  ! Debugging parameters
+  !-----------------------------------------------------------------------------
+  INTEGER :: bdyobs=2                 !STEVE: use of boundary obs.
+                                      !       1 := less restrictive, remove obs inside boundary
+                                      !       2 := remove all observations touching a boundary
   LOGICAL :: debug_obsfilter = .false.
-  LOGICAL :: debug_hdxf_0 = .false.   !This error occured because there was not a model representation of the observed value (i.e. SST obs with no SST model field)
-                                      ! Solution was to populate a SST model field (v2d) with surface temp data from the model (v3d(:,:,1))
+  LOGICAL :: debug_hdxf_0 = .false.   ! This error occured because there was not a model representation 
+                                      ! of the observed value (i.e. SST obs with no SST model field).
+                                      ! Solution was to populate a SST model field (v2d) with 
+                                      ! surface temp data from the model (v3d(:,:,1)).
   !STEVE: to adjust writing to output file
   LOGICAL :: verbose = .false.
 ! LOGICAL :: dodebug = .false.
@@ -66,20 +95,13 @@ PROGRAM obsop
   INTEGER :: cnt_obs_ssh=0, cnt_obs_sst=0, cnt_obs_sss=0, cnt_obs_eta=0
   INTEGER :: cnt_obs_x=0, cnt_obs_y=0, cnt_obs_z=0
   INTEGER, DIMENSION(nv3d+nv2d), SAVE :: cnt_obs = 0
+
   !STEVE: for debugging observation culling:
   INTEGER :: cnt_yout=0, cnt_xout=0, cnt_zout=0, cnt_triout=0
   INTEGER :: cnt_rigtnlon=0, cnt_nearland=0, cnt_oerlt0=0, cnt_altlatrng=0
   !STEVE: for adaptive obs:
   LOGICAL :: oerfile_exists
   REAL(r_size) :: oberr
-  !STEVE: for using satellite altimeter data of SSH
-! LOGICAL :: DO_ALTIMETRY !STEVE: now in common_mom4.f90
-  REAL(r_size), DIMENSION(nlon,nlat) :: Lxbar
-  REAL(r_size) :: HLxbar
-  REAL(r_sngl), DIMENSION(nlon,nlat) :: buf4
-  INTEGER :: iolen, fid=13
-  CHARACTER(slen) :: Lxfile='Lxbar.grd'
-  LOGICAL :: ex
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_mom4 module, and process command line options
@@ -209,7 +231,7 @@ PROGRAM obsop
       endif
       CYCLE
     else
-      !STEVE: check this, case 1 allows more, case 2 is more restrictive
+      !STEVE: check this, case 1 allows more observations, case 2 is more restrictive
       select case (bdyobs)
       case(1)
         IF(kmt(NINT(ri),NINT(rj)) .lt. 1) THEN
@@ -365,6 +387,9 @@ PROGRAM obsop
     oqc(n) = 1
   enddo !1:nobs
 
+  !-----------------------------------------------------------------------------
+  ! Print out the counts of observations removed for various reasons
+  !-----------------------------------------------------------------------------
   WRITE(6,*) "In letkf_obs.f90:: observations removed for:"
   WRITE(6,*) "cnt_oerlt0 = ", cnt_oerlt0
   WRITE(6,*) "cnt_xout = ", cnt_xout
@@ -375,6 +400,9 @@ PROGRAM obsop
   WRITE(6,*) "cnt_nearland = ", cnt_nearland
   WRITE(6,*) "cnt_altlatrng = ", cnt_altlatrng
 
+  !-----------------------------------------------------------------------------
+  ! Write the observations and their associated innovations to file
+  !-----------------------------------------------------------------------------
   CALL write_obs2(obsoutfile,nobs,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
 
   if (ALLOCATED(o3d)) DEALLOCATE(o3d)
@@ -384,9 +412,10 @@ PROGRAM obsop
 CONTAINS
 
 SUBROUTINE process_command_line
-
+!===============================================================================
+! Process command line arguments 
+!===============================================================================
 IMPLICIT NONE
-
 INTEGER, PARAMETER :: slen2=1024
 CHARACTER(slen2) :: arg1,arg2
 INTEGER :: i, ierr
