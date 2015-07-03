@@ -8,11 +8,6 @@
 #        in case your script is csh derived.
 set -ex
 
-source ../../config/machine.sh
-source ../../config/$MACHINE.fortran.sh
-source ../../config/$MACHINE.netcdf.sh
-#source ../../config/$MACHINE.mpi.sh
-
 MEM=028
 name=DRIFTERS
 PGM=letkf.$name.$MEM
@@ -24,18 +19,18 @@ LIB_NETCDF="-L$NETCDFF_ROOT/lib -lnetcdff -L$NETCDF_ROOT/lib -lnetcdf"
 INC_NETCDF="-I$NETCDFF_ROOT/include -I$NETCDF_ROOT/include"
 INC=$INC_NETCDF
 
-#F90=ftn
-#F90s=ftn #STEVE: in case we need a different compiler for serial runs
+F90=mpif90
+F90s=mpif90 #STEVE: in case we need a different compiler for serial runs
 OMP=
 PWD=`pwd`
-#F90OPT='-O3'
+F90OPT='-O3'
 # explanation of -mcmodel=medium and -shared-intel: http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
 INLINE= #"-Q -qinline"
 DEBUG_OPT= #'-g -qfullpath -v -C -qsigtrap=xl__trcedump' # -qflttrap=en:nanq -qsigtrap'
-BLAS=1 #0: no blas 1: using blas
+BLAS=0 #0: no blas 1: using blas
 
 INCLUDE_MPI= 
-LIB_MPI= #"-lmpi"
+LIB_MPI="-lmpi"
 sh ulnkcommon.sh
 sh lnkcommon.sh
 rm -f *.mod
@@ -44,7 +39,7 @@ rm -f *.o
 cat netlib.f > netlib2.f
 if test $BLAS -eq 1
 then
-  LBLAS="-L${CRAY_LIBSCI_PREFIX_DIR}/lib -lsci_intel -lsci_intel_mp"
+  LBLAS="-L/usr/lib -lblas"
 else
   #cat netlibblas.f >> netlib2.f90
   cat netlibblas.f >> netlib2.f

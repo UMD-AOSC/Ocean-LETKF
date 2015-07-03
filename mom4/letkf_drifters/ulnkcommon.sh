@@ -14,3 +14,8 @@ rm -f common_mom4.f90
 rm -f common_mpi_mom4.f90
 rm -f common_obs_mom4.f90
 
+rm -f letkf.f90
+rm -f letkf_local.f90
+rm -f letkf_obs.f90
+rm -f letkf_tools.f90
+rm -f obsop.f90
