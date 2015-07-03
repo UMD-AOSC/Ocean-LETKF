@@ -1,21 +1,44 @@
 MODULE letkf_obs
-!=======================================================================
+!===============================================================================
+! MODULE: letkf_obs
+! 
+! USES:
+!   use common
+!   use common_mpi
+!   use common_mom4
+!   use common_obs_mom4
+!   use common_mpi_mom4
+!   use common_letkf
+!   use letkf_drifters !(DRIFTERS)
 !
-! [PURPOSE:] Observational procedures
-!            Reads in all observational data
+! !PUBLIC TYPES:
+!                 implicit none
+!                 [save]
 !
-! [HISTORY:]
-!   01/23/2009 Takemasa MIYOSHI  created
+!                 <type declaration>
+!     
+! !PUBLIC MEMBER FUNCTIONS:
+!           <function>                     ! Description      
+!
+! !PUBLIC DATA MEMBERS:
+!           <type> :: <variable>           ! Variable description
+!
+! DESCRIPTION: 
+!   This module reads all observation data and stores in appropriate data structures
+!
+! !REVISION HISTORY:
 !   04/26/2011 Steve PENNY converted to OCEAN for use with MOM4
-!
-!=======================================================================
-!$USE OMP_LIB
-  USE common
-  USE common_mpi
-  USE common_mom4
-  USE common_obs_mom4
-  USE common_mpi_mom4
-  USE common_letkf
+!   01/23/2009 Takemasa MIYOSHI  created
+! 
+!-------------------------------------------------------------------------------
+! $Author: Steve Penny $
+!===============================================================================
+  use common
+  use common_mpi
+  use common_mom4
+  use common_obs_mom4
+  use common_mpi_mom4
+  use common_letkf
   !(DRIFTERS)
 ! USE letkf_drifters
 
@@ -24,18 +47,16 @@ MODULE letkf_obs
 
   INTEGER,SAVE :: nobs
   !STEVE: making these namelist accessible:
-  INTEGER :: nslots=5 ! number of time slots for 4D-LETKF
-  INTEGER :: nbslot=5 !1 !STEVE: nbslot=1 for testing for GMAO example case. Normal case is nbslot=5 ! basetime slot
-  REAL(r_size) :: sigma_obs=720.0d3 !3x Rossby Radius of Deformation at Equ. according to Chelton
-  REAL(r_size) :: sigma_obs0=200.0d3 !20x Rossby Radius of Deformation at Pole, according to Chelton
-  REAL(r_size) :: sigma_obsv=1000.0d0  !STEVE: doesn't matter if using option "DO_NO_VERT_LOC"
-  REAL(r_size) :: sigma_obst=5.0d0
-! INTEGER,PARAMETER :: nslots=5 ! number of time slots for 4D-LETKF
-! INTEGER,PARAMETER :: nbslot=5 !1 !STEVE: nbslot=1 for testing for GMAO example case. Normal case is nbslot=5 ! basetime slot
-! REAL(r_size),PARAMETER :: sigma_obs=720.0d3 !3x Rossby Radius of Deformation at Equ. according to Chelton
-! REAL(r_size),PARAMETER :: sigma_obs0=200.0d3 !20x Rossby Radius of Deformation at Pole, according to Chelton
-! REAL(r_size),PARAMETER :: sigma_obsv=1000.0d0  !STEVE: doesn't matter if using option "DO_NO_VERT_LOC"
-! REAL(r_size),PARAMETER :: sigma_obst=5.0d0
+  INTEGER,SAVE :: nslots=5                  ! number of time slots for 4D-LETKF
+  INTEGER,SAVE :: nbslot=5 !1               !STEVE: nbslot=1 for testing for GMAO example case. Normal case is nbslot=5 ! basetime slot
+  REAL(r_size),SAVE :: sigma_obs=720.0d3    !3x Rossby Radius of Deformation at Equ. according to Chelton
+  REAL(r_size),SAVE :: sigma_obs0=200.0d3   !20x Rossby Radius of Deformation at Pole, according to Chelton
+  REAL(r_size),SAVE :: sigma_obsv=1000.0d0  !STEVE: doesn't matter if using option "DO_NO_VERT_LOC"
+  REAL(r_size),SAVE :: sigma_obst=5.0d0     ! Not using this at the moment
+  REAL(r_size),SAVE :: gross_error=3.0d0    ! number of standard deviations
+! REAL(r_size),PARAMETER :: gross_error=10.0d0 !3.0d0 ! number of standard deviations   (Use for OSSEs)
+                                                      ! used to filter out observations
+  !--
   REAL(r_size),SAVE :: dist_zero
   REAL(r_size),SAVE :: dist_zerov
   REAL(r_size),ALLOCATABLE,SAVE :: dlon_zero(:)
@@ -56,7 +77,12 @@ MODULE letkf_obs
   !STEVE: for (DRIFTERS)
   REAL(r_size),ALLOCATABLE,SAVE :: obsid(:)
   REAL(r_size),ALLOCATABLE,SAVE :: obstime(:)
-  !STEVE:
+  !STEVE: for adaptive obs error:
+  LOGICAL :: oerfile_exists
+
+  !-----------------------------------------------------------------------------
+  ! For debugging
+  !-----------------------------------------------------------------------------
   LOGICAL :: debug_hdxf_0 = .true.   !This error occured because there was not a model representation of the observed value (i.e. SST obs with no SST model field)
                                      ! Solution was to populate a SST model field (v2d) with surface temp data from the model (v3d(:,:,1))
   INTEGER :: cnt_obs_u, cnt_obs_v, cnt_obs_t, cnt_obs_s, cnt_obs_x, cnt_obs_y, cnt_obs_z, cnt_obs_ssh, cnt_obs_eta, cnt_obs_sst, cnt_obs_sss
@@ -64,19 +90,13 @@ MODULE letkf_obs
   !STEVE: for debugging observation culling:
   INTEGER :: cnt_yout=0, cnt_xout=0, cnt_zout=0, cnt_triout=0
   INTEGER :: cnt_rigtnlon=0, cnt_nearland=0
-  !STEVE: for adaptive obs:
-  LOGICAL :: oerfile_exists
-  !STEVE: for using satellite altimeter data of SSH
-! LOGICAL :: DO_ALTIMETRY !STEVE: now in common_mom4.f90
-! REAL(r_size),PARAMETER :: gross_error=10.0d0 !3.0d0 ! number of standard deviations   (Use for OSSEs)
-                                                      ! used to filter out observations
-  REAL(r_size) :: gross_error=3.0d0 ! number of standard deviations
 
 CONTAINS
-!-----------------------------------------------------------------------
-! Initialize
-!-----------------------------------------------------------------------
+
 SUBROUTINE set_letkf_obs
+!===============================================================================
+! Initialize the module
+!===============================================================================
   IMPLICIT NONE
   REAL(r_size) :: dz,tg,qg
   REAL(r_size) :: ri,rj,rk
@@ -123,40 +143,43 @@ SUBROUTINE set_letkf_obs
   REAL(r_size) :: hdx2,mstd
   INTEGER :: gross_cnt,gross_2x_cnt
   !STEVE: for DO_ALTIMETRY
-  REAL(r_size) :: SSH_CLM_m !SSHclm_ij
+  REAL(r_size) :: SSH_CLM_m 
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
   dist_zero = sigma_obs * SQRT(10.0d0/3.0d0) * 2.0d0
   dist_zerov = sigma_obsv * SQRT(10.0d0/3.0d0) * 2.0d0
   dlat_zero = dist_zero / pi / re * 180.0d0
-  ALLOCATE(dlon_zero(nij1))
-  DO i=1,nij1
-    dlon_zero(i) = dlat_zero / COS(pi*lat1(i)/180.0d0)
-  END DO
 
-  IF(myrank == 0) THEN !Assuming all members have the identical obs records
-    DO islot=1,nslots
+  ALLOCATE(dlon_zero(nij1))
+  do i=1,nij1
+    dlon_zero(i) = dlat_zero / COS(pi*lat1(i)/180.0d0)
+  enddo
+
+  if (myrank == 0) then !Assuming all members have the identical obs records
+    do islot=1,nslots
       im = myrank+1
       WRITE(obsfile(4:8),'(I2.2,I3.3)') islot,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading an obs2-formatted file ',obsfile
       CALL get_nobs(obsfile,8,nobslots(islot))
-    ENDDO
-  ENDIF
+    enddo
+  endif
+
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(nobslots,nslots,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
   nobs = SUM(nobslots)
   WRITE(6,'(I10,A)') nobs,' TOTAL OBSERVATIONS INPUT'
 
-  IF(nobs == 0) THEN
+  if (nobs == 0) then
     WRITE(6,'(A)') 'No observation assimilated'
     RETURN
-  END IF
+  endif
 
-!
-! INITIALIZE GLOBAL VARIABLES
-!
+  !-----------------------------------------------------------------------------
+  ! INITIALIZE GLOBAL VARIABLES
+  !-----------------------------------------------------------------------------
   ALLOCATE( tmpelm(nobs) )
   ALLOCATE( tmplon(nobs) )
   ALLOCATE( tmplat(nobs) )
@@ -174,16 +197,16 @@ SUBROUTINE set_letkf_obs
   tmphdxf = 0.0d0
   tmperr = 0.0d0
 
-!
-! LOOP of timeslots
-!
+  !-----------------------------------------------------------------------------
+  ! LOOP of timeslots
+  !-----------------------------------------------------------------------------
   nn=0
-  timeslots0: DO islot=1,nslots
-    IF(nobslots(islot) == 0) CYCLE
+  timeslots0: do islot=1,nslots
+    if (nobslots(islot) == 0) CYCLE
     l=0
-    DO
+    do
       im = myrank+1 + nprocs * l
-      IF(im > nbv) EXIT
+      if (im > nbv) EXIT
       WRITE(obsfile(4:8),'(I2.2,I3.3)') islot,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',obsfile
       CALL read_obs2(obsfile,nobslots(islot),&
@@ -192,9 +215,9 @@ SUBROUTINE set_letkf_obs
        & tmpdat(nn+1:nn+nobslots(islot)),tmperr(nn+1:nn+nobslots(islot)),&
        & tmphdxf(nn+1:nn+nobslots(islot),im),tmpqc0(nn+1:nn+nobslots(islot),im))
       l = l+1
-    ENDDO
+    enddo
     nn = nn + nobslots(islot)
-  ENDDO timeslots0
+  enddo timeslots0
 
   WRITE(6,*) "Commencing collecting obs on all procs..."
   !STEVE: broadcast the 1d arrays from root onto all procs
@@ -285,24 +308,23 @@ SUBROUTINE set_letkf_obs
 if (.true.) then
   !STEVE: this is the original version
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
-  DO n=1,nobs
+  do n=1,nobs
     tmpqc(n) = MINVAL(tmpqc0(n,:))
-    IF(tmpqc(n) /= 1) CYCLE
+    if (tmpqc(n) /= 1) CYCLE
     tmpdep(n) = tmphdxf(n,1) !note: tmpdep is just used as a dummy variable to compute the mean over the next few lines
-    DO i=2,nbv
+    do i=2,nbv
       tmpdep(n) = tmpdep(n) + tmphdxf(n,i)
-    END DO
+    enddo
     tmpdep(n) = tmpdep(n) / REAL(nbv,r_size)
-    DO i=1,nbv
+    do i=1,nbv
       tmphdxf(n,i) = tmphdxf(n,i) - tmpdep(n) ! Hdxf (perturbations from mean)
-    END DO
+    enddo
     ! Now, tmpdep is defined appropriately as the obs departure from mean background
     tmpdep(n) = tmpdat(n) - tmpdep(n) ! y-Hx
-    IF(ABS(tmpdep(n)) > gross_error*tmperr(n)) THEN !gross error
+    if (ABS(tmpdep(n)) > gross_error*tmperr(n)) then !gross error
       tmpqc(n) = 0
       gross_cnt = gross_cnt + 1
-    END IF
+    endif
 
     !STEVE: as a check, count the number of each type of observation
     if (tmpelm(n) .eq. id_u_obs) cnt_obs_u = cnt_obs_u + 1
@@ -318,28 +340,27 @@ if (.true.) then
     if (tmpelm(n) .eq. id_y_obs) cnt_obs_y = cnt_obs_y + 1
     if (tmpelm(n) .eq. id_z_obs) cnt_obs_z = cnt_obs_z + 1
 
-  END DO
-!$OMP END PARALLEL DO
+  enddo
   DEALLOCATE(tmpqc0)
 
 else
 
-  !STEVE: this is the augmented version I created to do more
-  !       based on ensemble spread
+  !STEVE: this is the augmented version I created to do 
+  !       something more sophisticated based on ensemble spread
 
-  DO n=1,nobs
+  do n=1,nobs
     !WRITE(6,*) "n = ", n
 
     tmpqc(n) = MINVAL(tmpqc0(n,:))
-    IF(tmpqc(n) /= 1) CYCLE
+    if (tmpqc(n) /= 1) CYCLE
     tmpdep(n) = tmphdxf(n,1)
-    DO i=2,nbv
+    do i=2,nbv
       tmpdep(n) = tmpdep(n) + tmphdxf(n,i)
-    END DO
+    enddo
     tmpdep(n) = tmpdep(n) / REAL(nbv,r_size)
 
     hdx2=0
-    DO i=1,nbv
+    do i=1,nbv
       tmphdxf(n,i) = tmphdxf(n,i) - tmpdep(n) ! Hdx
       hdx2 = hdx2 + tmphdxf(n,i)**2 !STEVE: for std dev
       !STEVE: SUBTRACT THE MEAN
@@ -358,7 +379,7 @@ else
 !       STOP(10)
         WRITE(6,*) "================================================================="
       endif
-    END DO
+    enddo
     !STEVE: FORM THE DEPARTURE (OBS INNOVATION)
     tmpdep(n) = tmpdat(n) - tmpdep(n) ! y-Hx
 
@@ -370,7 +391,7 @@ else
            !will still not throw out obs that are outside the spread. Otherwise,
            !the model should grow the spread greater than the obs error.
 
-    qc_obs : IF(ABS(tmpdep(n)) > gross_error*mstd) THEN !gross error
+    qc_obs : if (ABS(tmpdep(n)) > gross_error*mstd) then !gross error
       !tmpqc(n) = 0
       !STEVE: changing this to gradual adjustment method
       ! Rather than removing the observation, increase the obs error so it 
@@ -406,7 +427,7 @@ else
     if (tmpelm(n) .eq. id_y_obs) cnt_obs_y = cnt_obs_y + 1
     if (tmpelm(n) .eq. id_z_obs) cnt_obs_z = cnt_obs_z + 1
 
-  END DO
+  enddo
   DEALLOCATE(tmpqc0)
 
 endif
@@ -456,34 +477,34 @@ endif
 ! PLUS, the temporal correlation scales are much longer than 5 days, so we can just ignore this
 
 !  nn = 0
-!  DO islot=1,nslots
+!  do islot=1,nslots
 !    if ( islot .ne. nbslot ) then
 !      tmperr(nn+1:nn+nobslots(islot)) = tmperr(nn+1:nn+nobslots(islot)) &
 !                                      & * exp(0.25d0 * (REAL(islot-nbslot,r_size) / sigma_obst)**2)
 !    endif
 !    nn = nn + nobslots(islot)
-!  END DO
+!  enddo
 
 !
 ! SELECT OBS IN THE NODE
 !
   nn = 0
   !STEVE: first, remove all of the Quality-Controlled data
-  DO n=1,nobs
-    IF(tmpqc(n) /= 1) CYCLE
-!    IF(tmplat(n) < MINVAL(lat1) .OR. MAXVAL(lat1) < tmplat(n)) THEN
+  do n=1,nobs
+    if (tmpqc(n) /= 1) CYCLE
+!    if (tmplat(n) < MINVAL(lat1) .OR. MAXVAL(lat1) < tmplat(n)) then
 !      dlat = MIN( ABS(MINVAL(lat1)-tmplat(n)),ABS(MAXVAL(lat1)-tmplat(n)) )
-!      IF(dlat > dlat_zero) CYCLE
-!    END IF
-!    IF(tmplon(n) < MINVAL(lon1) .OR. MAXVAL(lon1) < tmplon(n)) THEN
+!      if (dlat > dlat_zero) CYCLE
+!    endif
+!    if (tmplon(n) < MINVAL(lon1) .OR. MAXVAL(lon1) < tmplon(n)) then
 !      dlon1 = ABS(MINVAL(lon1) - tmplon(n))
 !      dlon1 = MIN(dlon1,360.0d0-dlon1)
 !      dlon2 = ABS(MAXVAL(lon1) - tmplon(n))
 !      dlon2 = MIN(dlon2,360.0d0-dlon2)
 !      dlon =  MIN(dlon1,dlon2) &
 !         & * pi*re*COS(tmplat(n)*pi/180.d0)/180.0d0
-!      IF(dlon > dist_zero) CYCLE
-!    END IF
+!      if (dlon > dist_zero) CYCLE
+!    endif
     nn = nn+1
     tmpelm(nn) = tmpelm(n)
     tmplon(nn) = tmplon(n)
@@ -497,7 +518,7 @@ endif
     tmpqc(nn) = tmpqc(n)
     tmpid(nn) = tmpid(n)     !(DRIFTERS)
     tmptime(nn) = tmptime(n) !(DRIFTERS)
-  END DO
+  enddo
   nobs = nn
   WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS TO BE ASSIMILATED IN MYRANK ',myrank
 
@@ -528,24 +549,24 @@ endif
   nobsgrd = 0
   nj = 0
   ! Count the number of observations within each latitude range
-  DO j=1,nlat-1
-    DO n=1,nobs
-      IF(tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
+  do j=1,nlat-1
+    do n=1,nobs
+      if (tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
       nj(j) = nj(j) + 1
-    END DO
-  END DO
+    enddo
+  enddo
   ! Record cumulative sum of observations up to this latitude
   ! Creates the basis for an indexing of observations from lat to lat
-  DO j=1,nlat-1
+  do j=1,nlat-1
     njs(j) = SUM(nj(0:j-1))
-  END DO
+  enddo
 
   ! Rearrange observations by latitude
-  DO j=1,nlat-1
+  do j=1,nlat-1
     nn = 0
-    DO n=1,nobs
-      IF(tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
-!     IF(tmplon(n) >= lon(nlon)-EPSILON(1.0d0)) CYCLE   !STEVE: I added this to align with the same condition in the code above
+    do n=1,nobs
+      if (tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
+!     if (tmplon(n) >= lon(nlon)-EPSILON(1.0d0)) CYCLE   !STEVE: I added this to align with the same condition in the code above
                                                         !       Otherwise, sometimes nn /= nj(j)
       nn = nn + 1
       tmp2elm(njs(j)+nn) = tmpelm(n)
@@ -559,24 +580,24 @@ endif
       tmp2hdxf(njs(j)+nn,:) = tmphdxf(n,:)
       tmp2id(njs(j)+nn) = tmpid(n)     !(DRIFTERS)
       tmp2time(njs(j)+nn) = tmptime(n) !(DRIFTERS)
-    END DO
-  END DO
+    enddo
+  enddo
 
   ! For each latitude, identify the number of obs per longitude.
   ! Then, rearrange observations by longitude within each latitude step
-  DO j=1,nlat-1
-    IF(nj(j) == 0) THEN
+  do j=1,nlat-1
+    if (nj(j) == 0) then
       nobsgrd(:,j) = njs(j)
       CYCLE
-    END IF
+    endif
     nn = 0
-    DO i=1,nlon
-      DO n=njs(j)+1,njs(j)+nj(j)
+    do i=1,nlon
+      do n=njs(j)+1,njs(j)+nj(j)
 
         ! Find the correct longitude bin for this observation...
-        IF(i < nlon) THEN
-          IF(tmp2lon(n) < lon(i) .OR. lon(i+1) <= tmp2lon(n)) CYCLE
-        ELSE
+        if (i < nlon) then
+          if (tmp2lon(n) < lon(i) .OR. lon(i+1) <= tmp2lon(n)) CYCLE
+        else
 ! STEVE: this is causing nn /= nj(j), the error thrown below.
 !        We need these points that are skipped, otherwise there are
 !        blank entries in the obselm etc. arrays, and this will
@@ -584,10 +605,10 @@ endif
 !        Another solution may be to cut out all the empty entries
 !        by changing the obsxxx indicies.
 !
-          IF(tmp2lon(n) < lon(nlon)) CYCLE
+          if (tmp2lon(n) < lon(nlon)) CYCLE
 
           !STEVE: debugging
-          IF(.false.) THEN
+          if (.false.) then
             WRITE(6,*) "n, nn, njs(j), nj(j) = ", n, nn, njs(j), nj(j)
             WRITE(6,*) "KEEPING, i == nlon == ", i, nlon
             WRITE(6,*) "tmp2lon(n) = ", tmp2lon(n)
@@ -596,7 +617,7 @@ endif
             WRITE(6,*) "tmp2lon(n) >= lon(nlon)"
             WRITE(6,*) "========================================================"
           ENDIF
-        END IF
+        endif
         nn = nn + 1
         obselm(njs(j)+nn) = tmp2elm(n)
         obslon(njs(j)+nn) = tmp2lon(n)
@@ -608,13 +629,13 @@ endif
         obshdxf(njs(j)+nn,:) = tmp2hdxf(n,:)
         obsid(njs(j)+nn) = tmp2id(n)     !(DRIFTERS)
         obstime(njs(j)+nn) = tmp2time(n) !(DRIFTERS)
-      END DO
+      enddo
       
       ! This now contains the accumulated count of obs up to this lat, up to this lon
       nobsgrd(i,j) = njs(j) + nn
-    END DO
+    enddo
 
-    IF(nn /= nj(j)) THEN
+    if (nn /= nj(j)) then
       WRITE(6,'(A,2I)') 'OBS DATA SORT ERROR: ',nn,nj(j)
       WRITE(6,'(F6.2,A,F6.2)') lat(j),'<= LAT <',lat(j+1)
       WRITE(6,'(F6.2,A,F6.2)') MINVAL(tmp2lat(njs(j)+1:njs(j)+nj(j))),'<= OBSLAT <',MAXVAL(tmp2lat(njs(j)+1:njs(j)+nj(j)))
@@ -623,10 +644,10 @@ endif
       WRITE(6,*) "nj(j) = ", nj(j)
       !STEVE: this is bad, something is wrong
       WRITE(6,*) "STEVE: this error will cause matrix eigenvalue < 0 error."
-      stop 3
-    END IF
+      STOP 3
+    endif
 
-  END DO
+  enddo
 
   DEALLOCATE( tmp2elm )
   DEALLOCATE( tmp2lon )
@@ -654,164 +675,6 @@ endif
   RETURN
 END SUBROUTINE set_letkf_obs
 
-!-----------------------------------------------------------------------
-! Monitor departure from gues/anal mean
-!-----------------------------------------------------------------------
-SUBROUTINE monit_mean(file)
-  IMPLICIT NONE
-  CHARACTER(4),INTENT(IN) :: file
-  REAL(r_size), ALLOCATABLE :: v3d(:,:,:,:) !(nlon,nlat,nlev,nv3d)
-  REAL(r_size), ALLOCATABLE :: v2d(:,:,:) !(nlon,nlat,nv2d)
-  REAL(r_size) :: elem
-  REAL(r_size) :: bias_u,bias_v,bias_t,bias_s,bias_ssh,bias_sst,bias_sss !(OCEAN)
-  REAL(r_size) :: rmse_u,rmse_v,rmse_t,rmse_s,rmse_ssh,rmse_sst,rmse_sss !(OCEAN)
-  REAL(r_size) :: hdxf,dep,ri,rj,rk
-  INTEGER :: n,iu,iv,it,is,issh,isst,isss !(OCEAN)
-  CHARACTER(11) :: filename='filexxx.grd'
-
-
-  ALLOCATE(v3d(nlon,nlat,nlev,nv3d),v2d(nlon,nlat,nv2d))
-
-  rmse_u  = 0.0d0
-  rmse_v  = 0.0d0
-  rmse_t  = 0.0d0
-  rmse_s  = 0.0d0  !(OCEAN)
-  rmse_ssh = 0.0d0 !(OCEAN)
-  rmse_sst = 0.0d0 !(OCEAN)
-  rmse_sss = 0.0d0 !(OCEAN)
-  bias_u = 0.0d0
-  bias_v = 0.0d0
-  bias_t = 0.0d0
-  bias_s = 0.0d0   !(OCEAN)
-  bias_ssh = 0.0d0 !(OCEAN)
-  bias_sst = 0.0d0 !(OCEAN)
-  bias_sss = 0.0d0 !(OCEAN)
-  iu  = 0
-  iv  = 0
-  it  = 0
-  is  = 0
-  issh = 0
-  isst = 0
-  isss = 0
-
-  WRITE(filename(1:7),'(A4,A3)') file,'_me'
-  CALL read_bingrd(filename,v3d,v2d)
-
-  DO n=1,nobs
-   !HOLDIT 
-    CALL phys2ijk(obselm(n),obslon(n),obslat(n),obslev(n),ri,rj,rk)    !(OCEAN)
-    IF(CEILING(rk) > nlev) CYCLE
-!   IF(FLOOR(rk) < 1) CYCLE
-!   IF(CEILING(rk) < 2 .AND. NINT(obselm(n)) /= id_ssh_obs) THEN              !(OCEAN)
-!     IF(NINT(obselm(n)) == id_u_obs .OR. NINT(obselm(n)) == id_v_obs) THEN
-!       rk = 1.00001d0
-!     ELSE
-!       CYCLE
-!     END IF
-!   END IF
-    IF(CEILING(rk) < 2 .AND. rk < 1.00001d0) THEN
-      rk = 1.00001d0
-    END IF
-    CALL Trans_XtoY(obselm(n),ri,rj,rk,v3d,v2d,hdxf)                   !(OCEAN)
-    dep = obsdat(n) - hdxf
-    SELECT CASE(NINT(obselm(n)))
-    CASE(id_u_obs)
-      rmse_u = rmse_u + dep**2
-      bias_u = bias_u + dep
-      iu = iu + 1
-    CASE(id_v_obs)
-      rmse_v = rmse_v + dep**2
-      bias_v = bias_v + dep
-      iv = iv + 1
-    CASE(id_t_obs)
-      rmse_t = rmse_t + dep**2
-      bias_t = bias_t + dep
-      it = it + 1
-    CASE(id_s_obs)
-      rmse_s = rmse_s + dep**2        !(OCEAN)
-      bias_s = bias_s + dep           !(OCEAN)
-      is = is + 1                     !(OCEAN)
-    CASE(id_ssh_obs)                  !(OCEAN)
-      rmse_ssh = rmse_ssh + dep**2    !(OCEAN)
-      bias_ssh = bias_ssh + dep       !(OCEAN)
-      issh = issh + 1                 !(OCEAN)
-    CASE(id_sst_obs)                  !(OCEAN)
-      rmse_sst = rmse_sst + dep**2    !(OCEAN)
-      bias_sst = bias_sst + dep       !(OCEAN)
-      isst = isst + 1                 !(OCEAN)
-    CASE(id_sss_obs)                  !(OCEAN)
-      rmse_sss = rmse_sss + dep**2    !(OCEAN)
-      bias_sss = bias_sss + dep       !(OCEAN)
-      isss = isss + 1                 !(OCEAN)
-    END SELECT
-  END DO
-
-  IF(iu == 0) THEN
-    rmse_u = undef
-    bias_u = undef
-  ELSE
-    rmse_u = SQRT(rmse_u / REAL(iu,r_size))
-    bias_u = bias_u / REAL(iu,r_size)
-  END IF
-  IF(iv == 0) THEN
-    rmse_v = undef
-    bias_v = undef
-  ELSE
-    rmse_v = SQRT(rmse_v / REAL(iv,r_size))
-    bias_v = bias_v / REAL(iv,r_size)
-  END IF
-  IF(it == 0) THEN
-    rmse_t = undef
-    bias_t = undef
-  ELSE
-    rmse_t = SQRT(rmse_t / REAL(it,r_size))
-    bias_t = bias_t / REAL(it,r_size)
-  END IF
-  IF(is == 0) THEN                            !(OCEAN)
-    rmse_s = undef                            !(OCEAN)
-    bias_s = undef                            !(OCEAN)
-  ELSE
-    rmse_s = SQRT(rmse_s / REAL(is,r_size))   !(OCEAN)
-    bias_s = bias_s / REAL(is,r_size)         !(OCEAN)
-  END IF
-
-  IF(issh == 0) THEN                               !(OCEAN)
-    rmse_ssh = undef                               !(OCEAN)
-    bias_ssh = undef                               !(OCEAN)
-  ELSE
-    rmse_ssh = SQRT(rmse_ssh / REAL(issh,r_size))  !(OCEAN)
-    bias_ssh = bias_ssh / REAL(issh,r_size)        !(OCEAN)
-  END IF
-  IF(isst == 0) THEN                               !(OCEAN)
-    rmse_sst = undef                               !(OCEAN)
-    bias_sst = undef                               !(OCEAN)
-  ELSE
-    rmse_sst = SQRT(rmse_sst / REAL(isst,r_size))  !(OCEAN)
-    bias_sst = bias_sst / REAL(isst,r_size)        !(OCEAN)
-  END IF
-  IF(isss == 0) THEN                               !(OCEAN)
-    rmse_sss = undef                               !(OCEAN)
-    bias_sss = undef                               !(OCEAN)
-  ELSE
-    rmse_sss = SQRT(rmse_sss / REAL(isss,r_size))  !(OCEAN)
-    bias_sss = bias_sss / REAL(isss,r_size)        !(OCEAN)
-  END IF
-
-  WRITE(6,'(3A)') '== PARTIAL OBSERVATIONAL DEPARTURE (',file,') ========================================'
-  WRITE(6,'(7A12)') 'U','V','T','S','SSH','SST','SSS'                          !(OCEAN)
-  WRITE(6,'(7ES12.3)') bias_u,bias_v,bias_t,bias_s,bias_ssh,bias_sst,bias_sss  !(OCEAN)
-  WRITE(6,'(7ES12.3)') rmse_u,rmse_v,rmse_t,rmse_s,rmse_ssh,rmse_sst,rmse_sss  !(OCEAN)
-  WRITE(6,'(A)') '== NUMBER OF OBSERVATIONS ========================================================'
-  WRITE(6,'(7A12)') 'U','V','T','S','SSH','SST','SSS'                          !(OCEAN)
-  WRITE(6,'(7I12)') iu,iv,it,is,issh,isst,isss                                 !(OCEAN)
-  WRITE(6,'(A)') '=================================================================================='
-
-  DEALLOCATE(v3d,v2d)
-
-  RETURN
-
-END SUBROUTINE monit_mean
-
 SUBROUTINE get_hdxa(anal3dg,anal2dg,hdxa) !,depa)
 REAL(r_size), INTENT(IN) :: anal3dg(nlon,nlat,nlev,nv3d)
 REAL(r_size), INTENT(IN) :: anal2dg(nlon,nlat,nv2d)
@@ -829,7 +692,7 @@ hdxa = 0.0d0
 ! l=0
 ! DO
 !   im = myrank+1 + nprocs * l
-!   IF(im > nbv) EXIT
+!   if (im > nbv) EXIT
 
 !   WRITE(analfile(5:7),'(I3.3)') im
 !   WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',analfile
@@ -839,7 +702,7 @@ hdxa = 0.0d0
 !   CALL get_hdxa(v3d,v2d,hdxa(:,im),obsdep_a)
 !     
 !   l = l+1
-! END DO
+! enddo
 
 WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is computing Trans_XtoY for get_hdxa'
 WRITE(6,*) "myrank+1,nobs,nprocs = ", myrank+1,nobs,nprocs
@@ -857,7 +720,7 @@ WRITE(6,*) "start,finish = ", start, finish
 if (dodebug) prntmod = NINT(obsper/2.0)
 
 ! Process all obs allocated to this processor
-DO n=start,finish
+do n=start,finish
   if (MOD(n,prntmod) .eq. 0) WRITE(6,*) "n = ", n 
   ! interpolation
   if (MOD(n,prntmod) .eq. 0) WRITE(6,*) "Calling phys2ijk..."
@@ -883,7 +746,7 @@ DO n=start,finish
 ! if (MOD(n,prntmod) .eq. 0) WRITE(6,*) "Calculating dep..."
 ! depa(n) = obsdat(n) - hdxa(n) ! y-Hx
 ! if (MOD(n,prntmod) .eq. 0) WRITE(6,*) "depa(n) = ", depa(n)
-ENDDO
+enddo
 
 WRITE(6,*) "MPI_BARRIER"
 CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -913,22 +776,22 @@ DEALLOCATE(wk1d)
 !DEALLOCATE(wk1d)
 
 !STEVE: may need this if I want to do for full ensemble:
-!DO n=1,nobs
+!do n=1,nobs
 !  depa(n) = hdxa(n,1)
-!  DO i=2,nbv
+!  do i=2,nbv
 !    depa(n) = depa(n) + hdxa(n,i)
-!  END DO
+!  enddo
 !  depa(n) = depa(n) / REAL(nbv,r_size)
-!  DO i=1,nbv
+!  do i=1,nbv
 !    hdxa(n,i) = hdxa(n,i) - depa(n) ! Hdx
 !    !STEVE: make sure none are zero
 !    if ( debug_hdxf_0 .AND. hdxa(n,i) == 0 ) then
 !      WRITE(6,*) "get_hdxa:: WARNING: hdxa(n,i) == 0"
 !      WRITE(6,*) "This is later used as a divisor for adaptive inflation."
 !    endif
-!  END DO
+!  enddo
 !  depa(n) = obsdat(n) - depa(n) ! y-Hx
-!ENDDO
+!enddo
 
 END SUBROUTINE get_hdxa
 

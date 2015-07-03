@@ -1,5 +1,5 @@
 MODULE letkf_tools
-!=======================================================================
+!===============================================================================
 !
 ! [PURPOSE:] Module for LETKF with SPEEDY
 !
@@ -7,7 +7,7 @@ MODULE letkf_tools
 !   01/26/2009 Takemasa Miyoshi  created
 !   04/26/2011 Steve Penny converted to OCEAN for use with MOM4
 !
-!=======================================================================
+!===============================================================================
   USE common
   USE common_mpi
   USE common_mom4
@@ -15,7 +15,6 @@ MODULE letkf_tools
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0
   USE letkf_local !STEVE: separating localization functions
-! use isa    !STEVE: for debugging (isnan, isinf)
 
   IMPLICIT NONE
 
@@ -57,9 +56,9 @@ MODULE letkf_tools
 ! INTEGER,SAVE :: var_local_n2n(nv3d+nv2d)
 
 CONTAINS
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Data Assimilation
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   IMPLICIT NONE
   CHARACTER(12) :: inflinfile='infl_mul.grd'
@@ -94,23 +93,25 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   INTEGER :: klev
 
   WRITE(6,'(A)') 'Hello from das_letkf'
-  nobstotal = nobs !+ ntvs
-  WRITE(6,'(A,I8)') 'Target observation numbers : NOBS=',nobs!,', NTVS=',ntvs
-  !
+  nobstotal = nobs
+  WRITE(6,'(A,I8)') 'Target observation numbers : NOBS=',nobs
+
+  !-----------------------------------------------------------------------------
   ! In case of no obs
-  !
-  IF(nobstotal == 0) THEN
+  !-----------------------------------------------------------------------------
+  if(nobstotal == 0) then
     WRITE(6,'(A)') 'No observation assimilated'
     anal3d = gues3d
     anal2d = gues2d
-    RETURN
-  ELSE                   !(OCEAN)
+    RETURN ! <- return / exit the subroutine
+  else                   !(OCEAN)
     anal3d = 0.0d0       !(OCEAN)
     anal2d = 0.0d0       !(OCEAN)
-  END IF
-  !
+  endif
+  
+  !-----------------------------------------------------------------------------
   ! Variable localization
-  !
+  !-----------------------------------------------------------------------------
   var_local_n2n(1) = 1
   DO n=2,nv3d+nv2d
     DO i=1,n
@@ -120,9 +121,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   END DO
   WRITE(6,*) "var_local_n2n = ", var_local_n2n
 
-  !
-  ! FCST PERTURBATIONS
-  !
+  !-----------------------------------------------------------------------------
+  ! Forecast perturbations
+  !-----------------------------------------------------------------------------
   ALLOCATE(mean3d(nij1,nlev,nv3d))
   ALLOCATE(mean2d(nij1,nv2d))
   CALL ensmean_grd(nbv,nij1,gues3d,gues2d,mean3d,mean2d)
@@ -144,9 +145,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END DO
   END DO
 
-  !
+  !-----------------------------------------------------------------------------
   ! multiplicative inflation
-  !
+  !-----------------------------------------------------------------------------
   IF(cov_infl_mul > 0.0d0) THEN ! fixed multiplicative inflation parameter
     ALLOCATE( work3d(nij1,nlev,nv3d) )
     ALLOCATE( work2d(nij1,nv2d) )
@@ -172,6 +173,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END IF
   END IF
 
+  !-----------------------------------------------------------------------------
+  ! Reset inflation, if desired
+  !-----------------------------------------------------------------------------
   if( DO_INFL_RESET ) then
     work3d = 1.0d0
     !work2d = 1.0d0 !STEVE: don't reset the 2D field
@@ -185,9 +189,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     ! If using the Hybrid-LETKF, multiplicative inflation is not necessary
   endif
 
-  !
+  !-----------------------------------------------------------------------------
   ! MAIN ASSIMILATION LOOP
-  !
+  !-----------------------------------------------------------------------------
   WRITE(6,*) "Allocating hdxf, rdiag, rloc, and dep..."
   ALLOCATE( hdxf(1:nobstotal,1:nbv),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
 ! ALLOCATE(obs_useidx(1:nobs)) !STEVE: for debugging...
@@ -253,6 +257,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !     enddo
 !     endif
 
+      !-------------------------------------------------------------------------
+      ! Loop through all prognostic variables (e.g. temp, salt, u, v, etc.)
+      !-------------------------------------------------------------------------
       DO n=1,nv3d
         IF(var_local_n2n(n) < n) THEN
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
@@ -350,38 +357,26 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           endif
           !STEVE: end
 
+          !-------------------------------------------------------------------------
+          ! Call LETKF MAIN subroutine
+          !-------------------------------------------------------------------------
           CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))   !STEVE: need to change for RIP
 
+          ! (if doing adaptive inflation)
           work3d(ij,ilev,n) = parm
 
-!         if ( isnan(parm) ) then
-!           WRITE(6,*) "post (3D) letkf_core, parm = ", parm
-!           WRITE(6,*) "letkf_tools.f90:: (3D) ij = ", ij
-!           WRITE(6,*) "letkf_tools.f90:: inputs to letkf_core:"
-!           WRITE(6,*) "nobstotal = ", nobstotal
-!           WRITE(6,*) "nobsl = ", nobsl
-!           WRITE(6,*) "hdxf(1:nobsl,1:nbv) = ", hdxf(1:nobsl,:)
-!           WRITE(6,*) "rdiag(1:nobsl) = ", rdiag(1:nobsl)
-!           WRITE(6,*) "rloc(1:nobsl) = ", rloc(1:nobsl)
-!           WRITE(6,*) "dep(1:nobsl) = ", dep(1:nobsl) 
-!           WRITE(6,*) "parm = ", parm
-!           WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
-!           WRITE(6,*) "ERROR: letkf_tools.f90::das_letkf:: inflation parameter parm == NaN"
-!           STOP 2
-!         endif
-
-        END IF
+        endif
 
         !STEVE: Use the trans matrix computed in letkf_core to form the analysis
-        DO m=1,nbv
+        do m=1,nbv
           anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
 
-          !STEVE: reset analysis to  mean for all levels
-          IF(DO_NO_VERT_LOC .and. ilev .eq. 1) THEN
-            DO klev=2,nlev
+          !STEVE: reset analysis to mean for all levels
+          if(DO_NO_VERT_LOC .and. ilev .eq. 1) then
+            do klev=2,nlev
               anal3d(ij,klev,m,n) = mean3d(ij,klev,n)
-            ENDDO
-          ENDIF
+            enddo
+          endif
 
           DO k=1,nbv
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) + gues3d(ij,ilev,k,n) * trans(k,m,n)
@@ -421,6 +416,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
       END DO ! n=1,nv3d
 
+      !-------------------------------------------------------------------------
+      ! Go through the 2d variables
+      !-------------------------------------------------------------------------
       IF(ilev == 1) THEN !update 2d variable at ilev=1
         DO n=1,nv2d
           IF(var_local_n2n(nv3d+n) <= nv3d) THEN
@@ -463,6 +461,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   DEALLOCATE(hdxf,rdiag,rloc,dep)
 ! DEALLOCATE(obs_useidx) !STEVE: for debugging...
+
+  !-------------------------------------------------------------------------
+  ! Write out the adaptive inflation
+  !-------------------------------------------------------------------------
   adaptive_inflation : IF(cov_infl_mul < 0.0d0) THEN
     CALL gather_grd_mpi(0,work3d,work2d,work3dg,work2dg)
     IF(myrank == 0) THEN
@@ -488,9 +490,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     DEALLOCATE(work3dg,work2dg,work3d,work2d)
   ENDIF adaptive_inflation
 
-  !
-  ! Additive inflation
-  !
+  !-------------------------------------------------------------------------
+  ! Compute and apply the additive inflation
+  !-------------------------------------------------------------------------
   additive_inflation : IF(sp_infl_add > 0.0d0) THEN
     CALL read_ens_mpi('addi',nbv,gues3d,gues2d)
     ALLOCATE( work3d(nij1,nlev,nv3d) )
