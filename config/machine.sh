@@ -1,0 +1,4 @@
+#!/bin/bash
+
+MACHINE=GAEA
+#MACHINE=DT2

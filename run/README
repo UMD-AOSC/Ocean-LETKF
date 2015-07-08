@@ -1,0 +1,7 @@
+# The xml/ scripts control the cycling of the data assimilation cycle
+
+# The scripts/ directory contains the shell scripts that are called to execute:
+#     model_prep.ksh
+#     model.ksh
+#     letkf_prep.ksh
+#     letkf.ksh

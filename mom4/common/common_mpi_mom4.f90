@@ -1,5 +1,5 @@
 MODULE common_mpi_mom4
-!=======================================================================
+!===============================================================================
 !
 ! [PURPOSE:] MPI procedures
 !
@@ -11,12 +11,11 @@ MODULE common_mpi_mom4
 !   01/23/2009 Takemasa Miyoshi  created
 !   04/26/2011 Steve Penny converted to OCEAN for use with MOM4
 !
-!=======================================================================
-!$USE OMP_LIB
+!===============================================================================
   USE common
   USE common_mpi
   USE common_mom4
-! use isa  !STEVE: for debugging (isnan, isinf)
+
   IMPLICIT NONE
   PUBLIC
 
@@ -31,7 +30,11 @@ MODULE common_mpi_mom4
   REAL(r_size),ALLOCATABLE,SAVE :: i1(:),j1(:)     !(OCEAN) splits grid coordinates out into list like ijs
 
 CONTAINS
+
 SUBROUTINE set_common_mpi_mom4
+!===============================================================================
+! Initialize this module
+!===============================================================================
   REAL(r_sngl), ALLOCATABLE :: v3dg(:,:,:,:) !(nlon,nlat,nlev,nv3d) != 0 !STEVE: initializing
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d) != 0      !STEVE: initializing
   REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
@@ -107,10 +110,11 @@ SUBROUTINE set_common_mpi_mom4
 
   RETURN
 END SUBROUTINE set_common_mpi_mom4
-!-----------------------------------------------------------------------
-! Scatter gridded data to processes (nrank -> all)
-!-----------------------------------------------------------------------
+
 SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
+!===============================================================================
+! Scatter gridded data to processes (nrank -> all)
+!===============================================================================
   INTEGER,INTENT(IN) :: nrank
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
@@ -134,6 +138,9 @@ SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
 END SUBROUTINE scatter_grd_mpi
 
 SUBROUTINE scatter_grd_mpi_safe(nrank,v3dg,v2dg,v3d,v2d)
+!===============================================================================
+! Scatter using a smaller buffer
+!===============================================================================
   INTEGER,INTENT(IN) :: nrank
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
@@ -207,6 +214,9 @@ SUBROUTINE scatter_grd_mpi_safe(nrank,v3dg,v2dg,v3d,v2d)
 END SUBROUTINE scatter_grd_mpi_safe
 
 SUBROUTINE scatter_grd_mpi_fast(nrank,v3dg,v2dg,v3d,v2d)
+!===============================================================================
+! Scatter using a larger buffer
+!===============================================================================
   INTEGER,INTENT(IN) :: nrank
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
@@ -258,10 +268,11 @@ SUBROUTINE scatter_grd_mpi_fast(nrank,v3dg,v2dg,v3d,v2d)
 
   RETURN
 END SUBROUTINE scatter_grd_mpi_fast
-!-----------------------------------------------------------------------
-! Gather gridded data (all -> nrank)
-!-----------------------------------------------------------------------
+
 SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
+!===============================================================================
+! Gather gridded data (all -> nrank)
+!===============================================================================
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
@@ -285,6 +296,9 @@ SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
 END SUBROUTINE gather_grd_mpi
 
 SUBROUTINE gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
+!===============================================================================
+! Gather the gridded data using a small buffer
+!===============================================================================
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
@@ -358,6 +372,9 @@ SUBROUTINE gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
 END SUBROUTINE gather_grd_mpi_safe
 
 SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
+!===============================================================================
+! Gather the gridded data using a large buffer
+!===============================================================================
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
@@ -409,10 +426,11 @@ SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
 
   RETURN
 END SUBROUTINE gather_grd_mpi_fast
-!-----------------------------------------------------------------------
-! Read ensemble data and distribute to processes
-!-----------------------------------------------------------------------
+
 SUBROUTINE read_ens_mpi(file,member,v3d,v2d)
+!===============================================================================
+! Read ensemble data and distribute to processes
+!===============================================================================
   CHARACTER(4),INTENT(IN) :: file
   INTEGER,INTENT(IN) :: member
   REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,member,nv3d)
@@ -461,10 +479,11 @@ SUBROUTINE read_ens_mpi(file,member,v3d,v2d)
 
   RETURN
 END SUBROUTINE read_ens_mpi
-!-----------------------------------------------------------------------
-! Write ensemble data after collecting data from processes
-!-----------------------------------------------------------------------
+
 SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
+!===============================================================================
+! Write ensemble data after collecting data from processes
+!===============================================================================
   INCLUDE 'netcdf.inc' !STEVE: for NaN correction (OCEAN)
   CHARACTER(4),INTENT(IN) :: file
   INTEGER,INTENT(IN) :: member
@@ -509,10 +528,10 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
   RETURN
 END SUBROUTINE write_ens_mpi
 
-!!!!!!!!!
-!STEVE: for debugging grid:
-!!!!!!!!!
 SUBROUTINE write_ens_mpi_grd(file,member,v3d,v2d)
+!===============================================================================
+! For debugging the grid
+!===============================================================================
   CHARACTER(4),INTENT(IN) :: file
   INTEGER,INTENT(IN) :: member
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
@@ -554,10 +573,10 @@ SUBROUTINE write_ens_mpi_grd(file,member,v3d,v2d)
   RETURN
 END SUBROUTINE write_ens_mpi_grd
 
-!-----------------------------------------------------------------------
-! gridded data -> buffer
-!-----------------------------------------------------------------------
 SUBROUTINE grd_to_buf(grd,buf)
+!===============================================================================
+! gridded data -> buffer
+!===============================================================================
   REAL(r_sngl),INTENT(IN) :: grd(nlon,nlat)
   REAL(r_sngl),INTENT(OUT) :: buf(nij1max,nprocs)
   INTEGER :: i,j,m,ilon,ilat
@@ -573,10 +592,11 @@ SUBROUTINE grd_to_buf(grd,buf)
 
   RETURN
 END SUBROUTINE grd_to_buf
-!-----------------------------------------------------------------------
-! buffer -> gridded data
-!-----------------------------------------------------------------------
+
 SUBROUTINE buf_to_grd(buf,grd)
+!===============================================================================
+! buffer -> gridded data
+!===============================================================================
   REAL(r_sngl),INTENT(IN) :: buf(nij1max,nprocs)
   REAL(r_sngl),INTENT(OUT) :: grd(nlon,nlat)
   INTEGER :: i,j,m,ilon,ilat
@@ -592,10 +612,11 @@ SUBROUTINE buf_to_grd(buf,grd)
 
   RETURN
 END SUBROUTINE buf_to_grd
-!-----------------------------------------------------------------------
-! STORING DATA (ensemble mean and spread)
-!-----------------------------------------------------------------------
+
 SUBROUTINE write_ensmspr_mpi(file,member,v3d,v2d)
+!===============================================================================
+! STORING DATA (ensemble mean and spread)
+!===============================================================================
   CHARACTER(4),INTENT(IN) :: file
   INTEGER,INTENT(IN) :: member
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
