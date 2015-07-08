@@ -676,6 +676,9 @@ endif
 END SUBROUTINE set_letkf_obs
 
 SUBROUTINE get_hdxa(anal3dg,anal2dg,hdxa) !,depa)
+!===============================================================================
+! Compute the obs operator applied to the analysis analagous to hdxf
+!===============================================================================
 REAL(r_size), INTENT(IN) :: anal3dg(nlon,nlat,nlev,nv3d)
 REAL(r_size), INTENT(IN) :: anal2dg(nlon,nlat,nv2d)
 REAL(r_size),INTENT(OUT) :: hdxa(nobs)

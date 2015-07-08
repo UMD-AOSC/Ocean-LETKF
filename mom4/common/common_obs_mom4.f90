@@ -1,5 +1,5 @@
 MODULE common_obs_mom4
-!=======================================================================
+!===============================================================================
 !
 ! [PURPOSE:] Observational procedures
 !
@@ -7,8 +7,7 @@ MODULE common_obs_mom4
 !   01/23/2009 Takemasa MIYOSHI  created
 !   04/26/2011 Steve PENNY converted to OCEAN for use with MOM4. grep '(OCEAN)' for changes.
 !
-!=======================================================================
-!$USE OMP_LIB
+!===============================================================================
   USE common
   USE common_mom4
 
@@ -39,40 +38,12 @@ MODULE common_obs_mom4
   INTEGER,PARAMETER :: id_atm_q_obs=5281      !(OCEAN) (ATMOS)
   INTEGER,PARAMETER :: id_atm_ps_obs=5280      !(OCEAN) (ATMOS)
 
-! REAL(r_size), SAVE, DIMENSION(nlev) :: cdnz, cdnzs !(OCEAN) (ALTIMETRY)
-  REAL(r_size), PARAMETER, DIMENSION(nlev) :: cdnz = & !(OCEAN) (ALTIMETRY)
-  (/ &
-              -.2014771E-03,-.2021952E-03,-.2012068E-03,-.2059982E-03, &
-              -.1963176E-03,-.2024579E-03,-.2014592E-03,-.2045388E-03, &
-              -.2041880E-03,-.2010160E-03,-.2046362E-03,-.2004182E-03, &
-              -.2009269E-03,-.1941259E-03,-.1892958E-03,-.1912126E-03, &
-              -.1893202E-03,-.1806058E-03,-.1763549E-03,-.1790938E-03, &
-              -.1717518E-03,-.1670867E-03,-.1728036E-03,-.1648548E-03, &
-              -.1606057E-03,-.1519071E-03,-.1565081E-03,-.1518184E-03, &
-              -.1388101E-03,-.1380927E-03,-.1342615E-03,-.1315726E-03, &
-              -.1189436E-03,-.1197509E-03,-.1289620E-03,-.1404231E-03, &
-              -.1530653E-03,-.1658596E-03,-.1648970E-03,-.1812041E-03  &
-  /)
-  
-  REAL(r_size), PARAMETER, DIMENSION(nlev) :: cdnzs = & !(OCEAN) (ALTIMETRY)
-  (/ &
-               .7823057E-03, .7825868E-03, .7818489E-03, .7769720E-03, &
-               .7661572E-03, .7891817E-03, .7838119E-03, .7481645E-03, &
-               .7672606E-03, .7699043E-03, .7709964E-03, .7909862E-03, &
-               .7795396E-03, .7761313E-03, .7791749E-03, .7617573E-03, &
-               .7873717E-03, .8361024E-03, .7790897E-03, .7492129E-03, &
-               .8294552E-03, .7626492E-03, .8101926E-03, .8064503E-03, &
-               .7741776E-03, .8003121E-03, .7295887E-03, .7208423E-03, &
-               .7187895E-03, .7483099E-03, .6228709E-03, .8024736E-03, &
-               .8328569E-03, .7962067E-03, .9343703E-03, .9987009E-03, &
-               .4830932E-03, .7673815E-03, .5449111E-03, .4681663E-03 &
-  /)
-
 CONTAINS
-!-----------------------------------------------------------------------
-! Transformation from model space to observation space (i.e. H-operator)
-!-----------------------------------------------------------------------
+
 SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
+!===============================================================================
+! Transformation from model space to observation space (i.e. H-operator)
+!===============================================================================
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
@@ -83,10 +54,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   INTEGER :: i,j,k
 ! INTEGER :: is,ie,js,je,ks,ke
   INTEGER :: intelm
-  INTEGER :: Aflag = 1 !1 = GODAS-type atlimetery assimilation
-  REAL(r_size) :: HLx ! Inferred SSH for the column (representing steric column expansion)
-  REAL(r_size) :: Hx ! Interpolated T and S for the column (for computing steric column expansion)
-  REAL(r_size) :: SSHclm_ij ! Model climatology interpolated to observation location
 ! ie = CEILING( ri )
 ! is = ie-1
 ! je = CEILING( rj )
@@ -107,27 +74,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   CASE(id_eta_obs) ! SSH                          !(OCEAN)
     !STEVE: use mom4 surface height to form Yb (i.e. hdxf)
     CALL itpl_2d(v2d(:,:,iv2d_eta),ri,rj,yobs)    !(OCEAN)
-    if (Aflag .eq. 1) then ! GODAS-type altimetry assimilation
-      ! We assume the observation climatology has been removed from the observation data set prior to reading into LETKF
-      ! The model climatology is removed from the eta field when reading in common_mom4.f90
-      ! (SLA_o) - (SLA_m) + HLxb - HLx
-
-      ! The mean field HLxb is added when reading the observation, so here we compute:
-      ! (SLA_o)' - (SLA_m + HLx)
- 
-      ! Interpolate each level to the observation location, apply linear
-      ! coefficients and sum up over the entire column
-      HLx = 0  !(STEVE: actually, computing LHx)
-      do k=1,nlev
-        !temp
-        CALL itpl_2d(v3d(:,:,k,iv3d_t),ri,rj,Hx)
-        HLx = HLx + cdnz(k) * Hx
-        !salt
-        CALL itpl_2d(v3d(:,:,k,iv3d_s),ri,rj,Hx)
-        HLx = HLx + cdnzs(k) * Hx
-      enddo
-      yobs = yobs + HLx
-    endif
   CASE(id_sst_obs) ! SST                          !(OCEAN)
     CALL itpl_2d(v2d(:,:,iv2d_sst),ri,rj,yobs)    !(OCEAN)
   CASE(id_sss_obs) ! SSS                          !(OCEAN)
@@ -142,10 +88,11 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
 
   RETURN
 END SUBROUTINE Trans_XtoY
-!-----------------------------------------------------------------------
-! Coordinate conversion
-!-----------------------------------------------------------------------
+
 SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
+!===============================================================================
+! Coordinate conversion
+!===============================================================================
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: elem
   REAL(r_size),INTENT(IN) :: rlon
@@ -279,10 +226,10 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
 END SUBROUTINE phys2ijk
 
-!-----------------------------------------------------------------------
-! Interpolation
-!-----------------------------------------------------------------------
 SUBROUTINE itpl_2d(var,ri,rj,var5)
+!===============================================================================
+! Interpolation
+!===============================================================================
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlon,nlat)
   REAL(r_size),INTENT(IN) :: ri
@@ -326,6 +273,9 @@ SUBROUTINE itpl_2d(var,ri,rj,var5)
 END SUBROUTINE itpl_2d
 
 SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
+!===============================================================================
+! Interpolation in 3D
+!===============================================================================
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlon,nlat,nlev)
   REAL(r_size),INTENT(IN) :: ri
@@ -365,10 +315,10 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
   RETURN
 END SUBROUTINE itpl_3d
 
-!-----------------------------------------------------------------------
-! Monitor departure
-!-----------------------------------------------------------------------
 SUBROUTINE monit_dep(nn,elm,dep,qc)
+!===============================================================================
+! Monitor departure
+!===============================================================================
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: nn
   REAL(r_size),INTENT(IN) :: elm(nn)
@@ -507,10 +457,11 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
 
   RETURN
 END SUBROUTINE monit_dep
-!-----------------------------------------------------------------------
-! Basic modules for observation input
-!-----------------------------------------------------------------------
+
 SUBROUTINE get_nobs(cfile,nrec,nn)
+!===============================================================================
+! Read in observation file to count the number of observations
+!===============================================================================
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nrec
@@ -596,6 +547,9 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 END SUBROUTINE get_nobs
 
 SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
+!===============================================================================
+! Read in observations
+!===============================================================================
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
@@ -703,6 +657,9 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
 END SUBROUTINE read_obs
 
 SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
+!===============================================================================
+! Read in observations with appended H(xb) for each ob
+!===============================================================================
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
@@ -747,6 +704,9 @@ END SUBROUTINE read_obs2
 
 !STEVE: adding for support
 SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
+!===============================================================================
+! Write out observations
+!===============================================================================
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
@@ -777,6 +737,9 @@ SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
 END SUBROUTINE write_obs
 
 SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
+!===============================================================================
+! Write out observations with appended H(xb) for each ob
+!===============================================================================
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
@@ -810,60 +773,5 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
 
   RETURN
 END SUBROUTINE write_obs2
-
-
-!STEVE: moved to letkf_local.f90:
-!!(OCEAN) STEVE: add checks for atlantic/pacific basin boundary
-!subroutine atlpac (xlat, xlon, lxap)
-!REAL(r_size), INTENT(IN) :: xlat, xlon
-!REAL(r_size), INTENT(OUT) :: lxap
-!
-!!c STEVE: Stolen from SODA: use until a general method for managing land-blocked ocean basins...
-!!c=================================================================
-!!c X. Cao 12/9/99
-!!c
-!!c   to make a mark to the location of a point in Caribbean area
-!!c (xlat.gt.-2..and.xlat.lt.32..and.xlon.gt.245..and.xlon.lt.295.)
-!!c to indicate if it is in Atlantic ocean (1) or in Pacific ocean (2)
-!!c or out of Caribbean area (0)
-!!c=================================================================
-!!c
-!  lxap=0
-!!c
-!!c -- Atlantic ? Pacific?
-!!c
-!  if(xlat.gt.-2..and.xlat.le.8.5) then
-!    if(xlon.lt.285.) then
-!      lxap=2
-!    else
-!      lxap=1
-!    endif
-!  endif
-!
-!  if(xlat.gt.8.5.and.xlat.le.15.5) then
-!    if(xlon.lt.276.) then
-!      lxap=2
-!    else
-!      lxap=1
-!    endif
-!  endif
-!
-!  if(xlat.gt.15.5.and.xlat.le.19.5) then
-!    if(xlon.lt.270.) then
-!      lxap=2
-!    else
-!      lxap=1
-!    endif
-!  endif
-!
-!  if(xlat.gt.19.5.and.xlat.le.32.0) then
-!    if(xlon.lt.258.) then
-!      lxap=2
-!    else
-!      lxap=1
-!    endif
-!  endif
-!  return
-!end subroutine atlpac
 
 END MODULE common_obs_mom4

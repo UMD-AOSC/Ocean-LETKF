@@ -8,34 +8,22 @@
 #        in case your script is csh derived.
 set -ex
 
-# Load modules
-#. /etc/profile
-#module load intel
-#module load mpt
-#module load netcdf/4.1.3-intel
+source ../../config/machine.sh
+source ../../config/$MACHINE.fortran.sh
+source ../../config/$MACHINE.netcdf.sh
 
-#MEM=008
+# Ensemble size
 MEM=056
-#MEM=028
-#MEM=002
-#MEM=004
-#name=CPO_DEBUG
-#name=CPO_SOLO
-#name=day1analysis
+# Experiment name
 name=CPO_ALT
-#name=DRIFTERS
-#name=NCEP_SFCFLUX
-#name=NCEP_TEST
+# Executable for letkf
 PGM=letkf.$name.$MEM
-AGM=aoerl.$name.$MEM
 
-F90=ftn #ifort
-F90s=ftn #ifort #STEVE: in case we need a different compiler for serial runs
+#F90=ftn #ifort
+#F90s=ftn #ifort #STEVE: in case we need a different compiler for serial runs
 OMP=
 PWD=`pwd`
-#F90OPT='-ftz -ip -ipo -O2 -parallel -i_dynamic -assume byterecl -i4 -r8 -what -fpp -fno-alias -stack_temps -safe_cray_ptr -fast'
-#F90OPT='-ftz -ip -ipo -O2 -parallel -i_dynamic -what -fpp -fno-alias -stack_temps -safe_cray_ptr -fast'
-F90OPT='-O3 -parallel -what'
+#F90OPT='-O3 -parallel -what'
 #STEVE: -mcmodel=medium needed for large model grid sizes (e.g. higher than 1 degree resolution of om3_core3)
 # explanation of -mcmodel=medium and -shared-intel: http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
 INLINE= #"-Q -qinline"
@@ -65,7 +53,6 @@ IEEE='-fltconsistency' #'-Kieee' #'-fltconsistency'
 OBJECT_FLAG='-c' #STEVE: for some reason, mpxlf doesn't use -c, but rather -g
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG common.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $IEEE $OBJECT_FLAG common.o isa.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG common_mpi.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG common_mtx.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG netlib2.f
@@ -77,9 +64,7 @@ $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_obs.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.o letkf_tools.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf.f90
-rm isa.o
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE -o ${PGM} *.o $LIB_MPI $LIB_NETCDF $LBLAS
-#$F90 $OMP $F90OPT $DEBUG_OPT $INLINE -o ${PGM} $OFILES $LIB_MPI $LIB_NETCDF $LBLAS
 
 OFILES='SFMT.o netlib2.o common.o common_mtx.o common_mom4.o common_mpi.o common_mpi_mom4.o common_obs_mom4.o common_letkf.o letkf_obs.o letkf_local.o letkf_tools.o'
 
@@ -94,5 +79,4 @@ sh ulnkcommon.sh
 
 echo "STEVE: min temp is set to -4 ºC and max salt is set to 50.0 psu incommon_mom4:: write_grd4"
 echo "STEVE: don't forget - in phys2ijk, obs above model level 1 are set to model level 1"
-echo "STEVE: reset line 1028 to .true. in ../common/common_mom4.f90 :: write_grd4"
 echo "NORMAL END"

@@ -7,16 +7,16 @@ PROGRAM obsop
 !   use common_mom4
 !   use common_obs_mom4
 !
-! !PUBLIC TYPES:
+! PUBLIC TYPES:
 !                 implicit none
 !                 [save]
 !
 !                 <type declaration>
 !     
-! !PUBLIC MEMBER FUNCTIONS:
+! PUBLIC MEMBER FUNCTIONS:
 !           <function>                     ! Description      
 !
-! !PUBLIC DATA MEMBERS:
+! PUBLIC DATA MEMBERS:
 !           <type> :: <variable>           ! Variable description
 !
 ! DESCRIPTION: 
