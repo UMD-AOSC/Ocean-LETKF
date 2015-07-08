@@ -56,10 +56,15 @@ MODULE letkf_tools
 ! INTEGER,SAVE :: var_local_n2n(nv3d+nv2d)
 
 CONTAINS
+
 !-------------------------------------------------------------------------------
 ! Data Assimilation
 !-------------------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
+!===============================================================================
+! The main control structure for the data assimilation algorithm.
+! Calls the letkf_core algorithm independently for each model grid point.
+!===============================================================================
   IMPLICIT NONE
   CHARACTER(12) :: inflinfile='infl_mul.grd'
   CHARACTER(12) :: infloutfile='infl_out.grd'
@@ -552,10 +557,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   RETURN
 END SUBROUTINE das_letkf
 
+SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
 !================================================================================
 !STEVE: Use the following subroutines for doing adaptive observation error:
 !================================================================================
-SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
   REAL(r_size), INTENT(IN) :: hdxa(nobs,nbv)
   REAL(r_size), INTENT(INOUT) :: oer3d(nij1,nlev,nv3d)
   REAL(r_size), INTENT(INOUT) :: oer2d(nij1,nv2d)
@@ -708,6 +713,9 @@ SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
 END SUBROUTINE adapt_obserr
 
 SUBROUTINE desroziers(nobsl,dep_a,dep_b,rloc,rdiag,oer)
+!================================================================================
+! The Desroziers-type (Desroziers, 2005) statistics for the O-F, O-A, and A-B
+!================================================================================
 INTEGER, INTENT(IN) :: nobsl
 REAL(r_size), DIMENSION(nobsl), INTENT(IN) :: dep_a, dep_b, rloc, rdiag
 REAL(r_size), INTENT(INOUT) :: oer
@@ -767,6 +775,9 @@ LOGICAL, SAVE :: dodebug = .true.
 END SUBROUTINE desroziers
 
 SUBROUTINE create_oer_init(infile,oer3dg,oer2dg)
+!===============================================================================
+! Initialize the observation error adaptive estimation
+!===============================================================================
 CHARACTER(*), INTENT(IN) :: infile
 REAL(r_sngl), INTENT(OUT) :: oer3dg(nlon,nlat,nlev,nv3d)
 REAL(r_sngl), INTENT(OUT) :: oer2dg(nlon,nlat,nv2d)
