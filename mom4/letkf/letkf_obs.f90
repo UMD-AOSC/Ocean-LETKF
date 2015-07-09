@@ -33,50 +33,21 @@ MODULE letkf_obs
 !-------------------------------------------------------------------------------
 ! $Author: Steve Penny $
 !===============================================================================
-  use common
-  use common_mpi
-  use common_mom4
-  use common_obs_mom4
-  use common_mpi_mom4
-  use common_letkf
+  USE common
+  USE common_mpi
+  USE common_mom4
+  USE common_obs_mom4
+  USE common_mpi_mom4
+  USE common_letkf
+  USE params_obs
+  USE vars_obs
   !(DRIFTERS)
 ! USE letkf_drifters
 
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,SAVE :: nobs
-  !STEVE: making these namelist accessible:
-  INTEGER,SAVE :: nslots=5                  ! number of time slots for 4D-LETKF
-  INTEGER,SAVE :: nbslot=5 !1               !STEVE: nbslot=1 for testing for GMAO example case. Normal case is nbslot=5 ! basetime slot
-  REAL(r_size),SAVE :: sigma_obs=720.0d3    !3x Rossby Radius of Deformation at Equ. according to Chelton
-  REAL(r_size),SAVE :: sigma_obs0=200.0d3   !20x Rossby Radius of Deformation at Pole, according to Chelton
-  REAL(r_size),SAVE :: sigma_obsv=1000.0d0  !STEVE: doesn't matter if using option "DO_NO_VERT_LOC"
-  REAL(r_size),SAVE :: sigma_obst=5.0d0     ! Not using this at the moment
-  REAL(r_size),SAVE :: gross_error=3.0d0    ! number of standard deviations
-! REAL(r_size),PARAMETER :: gross_error=10.0d0 !3.0d0 ! number of standard deviations   (Use for OSSEs)
-                                                      ! used to filter out observations
   !--
-  REAL(r_size),SAVE :: dist_zero
-  REAL(r_size),SAVE :: dist_zerov
-  REAL(r_size),ALLOCATABLE,SAVE :: dlon_zero(:)
-  REAL(r_size),SAVE :: dlat_zero
-  REAL(r_size),ALLOCATABLE,SAVE :: obselm(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obslon(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obslat(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obslev(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsdat(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obserr(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsdep(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obshdxf(:,:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsi(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsj(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsk(:)
-  INTEGER, ALLOCATABLE, SAVE :: obs_useidx(:) !STEVE: general version of nobs_use()
-  INTEGER,SAVE :: nobsgrd(nlon,nlat)
-  !STEVE: for (DRIFTERS)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsid(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obstime(:)
   !STEVE: for adaptive obs error:
   LOGICAL :: oerfile_exists
 
@@ -546,6 +517,7 @@ endif
   ALLOCATE( obsid(nobs) )    !(DRIFTERS)
   ALLOCATE( obstime(nobs) )  !(DRIFTERS)
 
+  ALLOCATE(nobsgrd(nlon,nlat)) !STEVE: added 07/09/15, changed nobsgrd to ALLOCATABLE
   nobsgrd = 0
   nj = 0
   ! Count the number of observations within each latitude range

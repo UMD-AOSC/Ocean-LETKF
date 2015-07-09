@@ -19,6 +19,7 @@ MODULE common
   INTEGER,PARAMETER :: r_size=kind(0.0d0)
   INTEGER,PARAMETER :: r_dble=kind(0.0d0)
   INTEGER,PARAMETER :: r_sngl=kind(0.0e0)
+  INTEGER,PARAMETER :: slen=512
 !-----------------------------------------------------------------------
 ! Constants
 !-----------------------------------------------------------------------

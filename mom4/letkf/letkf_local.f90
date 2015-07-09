@@ -9,6 +9,7 @@ MODULE letkf_local
 !   use common_mpi_mom4
 !   use common_letkf
 !   use letkf_obs
+!   use params_letkf
 !
 ! PUBLIC TYPES:
 !                 implicit none
@@ -52,21 +53,7 @@ MODULE letkf_local
   USE common_mpi_mom4
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0, and nobsgrd
-
-  !STEVE: Testing "Vertical Tube" localization:
-  !       i.e. the localization is not applied vertically
-  ! This provides the benefit that 
-  ! (1) the analysis only has to be computed once
-  ! per horizontal gridpoint, thus providing a nlevX (40X) speedup
-  ! (2) the altimetry, SST, SSH, and bottom pressure (GRACE) can now be applied
-  ! as direct constraints on the water column.
-  !
-  ! There is precedence for this as in the paper "Reconstructing the Ocean's
-  ! Interior from Surface Data" Wang et al. (2013)
-  !
-  !STEVE: making namelist accessible:
-  LOGICAL :: DO_NO_VERT_LOC=.true. !STEVE: moved to letkf_local.f90 from letkf_tools.f90
-  INTEGER :: localization_method=1 !1 !(OCEAN) =0 for uniform radius (default), =1 for latitude-dependent
+  USE params_letkf, ONLY: nbv, DO_NO_VERT_LOC, localization_method
 
   REAL(r_size),PARAMETER :: var_local(nv3d+nv2d,nid_obs) = 1.0d0
 
