@@ -1,0 +1,6 @@
+# STEVE:
+
+The code has been reogranized to put static PARAMETERS and namelist controllable parameters
+in params_XYZ.f90 files, while SAVE variables and other reused variables are in vars_XYZ.f90 files.
+
+Notably, the ensemble size 'nbv' has been placed in the params_letkf.f90 file.
