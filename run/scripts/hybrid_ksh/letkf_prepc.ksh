@@ -142,6 +142,9 @@ do
 
   #STEVE: the hard-link limit is running out (65000 max), so best to delete unnecessary links
   rm grid_spec.nc
+  if [ $USE_ALTIMETRY -eq "1" ]; then
+    rm -f $altimetry_climatology_file
+  fi
 
 done #DONE FCST loop
 
