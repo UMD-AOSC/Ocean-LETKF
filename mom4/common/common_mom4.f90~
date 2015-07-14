@@ -7,7 +7,7 @@ MODULE common_mom4
 !   10/15/2004 Takemasa Miyoshi  created
 !   01/23/2009 Takemasa Miyoshi  modified
 !   04/26/2011 Steve Penny, converted to OCEAN for use with MOM4
-!   07/08/2015 Modify logic value DO_DRIFTERS = .true.
+!   07/08/2014 Modify logic value DO_DRIFTERS = .true.
 !
 !=======================================================================
 !$USE OMP_LIB

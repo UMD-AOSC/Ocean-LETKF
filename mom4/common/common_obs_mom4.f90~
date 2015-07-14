@@ -702,7 +702,8 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
   RETURN
 END SUBROUTINE read_obs
 
-SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
+SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,time)
+! LUYU: add 9th field, "time".
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
@@ -714,7 +715,8 @@ SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
   REAL(r_size),INTENT(OUT) :: oerr(nn)
   REAL(r_size),INTENT(OUT) :: ohx(nn)
   INTEGER,INTENT(OUT) :: oqc(nn)
-  REAL(r_sngl) :: wk(8)
+  REAL(r_size),INTENT(OUT) :: time(nn)
+  REAL(r_sngl) :: wk(9)
   INTEGER :: n,iunit
 
   iunit=91
@@ -739,6 +741,7 @@ SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
     oerr(n) = REAL(wk(6),r_size)
     ohx(n) = REAL(wk(7),r_size)
     oqc(n)  = NINT(wk(8))
+    time(n) = REAL(wk(9),r_size)
   END DO
   CLOSE(iunit)
 

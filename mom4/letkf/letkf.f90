@@ -7,6 +7,7 @@ PROGRAM letkf
 !   01/16/2009 Takemasa Miyoshi created for atmospheric analysis
 !   04/26/2011 Steve Penny converted to OCEAN for use with mom4
 !   03/18/2014 Steve Penny adapted to use on Gaea at NCEP/GFDL
+!   07/08/2015 uncomment all the drifters subroutine
 !
 !==============================================================================
   USE common
@@ -111,7 +112,7 @@ PROGRAM letkf
   CALL set_common_mom4
   CALL set_common_mpi_mom4
   if (DO_DRIFTERS) then
-!   CALL set_common_drifters
+    CALL set_common_drifters
   endif
 
   !-----------------------------------------------------------------------------
@@ -186,7 +187,7 @@ PROGRAM letkf
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('gues',nbv,gues3d,gues2d)
   if (DO_DRIFTERS) then
-!   CALL write_ensmspr_drifters('gues',nbv,gues4d)
+   CALL write_ensmspr_drifters('gues',nbv,gues4d)
   endif
 
   !STEVE: debug
@@ -216,7 +217,7 @@ PROGRAM letkf
   ! part of the model state vector, appended to the model grid coordinates.
   ! Using LETKF's grid-based localization strategy, there is no difference.
   if (DO_DRIFTERS) then
-!   CALL das_drifters(gues4d,anal4d)
+    CALL das_drifters(gues4d,anal4d)
   endif
 
   !-----------------------------------------------------------------------------
@@ -236,13 +237,13 @@ PROGRAM letkf
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ens_mpi('anal',nbv,anal3d,anal2d)
   if (DO_DRIFTERS) then
-!   CALL write_ens_drifters('anal',anal4d)
+   CALL write_ens_drifters('anal',anal4d)
   endif
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('anal',nbv,anal3d,anal2d)
   if (DO_DRIFTERS) then
-!   write_ensmspr_drifters('anal',anal4d)
+   write_ensmspr_drifters('anal',anal4d)
   endif
 
   !-----------------------------------------------------------------------------

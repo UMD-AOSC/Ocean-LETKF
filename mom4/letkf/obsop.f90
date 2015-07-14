@@ -47,6 +47,8 @@ PROGRAM obsop
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
   CHARACTER(slen) :: aoerinfile='oer_inp.grd' !IN (default)
   CHARACTER(slen) :: aoeroutfile='oer_inp.grd'!OUT(default)
+  
+  
   REAL(r_size), ALLOCATABLE :: elem(:)
   REAL(r_size), ALLOCATABLE :: rlon(:)
   REAL(r_size), ALLOCATABLE :: rlat(:)
