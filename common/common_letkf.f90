@@ -16,18 +16,13 @@ MODULE common_letkf
 !  04/26/2011 Steve Penny converted to OCEAN for use with MOM4
 !
 !=======================================================================
-!$USE OMP_LIB
   USE common
   USE common_mtx
-! use isa !STEVE: (isnan) for debugging
+  USE params_letkf, ONLY: nbv
 
   IMPLICIT NONE
 
   PUBLIC
-!=======================================================================
-!  LEKF Model Independent Parameters
-!=======================================================================
-  INTEGER,PARAMETER :: nbv=4 !56 !20 !24 !20 !4 !16 !4    ! ensemble size
 
 CONTAINS
 !=======================================================================

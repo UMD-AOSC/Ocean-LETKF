@@ -16,8 +16,9 @@ PROGRAM letkf
   USE common_letkf
   USE letkf_obs
   USE letkf_tools
-  USE letkf_local,     only: DO_NO_VERT_LOC, localization_method  ! For namelist settings
-! USE common_obs_mom4,             only: nid_obs
+  USE params_letkf
+  USE params_model
+  USE params_obs
 
   IMPLICIT NONE
   REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
@@ -32,16 +33,12 @@ PROGRAM letkf
   INTEGER :: ij, m !STEVE: for debugging
   LOGICAL :: ex
   INTEGER :: fid=21
-  LOGICAL :: dortout=.true.   ! Force 'realtime' output (helps with parallel debugging)
+  LOGICAL :: dortout=.true.    ! Force 'realtime' output (helps with parallel debugging)
   LOGICAL :: dodebug0=.false.  ! Debug flag for various routines
 
-!STEVE: at the moment, these are setup as PARAMETERs, so can't be adjusted via namelist:
-! NAMELIST /common_mom4_nml/ nlon,nlat,nlev,nv3d,nv2d,iv3d_u,iv3d_v,iv3d_t,iv3d_s,iv2d_ssh,iv2d_sst,iv2d_sss, &
-  NAMELIST /common_mom4_nml/ gridfile, DO_DRIFTERS, DO_ALTIMETRY, SSHclm_file
-  NAMELIST /letkf_obs_nml/   nslots,nbslot,sigma_obs,sigma_obs0,sigma_obsv,sigma_obst,gross_error
-  NAMELIST /letkf_local_nml/ DO_NO_VERT_LOC, localization_method
-  NAMELIST /letkf_tools_nml/ cov_infl_mul,sp_infl_add,DO_INFL_RESET
-! NAMELIST /common_obs_mom4_nml/ nid_obs
+  NAMELIST /params_model_nml/ gridfile, SSHclm_file
+  NAMELIST /params_obs_nml/   nslots,nbslot,sigma_obs,sigma_obs0,sigma_obsv,sigma_obst,gross_error
+  NAMELIST /params_letkf_nml/ DO_DRIFTERS, DO_ALTIMETRY, DO_NO_VERT_LOC, localization_method, cov_infl_mul,sp_infl_add,DO_INFL_RESET
 
 !------------------------------------------------------------------------------
 ! Initial settings
@@ -62,18 +59,16 @@ PROGRAM letkf
   INQUIRE(FILE="input.nml", EXIST=ex)
   if (ex) then
     open(fid,file="input.nml", status='OLD') !, delim='APOSTROPHE')
-    read(fid,nml=common_mom4_nml)
-    read(fid,nml=letkf_obs_nml)
-    read(fid,nml=letkf_local_nml)
-    read(fid,nml=letkf_tools_nml)
+    read(fid,nml=params_model_nml)
+    read(fid,nml=params_obs_nml)
+    read(fid,nml=params_letkf_nml)
   endif
   WRITE(6,*) "================================================================="
   WRITE(6,*) "Namelist inputs:"
   WRITE(6,*) "================================================================="
-  write(6,common_mom4_nml)
-  write(6,letkf_obs_nml)
-  write(6,letkf_local_nml)
-  write(6,letkf_tools_nml)
+  write(6,params_model_nml)
+  write(6,params_obs_nml)
+  write(6,params_letkf_nml)
   WRITE(6,*) "================================================================="
 
   !----------------------------------------------------------------------------
@@ -91,7 +86,8 @@ PROGRAM letkf
   WRITE(6,'(A)') '  Developed for NCEP use by Steve Penny (2014)   '
   WRITE(6,'(A)') '  Developed for the OCEAN by Steve Penny (2011)  '
   WRITE(6,'(A)') '                                                 '
-  WRITE(6,'(A)') '  Based on original code by T. Miyoshi,          '
+  WRITE(6,'(A)') '  Based on original code by T. Miyoshi           '
+  WRITE(6,'(A)') '  for the SPEEDY Atmospheric GCM                 '
   WRITE(6,'(A)') '  and algorithms by Ott (2004) and Hunt (2007)   '
   WRITE(6,'(A)') '================================================='
   WRITE(6,'(A)') '              LETKF PARAMETERS                   '

@@ -15,31 +15,14 @@ MODULE letkf_tools
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0
   USE letkf_local !STEVE: separating localization functions
+  USE params_letkf, ONLY: nbv, cov_infl_mul, sp_infl_add, DO_INFL_RESET 
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC ::  das_letkf, adapt_obserr, create_oer_init
-  PUBLIC :: cov_infl_mul, sp_infl_add, DO_INFL_RESET
 
   INTEGER,SAVE :: nobstotal
-! > 0: globally constant covariance inflation
-! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
-  REAL(r_size) :: cov_infl_mul = 1.0d0 !(NO INFLATION) !-1.0d0 => adaptive multiplicative inflation
-  REAL(r_size) :: sp_infl_add = 0.d0 !additive inflation
-  LOGICAL :: DO_INFL_RESET = .true. !(DO_SFCFLUXES) STEVE: for inflating only the surface forcing fields. Reset the 3D ocean interior to 0% inflation (rho = 1.0)
-
-  !STEVE: Testing "Vertical Tube" localization:
-  !       i.e. the localization is not applied vertically
-  ! This provides the benefit that 
-  ! (1) the analysis only has to be computed once
-  ! per horizontal gridpoint, thus providing a nlevX (40X) speedup
-  ! (2) the altimetry, SST, SSH, and bottom pressure (GRACE) can now be applied
-  ! as direct constraints on the water column.
-  !
-  ! There is precedence for this as in the paper "Reconstructing the Ocean's Interior from Surface Data" Wang et al. (2013)
-  !
-! LOGICAL :: DO_NO_VERT_LOC=.true. !STEVE: moved to letkf_local.f90
 
 !STEVE: moved the following to letkf_local.f90:
 ! REAL(r_size),PARAMETER :: var_local(nv3d+nv2d,nid_obs) = RESHAPE( &        !(OCEAN)

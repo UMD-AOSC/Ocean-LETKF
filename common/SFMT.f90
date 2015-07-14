@@ -39,9 +39,6 @@ module MOD_SFMT
 ! * of 64-bit integers.*/
     integer,parameter:: N64 = (N * 2)
     
-
-
-    
     integer*4:: psfmt32(0:N32-1)
     integer*8:: psfmt64(0:N64-1)
     integer:: idx
