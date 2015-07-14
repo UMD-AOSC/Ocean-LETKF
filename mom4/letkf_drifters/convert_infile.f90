@@ -1,0 +1,35 @@
+PROGRAM convert_infile
+
+  IMPLICIT NONE
+
+  INTEGER :: fid = 101
+  INTEGER :: fout = 102
+  INTEGER :: nn = 4
+  INTEGER :: n
+
+  REAL, ALLOCATABLE :: rlon(:)
+  REAL, ALLOCATABLE :: rlat(:)
+  REAL, ALLOCATABLE :: rlev(:)
+  INTEGER, ALLOCATABLE :: obsid(:)
+  
+  ALLOCATE(  rlon(nn)  )
+  ALLOCATE(  rlat(nn)  )
+  ALLOCATE(  rlev(nn)  )
+  ALLOCATE(  obsid(nn)  ) 	
+
+  open(fid,FILE='test_in_drifters.dat')
+  DO n=1,nn
+    read(fid,*)  rlon(n), rlat(n), rlev(n), obsid(n)
+  end DO
+  close(fid)
+
+  open(fout,FILE='obsin_drifters.dat')
+  DO n=1,nn
+     WRITE(fout,*) 1111,rlon(n),rlat(n),rlev(n),obsid(n)  
+     WRITE(fout,*) 2222,rlon(n),rlat(n),rlev(n),obsid(n)
+     WRITE(fout,*) 3333,rlon(n),rlat(n),rlev(n),obsid(n)
+  END DO
+  close(fout)
+
+
+END PROGRAM convert_infile

@@ -695,5 +695,4 @@ SUBROUTINE ensmean_drifters(nid,v4d_sub,v4dm)
   RETURN
 END SUBROUTINE ensmean_drifters
 
-
 END MODULE letkf_drifters
