@@ -32,3 +32,21 @@ function gsw_sa_from_sp(sp,p,long,lat)
 ! lat    : latitude                                        [DEG N]
 !
 ! gsw_sa_from_sp   : Absolute Salinity                     [g/kg]
+
+
+#STEVE:
+For the conversion of potential temperature TO in situ temperature,
+
+Perhaps they can be switched by switching the reference pressure?
+!==========================================================================
+function gsw_pt_from_t(sa,t,<p_ref>,<p>)
+!==========================================================================
+
+! Calculates potential temperature of seawater from in-situ temperature 
+!
+! sa     : Absolute Salinity                               [g/kg]
+! t      : in-situ temperature                             [deg C]
+! p      : sea pressure                                    [dbar]
+! p_ref  : reference sea pressure                          [dbar]
+!
+! gsw_pt_from_t : potential temperature                    [deg C]

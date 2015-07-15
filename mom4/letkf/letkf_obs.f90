@@ -132,7 +132,7 @@ SUBROUTINE set_letkf_obs
       im = myrank+1
       WRITE(obsfile(4:8),'(I2.2,I3.3)') islot,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading an obs2-formatted file ',obsfile
-      CALL get_nobs(obsfile,8,nobslots(islot))
+      CALL get_nobs(obsfile,obs2nrec,nobslots(islot))
     enddo
   endif
 
@@ -184,7 +184,8 @@ SUBROUTINE set_letkf_obs
        & tmpelm(nn+1:nn+nobslots(islot)),tmplon(nn+1:nn+nobslots(islot)),&
        & tmplat(nn+1:nn+nobslots(islot)),tmplev(nn+1:nn+nobslots(islot)),&
        & tmpdat(nn+1:nn+nobslots(islot)),tmperr(nn+1:nn+nobslots(islot)),&
-       & tmphdxf(nn+1:nn+nobslots(islot),im),tmpqc0(nn+1:nn+nobslots(islot),im))
+       & tmphdxf(nn+1:nn+nobslots(islot),im),tmpqc0(nn+1:nn+nobslots(islot),im),&
+       & tmptime(nn+1:nn+nobslots(islot)) )
       l = l+1
     enddo
     nn = nn + nobslots(islot)
