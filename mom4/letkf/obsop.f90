@@ -60,6 +60,7 @@ PROGRAM obsop
   REAL(r_size), ALLOCATABLE :: odat(:)
   REAL(r_size), ALLOCATABLE :: oerr(:)
   REAL(r_size), ALLOCATABLE :: ohx(:)
+  REAL(r_size), ALLOCATABLE :: obhr(:)
   INTEGER     , ALLOCATABLE :: oqc(:)
   REAL(r_size), ALLOCATABLE :: v3d(:,:,:,:)
   REAL(r_size), ALLOCATABLE :: v2d(:,:,:)
@@ -126,7 +127,15 @@ PROGRAM obsop
   ALLOCATE( oerr(nobs) )
   ALLOCATE( ohx(nobs) )
   ALLOCATE( oqc(nobs) )
-  CALL read_obs(trim(obsinfile),nobs,elem,rlon,rlat,rlev,odat,oerr)
+  ALLOCATE( obhr(nobs) )
+  if (obs2nrec==8) then
+    CALL read_obs(trim(obsinfile),nobs,elem,rlon,rlat,rlev,odat,oerr)
+  elseif (obs2nrec==9) then
+    CALL read_obs(trim(obsinfile),nobs,elem,rlon,rlat,rlev,odat,oerr,obhr)
+  else
+    WRITE(6,*) "obsop.f90:: no read_obs option for obs2nrec = ", obs2nrec
+    STOP 95
+  endif
 
   !-----------------------------------------------------------------------------
   ! Read model forecast for this member
@@ -408,11 +417,11 @@ PROGRAM obsop
   !-----------------------------------------------------------------------------
   ! Write the observations and their associated innovations to file
   !-----------------------------------------------------------------------------
-  CALL write_obs2(obsoutfile,nobs,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
+  CALL write_obs2(obsoutfile,nobs,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
 
   if (ALLOCATED(o3d)) DEALLOCATE(o3d)
   if (ALLOCATED(o2d)) DEALLOCATE(o2d)
-  DEALLOCATE( elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,v3d,v2d )
+  DEALLOCATE( elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,v3d,v2d )
 
 CONTAINS
 

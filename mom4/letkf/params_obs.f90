@@ -34,13 +34,14 @@ INTEGER,PARAMETER :: id_q_obs=3330
 INTEGER,PARAMETER :: id_rh_obs=3331
 INTEGER,PARAMETER :: id_ps_obs=14593
 INTEGER,PARAMETER :: id_rain_obs=9999
-INTEGER,PARAMETER :: nid_sfcflxobs=14 !(DO_SFCFLUXES)
+INTEGER,PARAMETER :: nid_sfcflxobs=14       !(DO_SFCFLUXES)
 INTEGER,PARAMETER :: id_atm_u_obs=5287      !(OCEAN) (ATMOS)
 INTEGER,PARAMETER :: id_atm_v_obs=5284      !(OCEAN) (ATMOS)
 INTEGER,PARAMETER :: id_atm_t_obs=5285      !(OCEAN) (ATMOS)
 INTEGER,PARAMETER :: id_atm_q_obs=5281      !(OCEAN) (ATMOS)
-INTEGER,PARAMETER :: id_atm_ps_obs=5280      !(OCEAN) (ATMOS)
+INTEGER,PARAMETER :: id_atm_ps_obs=5280     !(OCEAN) (ATMOS)
 
-
+INTEGER :: obs1nrec = 6                     ! The number of records in the obs1-formatted file (previous 6, 7 adds a time record).
+INTEGER :: obs2nrec = 9                     ! The number of records in the obs2-formatted file (previous 8, 9 adds a time record).
 
 END MODULE params_obs

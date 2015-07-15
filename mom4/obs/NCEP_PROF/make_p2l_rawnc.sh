@@ -14,9 +14,10 @@ PGM=p2l_rawnc.x
 rm -f *.mod
 rm -f *.o
 
-#$F90 $OMP $F90OPT $INLINE -c SFMT.f90
+$F90 $OMP $F90OPT $INLINE -c $CDIR/SFMT.f90
 $F90 $OMP $F90OPT $INLINE -c $CDIR/common.f90
 $F90 $OMP $F90OPT $INLINE -c $LDIR/params_obs.f90
+$F90 $OMP $F90OPT $INLINE -c $LDIR/params_model.f90
 ##$F90 $OMP $F90OPT $INLINE -c calendar.f90
 $F90 $OMP $F90OPT $INCLUDE_NETCDF -c prof2letkf_rawnc.f90
 $F90 $OMP $F90OPT $INLINE -o ${PGM} *.o $LIB_NETCDF
