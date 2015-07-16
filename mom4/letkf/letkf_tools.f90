@@ -56,20 +56,6 @@ MODULE letkf_tools
 
   INTEGER,SAVE :: nobstotal
 
-!STEVE: moved the following to letkf_local.f90:
-! REAL(r_size),PARAMETER :: var_local(nv3d+nv2d,nid_obs) = RESHAPE( &        !(OCEAN)
-!!          U      V      T      S    SSH    SST    SSS                      !(OCEAN)
-!  & (/ 1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! U              !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! V              !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! T              !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! S              !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! SSH            !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! SST            !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0 /)& ! SSS            !(OCEAN)
-!  & ,(/nv3d+nv2d,nid_obs/))
-!  !NOTE: the obs are the rows and the model variables the columns
-! INTEGER,SAVE :: var_local_n2n(nv3d+nv2d)
-
 CONTAINS
 
 !-------------------------------------------------------------------------------
