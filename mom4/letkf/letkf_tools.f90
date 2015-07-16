@@ -3,11 +3,49 @@ MODULE letkf_tools
 !
 ! [PURPOSE:] Module for LETKF with SPEEDY
 !
-! [HISTORY:]
-!   01/26/2009 Takemasa Miyoshi  created
-!   04/26/2011 Steve Penny converted to OCEAN for use with MOM4
 !
 !===============================================================================
+!===============================================================================
+! MODULE: letkf_tools
+! 
+! USES:
+!  use common
+!  use common_mpi
+!  use common_mom4
+!  use common_mpi_mom4
+!  use common_letkf
+!  use letkf_obs !contains debug_hdxf_0
+!  use letkf_local
+!  use params_letkf, ONLY: nbv, cov_infl_mul, sp_infl_add, DO_INFL_RESET
+!
+! PUBLIC TYPES:
+!                 das_letkf, adapt_obserr, create_oer_init
+!
+! SAVE:
+!                 nobstotal (private)
+!     
+! PUBLIC MEMBER FUNCTIONS:
+!           <function>                     ! Description      
+!
+! PUBLIC DATA MEMBERS:
+!           <type> :: <variable>           ! Variable description
+!
+! DESCRIPTION: 
+!   This module performs the main loop for the letkf data assimilation.
+!   The letkf_core is called for each grid point. In this routine,
+!   the grid points have already been distributed across processes.
+!   Note that the letkf_core computes the transformation matrix
+!   to be applied to the background ensemble.
+!
+! REVISION HISTORY:
+!   01/26/2009 Takemasa Miyoshi  created
+!   04/26/2011 Steve Penny converted to OCEAN for use with MOM4
+!   04/03/2014 Steve Penny created for use with OCEAN at NCEP.
+! 
+!-------------------------------------------------------------------------------
+! $Authors: Steve Penny, Takemasa Miyoshi $
+!===============================================================================
+
   USE common
   USE common_mpi
   USE common_mom4
@@ -23,20 +61,6 @@ MODULE letkf_tools
   PUBLIC ::  das_letkf, adapt_obserr, create_oer_init
 
   INTEGER,SAVE :: nobstotal
-
-!STEVE: moved the following to letkf_local.f90:
-! REAL(r_size),PARAMETER :: var_local(nv3d+nv2d,nid_obs) = RESHAPE( &        !(OCEAN)
-!!          U      V      T      S    SSH    SST    SSS                      !(OCEAN)
-!  & (/ 1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! U              !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! V              !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! T              !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! S              !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! SSH            !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0,  & ! SST            !(OCEAN)
-!  &    1.0d0, 1.0d0, 1.0d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0 /)& ! SSS            !(OCEAN)
-!  & ,(/nv3d+nv2d,nid_obs/))
-!  !NOTE: the obs are the rows and the model variables the columns
-! INTEGER,SAVE :: var_local_n2n(nv3d+nv2d)
 
 CONTAINS
 
