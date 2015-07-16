@@ -3,12 +3,33 @@ PROGRAM letkf
 !
 ! [PURPOSE:] Main program of LETKF
 !
-! [HISTORY:]
+!===============================================================================
+! MODULE: letkf_local
+! 
+! USES:
+!  use common
+!  use common_mpi
+!  use common_mom4
+!  use common_mpi_mom4
+!  use common_letkf
+!  use letkf_obs
+!  use letkf_tools
+!  use params_letkf
+!  use params_model
+!  use params_obs
+!
+! DESCRIPTION: 
+!   This is the main program for the letkf data assimilation.
+!
+! REVISION HISTORY:
 !   01/16/2009 Takemasa Miyoshi created for atmospheric analysis
 !   04/26/2011 Steve Penny converted to OCEAN for use with mom4
 !   03/18/2014 Steve Penny adapted to use on Gaea at NCEP/GFDL
 !
-!==============================================================================
+!-------------------------------------------------------------------------------
+! $Author: Steve Penny, Takemasa Miyoshi $
+!===============================================================================
+
   USE common
   USE common_mpi
   USE common_mom4
