@@ -1,13 +1,45 @@
 MODULE letkf_tools
 !===============================================================================
+! MODULE: letkf_tools
+! 
+! USES:
+!  use common
+!  use common_mpi
+!  use common_mom4
+!  use common_mpi_mom4
+!  use common_letkf
+!  use letkf_obs !contains debug_hdxf_0
+!  use letkf_local
+!  use params_letkf, ONLY: nbv, cov_infl_mul, sp_infl_add, DO_INFL_RESET
 !
-! [PURPOSE:] Module for LETKF with SPEEDY
+! PUBLIC TYPES:
+!                 das_letkf, adapt_obserr, create_oer_init
 !
-! [HISTORY:]
+! SAVE:
+!                 nobstotal (private)
+!     
+! PUBLIC MEMBER FUNCTIONS:
+!           <function>                     ! Description      
+!
+! PUBLIC DATA MEMBERS:
+!           <type> :: <variable>           ! Variable description
+!
+! DESCRIPTION: 
+!   This module performs the main loop for the letkf data assimilation.
+!   The letkf_core is called for each grid point. In this routine,
+!   the grid points have already been distributed across processes.
+!   Note that the letkf_core computes the transformation matrix
+!   to be applied to the background ensemble.
+!
+! REVISION HISTORY:
 !   01/26/2009 Takemasa Miyoshi  created
 !   04/26/2011 Steve Penny converted to OCEAN for use with MOM4
-!
+!   04/03/2014 Steve Penny created for use with OCEAN at NCEP.
+! 
+!-------------------------------------------------------------------------------
+! $Authors: Steve Penny, Takemasa Miyoshi $
 !===============================================================================
+
   USE common
   USE common_mpi
   USE common_mom4
