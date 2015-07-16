@@ -39,10 +39,12 @@ MODULE common
   REAL(r_size),PARAMETER :: sigma_b = 0.1d0 !1.0d0 !0.1d0
 
 CONTAINS
+
+
+SUBROUTINE com_mean(ndim,var,amean)
 !-----------------------------------------------------------------------
 ! Mean
 !-----------------------------------------------------------------------
-SUBROUTINE com_mean(ndim,var,amean)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -57,12 +59,13 @@ SUBROUTINE com_mean(ndim,var,amean)
   END DO
   amean = amean / REAL(ndim,r_size)
 
-  RETURN
 END SUBROUTINE com_mean
+
+
+SUBROUTINE com_stdev(ndim,var,aout)
 !-----------------------------------------------------------------------
 ! Standard deviation
 !-----------------------------------------------------------------------
-SUBROUTINE com_stdev(ndim,var,aout)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -78,12 +81,13 @@ SUBROUTINE com_stdev(ndim,var,aout)
 
   aout = SQRT( SUM(dev*dev) / REAL(ndim-1,r_size) )
 
-  RETURN
 END SUBROUTINE com_stdev
+
+
+SUBROUTINE com_covar(ndim,var1,var2,cov)
 !-----------------------------------------------------------------------
 ! Covariance
 !-----------------------------------------------------------------------
-SUBROUTINE com_covar(ndim,var1,var2,cov)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -104,10 +108,12 @@ SUBROUTINE com_covar(ndim,var1,var2,cov)
 
   RETURN
 END SUBROUTINE com_covar
+
+
+SUBROUTINE com_correl(ndim,var1,var2,cor)
 !-----------------------------------------------------------------------
 ! Correlation
 !-----------------------------------------------------------------------
-SUBROUTINE com_correl(ndim,var1,var2,cor)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -123,12 +129,13 @@ SUBROUTINE com_correl(ndim,var1,var2,cor)
 
   cor = cov/stdev1/stdev2
 
-  RETURN
 END SUBROUTINE com_correl
+
+
+SUBROUTINE com_anomcorrel(ndim,var1,var2,varmean,cor)
 !-----------------------------------------------------------------------
 ! Anomaly Correlation
 !-----------------------------------------------------------------------
-SUBROUTINE com_anomcorrel(ndim,var1,var2,varmean,cor)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -144,12 +151,13 @@ SUBROUTINE com_anomcorrel(ndim,var1,var2,varmean,cor)
 
   cor = SUM( dev1*dev2 ) / SQRT( SUM(dev1*dev1) * SUM(dev2*dev2) )
 
-  RETURN
 END SUBROUTINE com_anomcorrel
+
+
+SUBROUTINE com_l2norm(ndim,var,anorm)
 !-----------------------------------------------------------------------
 ! L2 Norm
 !-----------------------------------------------------------------------
-SUBROUTINE com_l2norm(ndim,var,anorm)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -158,12 +166,13 @@ SUBROUTINE com_l2norm(ndim,var,anorm)
 
   anorm = SQRT( SUM(var*var) )
 
-  RETURN
 END SUBROUTINE com_l2norm
+
+
+SUBROUTINE com_rms(ndim,var,rmsv)
 !-----------------------------------------------------------------------
 ! RMS (root mean square)
 !-----------------------------------------------------------------------
-SUBROUTINE com_rms(ndim,var,rmsv)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -172,12 +181,13 @@ SUBROUTINE com_rms(ndim,var,rmsv)
 
   rmsv = SQRT( SUM(var*var) / REAL(ndim,r_size) )
 
-  RETURN
 END SUBROUTINE com_rms
+
+
+SUBROUTINE com_filter_lanczos(ndim,fc,var)
 !-----------------------------------------------------------------------
 ! Lanczos Filter (Low-pass) with cyclic boundary
 !-----------------------------------------------------------------------
-SUBROUTINE com_filter_lanczos(ndim,fc,var)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -225,12 +235,13 @@ SUBROUTINE com_filter_lanczos(ndim,fc,var)
     END DO
   END DO
 
-  RETURN
 END SUBROUTINE com_filter_lanczos
+
+
+SUBROUTINE com_rand(ndim,var)
 !-----------------------------------------------------------------------
 ! RAND (random number with uniform distribution)
 !-----------------------------------------------------------------------
-SUBROUTINE com_rand(ndim,var)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -251,12 +262,13 @@ SUBROUTINE com_rand(ndim,var)
     var(i) = genrand_res53()
   END DO
 
-  RETURN
 END SUBROUTINE com_rand
+
+
+SUBROUTINE com_randn(ndim,var)
 !-----------------------------------------------------------------------
 ! RANDN (random number with normal distribution)
 !-----------------------------------------------------------------------
-SUBROUTINE com_randn(ndim,var)
   IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: ndim
@@ -293,12 +305,13 @@ SUBROUTINE com_randn(ndim,var)
     var(ndim) = sqrt( -2.0d0 * log( rnd(1) ) ) * sin( 2.0d0*pi*rnd(2) )
   END IF
 
-  RETURN
 END SUBROUTINE com_randn
+
+
+SUBROUTINE com_timeinc_hr(iy,im,id,ih,incr)
 !-----------------------------------------------------------------------
 ! TIMEINC
 !-----------------------------------------------------------------------
-SUBROUTINE com_timeinc_hr(iy,im,id,ih,incr)
   IMPLICIT NONE
 
   INTEGER,INTENT(INOUT) :: iy
@@ -330,12 +343,13 @@ SUBROUTINE com_timeinc_hr(iy,im,id,ih,incr)
     END IF
   END IF
 
-  RETURN
 END SUBROUTINE com_timeinc_hr
+
+
+SUBROUTINE com_time2ymdh(itime,iy,im,id,ih)
 !-----------------------------------------------------------------------
 ! TIMECONVERSION
 !-----------------------------------------------------------------------
-SUBROUTINE com_time2ymdh(itime,iy,im,id,ih)
   IMPLICIT NONE
   INTEGER(8),INTENT(IN) :: itime
   INTEGER,INTENT(OUT) :: iy
@@ -348,8 +362,8 @@ SUBROUTINE com_time2ymdh(itime,iy,im,id,ih)
   id = INT( (itime-iy*1000000-im*10000) / 100 )
   ih = INT(  itime-iy*1000000-im*10000-id*100 )
 
-  RETURN
 END SUBROUTINE com_time2ymdh
+
 
 SUBROUTINE com_ymdh2time(iy,im,id,ih,itime)
   IMPLICIT NONE
@@ -361,12 +375,13 @@ SUBROUTINE com_ymdh2time(iy,im,id,ih,itime)
 
   itime=iy*1000000+im*10000+id*100+ih
 
-  RETURN
 END SUBROUTINE com_ymdh2time
+
+
+SUBROUTINE com_distll(ndim,alon,alat,blon,blat,dist)
 !-----------------------------------------------------------------------
 ! DISTANCE BETWEEN TWO POINTS (LONa,LATa)-(LONb,LATb)
 !-----------------------------------------------------------------------
-SUBROUTINE com_distll(ndim,alon,alat,blon,blat,dist)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: ndim
   REAL(r_size),INTENT(IN) :: alon(ndim)
@@ -392,12 +407,13 @@ SUBROUTINE com_distll(ndim,alon,alat,blon,blat,dist)
     dist(i) = ACOS( cosd(i) ) * re
   END DO
 
-  RETURN
 END SUBROUTINE com_distll
+
+
+SUBROUTINE com_distll_1(alon,alat,blon,blat,dist)
 !-----------------------------------------------------------------------
 ! DISTANCE BETWEEN TWO POINTS (LONa,LATa)-(LONb,LATb)
 !-----------------------------------------------------------------------
-SUBROUTINE com_distll_1(alon,alat,blon,blat,dist)
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: alon
   REAL(r_size),INTENT(IN) :: alat
@@ -419,13 +435,14 @@ SUBROUTINE com_distll_1(alon,alat,blon,blat,dist)
 
   dist = ACOS( cosd ) * re
 
-  RETURN
 END SUBROUTINE com_distll_1
+
+
+SUBROUTINE com_interp_spline(ndim,x,y,n,x5,y5)
 !-----------------------------------------------------------------------
 ! Cubic spline interpolation
 !   [Reference:] Akima, H., 1970: J. ACM, 17, 589-602.
 !-----------------------------------------------------------------------
-SUBROUTINE com_interp_spline(ndim,x,y,n,x5,y5)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: ndim         ! number of grid points
   REAL(r_size),INTENT(IN) :: x(ndim) ! coordinate
@@ -496,13 +513,14 @@ SUBROUTINE com_interp_spline(ndim,x,y,n,x5,y5)
         & + dx*dx*dx*(t(1)+t(2)-2.0d0*dydx(3))/dx21/dx21
   END DO TGT
 
-  RETURN
 END SUBROUTINE com_interp_spline
+
+
+SUBROUTINE com_pos2ij(msw,nx,ny,flon,flat,num_obs,olon,olat,oi,oj)
 !-----------------------------------------------------------------------
 ! (LON,LAT) --> (i,j) conversion
 !   [ORIGINAL AUTHOR:] Masaru Kunii
 !-----------------------------------------------------------------------
-SUBROUTINE com_pos2ij(msw,nx,ny,flon,flat,num_obs,olon,olat,oi,oj)
   IMPLICIT NONE
   ! --- inout variables
   INTEGER,INTENT(IN) :: msw   !MODE SWITCH: 1: fast, 2: accurate
@@ -665,12 +683,13 @@ SUBROUTINE com_pos2ij(msw,nx,ny,flon,flat,num_obs,olon,olat,oi,oj)
     END DO Obs_Loop_2
   END IF
 
-  RETURN
 END SUBROUTINE com_pos2ij
+
+
+SUBROUTINE com_utc2tai(iy,im,id,ih,imin,sec,tai93)
 !-----------------------------------------------------------------------
 ! UTC to TAI93
 !-----------------------------------------------------------------------
-SUBROUTINE com_utc2tai(iy,im,id,ih,imin,sec,tai93)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: iy,im,id,ih,imin
   REAL(r_size),INTENT(IN) :: sec
@@ -698,12 +717,13 @@ SUBROUTINE com_utc2tai(iy,im,id,ih,imin,sec,tai93)
   IF(iy > 2005) tai93 = tai93 + 1.0d0 !leap second
   IF(iy > 2008) tai93 = tai93 + 1.0d0 !leap second
 
-  RETURN
 END SUBROUTINE com_utc2tai
+
+
+SUBROUTINE com_tai2utc(tai93,iy,im,id,ih,imin,sec)
 !-----------------------------------------------------------------------
 ! TAI93 to UTC
 !-----------------------------------------------------------------------
-SUBROUTINE com_tai2utc(tai93,iy,im,id,ih,imin,sec)
   IMPLICIT NONE
   INTEGER,PARAMETER :: n=7 ! number of leap seconds after Jan. 1, 1993
   INTEGER,PARAMETER :: leapsec(n) = (/  15638399,  47174400,  94608001,&
@@ -750,7 +770,6 @@ SUBROUTINE com_tai2utc(tai93,iy,im,id,ih,imin,sec)
   imin = FLOOR(wk/mins)
   IF(sec < 60.0d0) sec = wk - REAL(imin,r_size)*mins
 
-  RETURN
 END SUBROUTINE com_tai2utc
 
 END MODULE common
