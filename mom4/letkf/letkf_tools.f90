@@ -119,12 +119,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Variable localization
   !-----------------------------------------------------------------------------
   var_local_n2n(1) = 1
-  DO n=2,nv3d+nv2d
-    DO i=1,n
+  do n=2,nv3d+nv2d
+    do i=1,n
       var_local_n2n(n) = i
       IF(MAXVAL(ABS(var_local(i,:)-var_local(n,:))) < TINY(var_local)) EXIT
-    END DO
-  END DO
+    enddo
+  enddo
   WRITE(6,*) "var_local_n2n = ", var_local_n2n
 
   !-----------------------------------------------------------------------------
@@ -134,55 +134,55 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE(mean2d(nij1,nv2d))
   CALL ensmean_grd(nbv,nij1,gues3d,gues2d,mean3d,mean2d)
 
-  DO n=1,nv3d
-    DO m=1,nbv
-      DO k=1,nlev
-        DO i=1,nij1
+  do n=1,nv3d
+    do m=1,nbv
+      do k=1,nlev
+        do i=1,nij1
           gues3d(i,k,m,n) = gues3d(i,k,m,n) - mean3d(i,k,n)
-        END DO
-      END DO
-    END DO
-  END DO
-  DO n=1,nv2d
-    DO m=1,nbv
-      DO i=1,nij1
+        enddo
+      enddo
+    enddo
+  enddo
+  do n=1,nv2d
+    do m=1,nbv
+      do i=1,nij1
         gues2d(i,m,n) = gues2d(i,m,n) - mean2d(i,n)
-      END DO
-    END DO
-  END DO
+      enddo
+    enddo
+  enddo
 
   !-----------------------------------------------------------------------------
   ! multiplicative inflation
   !-----------------------------------------------------------------------------
-  IF(cov_infl_mul > 0.0d0) THEN ! fixed multiplicative inflation parameter
+  if (cov_infl_mul > 0.0d0) then ! fixed multiplicative inflation parameter
     ALLOCATE( work3d(nij1,nlev,nv3d) )
     ALLOCATE( work2d(nij1,nv2d) )
     work3d = cov_infl_mul
     work2d = cov_infl_mul
-  END IF
-  IF(cov_infl_mul <= 0.0d0) THEN ! 3D parameter values are read-in
+  endif
+  if (cov_infl_mul <= 0.0d0) then ! 3D parameter values are read-in
     ALLOCATE( work3dg(nlon,nlat,nlev,nv3d) )
     ALLOCATE( work2dg(nlon,nlat,nv2d) )
     ALLOCATE( work3d(nij1,nlev,nv3d) )
     ALLOCATE( work2d(nij1,nv2d) )
     INQUIRE(FILE=inflinfile,EXIST=ex)
-    IF(ex) THEN
-      IF(myrank == 0) THEN
+    if (ex) then
+      if (myrank == 0) then
         WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',inflinfile
         CALL read_bingrd4(inflinfile,work3dg,work2dg)
-      END IF
+      endif
       CALL scatter_grd_mpi(0,work3dg,work2dg,work3d,work2d)
-    ELSE
+    else
       WRITE(6,'(2A)') '!!WARNING: no such file exist: ',inflinfile
       work3d = -1.0d0 * cov_infl_mul
       work2d = -1.0d0 * cov_infl_mul
-    END IF
-  END IF
+    endif
+  endif
 
   !-----------------------------------------------------------------------------
   ! Reset inflation, if desired
   !-----------------------------------------------------------------------------
-  if( DO_INFL_RESET ) then
+  if ( DO_INFL_RESET ) then
     work3d = 1.0d0
     !work2d = 1.0d0 !STEVE: don't reset the 2D field
     !STEVE: will this mess up SST, SSH and SSS? maybe should reset them also.
@@ -203,12 +203,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 ! ALLOCATE(obs_useidx(1:nobs)) !STEVE: for debugging...
 ! obs_useidx=0
   WRITE(6,*) "... done."
-  DO ilev=1,nlev
+  do ilev=1,nlev
     WRITE(6,'(A,I3)') 'ilev = ',ilev
 
-    IF(DO_NO_VERT_LOC .and. ilev > 1) CYCLE
+    if (DO_NO_VERT_LOC .and. ilev > 1) CYCLE
           
-    DO ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
+    do ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
       if (dodebug) WRITE(6,*) "ij = ", ij
 
       !STEVE: debug
@@ -266,11 +266,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       !-------------------------------------------------------------------------
       ! Loop through all prognostic variables (e.g. temp, salt, u, v, etc.)
       !-------------------------------------------------------------------------
-      DO n=1,nv3d
-        IF(var_local_n2n(n) < n) THEN
+      do n=1,nv3d
+        if (var_local_n2n(n) < n) then
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
           work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
-        ELSE
+        else
           CALL obs_local(ij,ilev,var_local(n,:),hdxf,rdiag,rloc,dep,nobsl,nobstotal)
 
           parm = work3d(ij,ilev,n)
@@ -384,7 +384,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             enddo
           endif
 
-          DO k=1,nbv
+          do k=1,nbv
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) + gues3d(ij,ilev,k,n) * trans(k,m,n)
 
             !STEVE: debug - check for bad values
@@ -396,9 +396,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !             STOP 6 
 !           endif
 
-            IF(DO_NO_VERT_LOC .and. ilev .eq. 1) THEN
+            if (DO_NO_VERT_LOC .and. ilev .eq. 1) then
               !STEVE: match up ij to ij at other vertical levels
-              DO klev=2,nlev
+              do klev=2,nlev
                 if (kmt1(ij) < klev) then
                   anal3d(ij,klev,:,:) = 0.0
                   work3d(ij,klev,:) = 0.0
@@ -406,9 +406,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                   anal3d(ij,klev,m,n) = anal3d(ij,klev,m,n) + gues3d(ij,klev,k,n) * trans(k,m,n)
                   work3d(ij,klev,:) = work3d(ij,ilev,:)
                 endif
-              ENDDO
-            ENDIF
-          END DO
+              enddo
+            endif
+          enddo
           !STEVE: debug
 !         if ( i1(ij) .eq. 456 .and. j1(ij) .eq. 319 .and. ilev .eq. 5) then
 !           WRITE(6,*) "------------------------------------------------------------"
@@ -418,22 +418,22 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !           WRITE(6,*) "A-B                 = ", anal3d(ij,ilev,m,n) - gues3d(ij,ilev,m,n) - mean3d(ij,ilev,n)
 !           WRITE(6,*) "------------------------------------------------------------"
 !         endif
-        END DO
+        enddo
 
-      END DO ! n=1,nv3d
+      enddo ! n=1,nv3d
 
       !-------------------------------------------------------------------------
       ! Go through the 2d variables
       !-------------------------------------------------------------------------
-      IF(ilev == 1) THEN !update 2d variable at ilev=1
-        DO n=1,nv2d
-          IF(var_local_n2n(nv3d+n) <= nv3d) THEN
+      if (ilev == 1) then !update 2d variable at ilev=1
+        do n=1,nv2d
+          if (var_local_n2n(nv3d+n) <= nv3d) then
             trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
             work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n))
-          ELSE IF(var_local_n2n(nv3d+n) < nv3d+n) THEN
+          elseif (var_local_n2n(nv3d+n) < nv3d+n) then
             trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
             work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d)
-          ELSE
+          else
             CALL obs_local(ij,ilev,var_local(n,:),hdxf,rdiag,rloc,dep,nobsl,nobstotal)
             parm = work2d(ij,n)
             !STEVE: check rdiag for > 0
@@ -449,21 +449,21 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !           print *, "pre letkf_core 2D, ilev=1: ij, n, work2d(ij,n) (parm out) = ", ij, n, work2d(ij,n)
             work2d(ij,n) = parm
 !           print *, "post letkf_core 2D, ilev=1: ij, n, work2d(ij,n) (parm out) = ", ij, n, work2d(ij,n)
-          END IF
+          endif
 
           !STEVE: process 2D SFC variables here:
-          DO m=1,nbv
+          do m=1,nbv
             anal2d(ij,m,n)  = mean2d(ij,n)
-            DO k=1,nbv
+            do k=1,nbv
               anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,k,n) * trans(k,m,nv3d+n)
-            END DO
-          END DO
-        END DO
+            enddo
+          enddo
+        enddo
 
-      END IF !(ilev == 1)
+      endif !(ilev == 1)
 
-    END DO !ij
-  END DO !ilev
+    enddo !ij
+  enddo !ilev
 
   DEALLOCATE(hdxf,rdiag,rloc,dep)
 ! DEALLOCATE(obs_useidx) !STEVE: for debugging...
@@ -471,9 +471,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !-------------------------------------------------------------------------
   ! Write out the adaptive inflation
   !-------------------------------------------------------------------------
-  adaptive_inflation : IF(cov_infl_mul < 0.0d0) THEN
+  adaptive_inflation : if (cov_infl_mul < 0.0d0) then
     CALL gather_grd_mpi(0,work3d,work2d,work3dg,work2dg)
-    IF(myrank == 0) THEN
+    if (myrank == 0) then
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing.. ',infloutfile
       CALL write_bingrd4(infloutfile,work3dg,work2dg)
       !STEVE: check
@@ -492,34 +492,34 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !     enddo
       !STEVE: end
  
-    END IF
+    endif
     DEALLOCATE(work3dg,work2dg,work3d,work2d)
-  ENDIF adaptive_inflation
+  endif adaptive_inflation
 
   !-------------------------------------------------------------------------
   ! Compute and apply the additive inflation
   !-------------------------------------------------------------------------
-  additive_inflation : IF(sp_infl_add > 0.0d0) THEN
+  additive_inflation : if (sp_infl_add > 0.0d0) then
     CALL read_ens_mpi('addi',nbv,gues3d,gues2d)
     ALLOCATE( work3d(nij1,nlev,nv3d) )
     ALLOCATE( work2d(nij1,nv2d) )
     CALL ensmean_grd(nbv,nij1,gues3d,gues2d,work3d,work2d)
-    DO n=1,nv3d
-      DO m=1,nbv
-        DO k=1,nlev
-          DO i=1,nij1
+    do n=1,nv3d
+      do m=1,nbv
+        do k=1,nlev
+          do i=1,nij1
             gues3d(i,k,m,n) = gues3d(i,k,m,n) - work3d(i,k,n)
-          END DO
-        END DO
-      END DO
-    END DO
-    DO n=1,nv2d
-      DO m=1,nbv
-        DO i=1,nij1
+          enddo
+        enddo
+      enddo
+    enddo
+    do n=1,nv2d
+      do m=1,nbv
+        do i=1,nij1
           gues2d(i,m,n) = gues2d(i,m,n) - work2d(i,n)
-        END DO
-      END DO
-    END DO
+        enddo
+      enddo
+    enddo
 
     DEALLOCATE(work3d,work2d)
     WRITE(6,'(A)') '===== Additive covariance inflation ====='
@@ -531,32 +531,32 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !        & + parm * REAL(1-ilev,r_size)/REAL(nlev_dampinfl,r_size)
 !      parm_infl_damp(ilev) = MAX(parm_infl_damp(ilev),1.0d0)
 !    END DO
-    DO n=1,nv3d
-      DO m=1,nbv
-        DO ilev=1,nlev
-          DO ij=1,nij1
+    do n=1,nv3d
+      do m=1,nbv
+        do ilev=1,nlev
+          do ij=1,nij1
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
               & + gues3d(ij,ilev,m,n) * sp_infl_add
-          END DO
-        END DO
-      END DO
-    END DO
-    DO n=1,nv2d
-      DO m=1,nbv
-        DO ij=1,nij1
+          enddo
+        enddo
+      enddo
+    enddo
+    do n=1,nv2d
+      do m=1,nbv
+        do ij=1,nij1
           anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,m,n) * sp_infl_add
-        END DO
-      END DO
-    END DO
-  ENDIF additive_inflation
+        enddo
+      enddo
+    enddo
+  endif additive_inflation
 
   ! STEVE: I'd like to output the mean field in the gues spot
 ! gues3d(:,:,1,:) = mean3d(:,:,:)
 ! gues2d(:,1,:)   = mean2d(:,:)
   DEALLOCATE(mean3d,mean2d)
 
-  RETURN
 END SUBROUTINE das_letkf
+
 
 SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
 !================================================================================
@@ -616,17 +616,17 @@ SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
 
   !STEVE: Just in case we didn't call das_letkf to get this initialized:
   var_local_n2n(1) = 1
-  DO n=2,nv3d+nv2d
-    DO i=1,n
+  do n=2,nv3d+nv2d
+    do i=1,n
       var_local_n2n(n) = i
       IF(MAXVAL(ABS(var_local_oer(i,:)-var_local_oer(n,:))) < TINY(var_local_oer)) EXIT
-    END DO
-  END DO
+    enddo
+  enddo
   WRITE(6,*) "var_local_n2n = ", var_local_n2n
 
-  DO ilev=1,nlev ! Cycle through vertical levels:
+  do ilev=1,nlev ! Cycle through vertical levels:
     WRITE(6,*) "ilev = ", ilev
-    DO ij=1,nij1 ! Cycle through grid points divided up for this processor
+    do ij=1,nij1 ! Cycle through grid points divided up for this processor
       !(OCEAN) STEVE: it's on land, so just assign undef values and CYCLE
       !STEVE: NEED to define kmt1 as ocean depth
       if (kmt1(ij) < ilev) then
@@ -637,7 +637,7 @@ SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
 
       if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "ij = ", ij
 
-      DO n=1,nv3d ! Cycle through model variables: ssh, sst, sss
+      do n=1,nv3d ! Cycle through model variables: ssh, sst, sss
         if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "var_local_n2n(n), n  = ", var_local_n2n(n), n
         !STEVE: this is inefficient, and thus temporary... (don't want to call
         !this twice, and I would rather do this processing in letkf_tools)
@@ -665,10 +665,10 @@ SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
         !STEVE: debug hijack:
         !oer3d(ij,ilev,n) = nobsl_b
         if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "letkf_tools.f90:: post-desroziers, oer3d(ij,ilev,n) = ", oer3d(ij,ilev,n)
-      ENDDO
+      enddo
 
-      IF(ilev == 1) THEN !update 2d variable at ilev=1
-        DO n=1,nv2d
+      if (ilev == 1) then !update 2d variable at ilev=1
+        do n=1,nv2d
           if (cnt_obs(nv3d+n) < 1) CYCLE 
           CALL obs_local(ij,ilev,var_local_oer(nv3d+n,:),hdxb,rdiag_b,rloc_b,dep_b,nobsl_b,nobs)
           if (nobsl_b < 1) CYCLE
@@ -690,11 +690,11 @@ SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
                                                      rdiag_b(1:nobsl_b), oer2d(ij,n))
           if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "letkf_tools.f90:: post-desroziers, oer2d(ij,n) = ", oer2d(ij,n)
 
-        ENDDO
-      ENDIF
+        enddo
+      endif
 
-    ENDDO
-  ENDDO
+    enddo
+  enddo
 
   WRITE(6,*) "letkf_tools::adapt_obserr: Deallocating..."
   WRITE(6,*) "hdxb..."
@@ -712,6 +712,7 @@ SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
   WRITE(6,*) "... done."
 
 END SUBROUTINE adapt_obserr
+
 
 SUBROUTINE desroziers(nobsl,dep_a,dep_b,rloc,rdiag,oer)
 !================================================================================
@@ -774,6 +775,7 @@ LOGICAL, SAVE :: dodebug = .true.
   dodebug = .false.
 
 END SUBROUTINE desroziers
+
 
 SUBROUTINE create_oer_init(infile,oer3dg,oer2dg)
 !===============================================================================
