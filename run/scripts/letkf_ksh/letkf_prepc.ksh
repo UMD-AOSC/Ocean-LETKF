@@ -1,16 +1,43 @@
 #!/bin/ksh --login
+#===============================================================================
+# SCRIPT:
+# letkf_prepc.ksh
+#
+# PURPOSE:
 # This script prepares background and observation data for letkf 
-# Tripolar background grid is converted to spherical if necessary
+# This 'compact' version runs all processing for each member 
+# (as opposed to a separate instance not each member & timeslot)
 #
-# This 'compact' version runs all processing for each members (not each member & timeslot)
+# MODULES USED:
+#  (e.g. on Gaea)
+#  module swap PrgEnv-pgi PrgEnv-intel
+#  module load netcdf
 #
-# Written by Dr. Stephen G. Penny
-#
+# INPUTS:
+#  YYYYMMDDHH    :: string containing 4-digit year, 2-digit month, 2-digit day, 2-digit hour
+#  MEMBERID      :: Ensemble member number
+#  EXP_DATA      :: directory containing experiment output data
+#  NSLOTS        :: number of timeslots to use for 4D-LETKF (e.g. "5" for 5 days)
+#  days          :: forecast length (in integer days)
+#  OBSOPexe      :: execuatable for LETKF observation operator
+#  OBSDIR1       :: Observation directory, primary
+#  OBSDIR5       :: Observation directory to use for analysis time only
+#  INPUT_INIT    :: Directory containing static model input files
+#  LDIR          :: directory of letkf executable and obsoperator executable
+#  USE_ALTIMETRY :: flag to assimilate altimetry data (1==true,0==false)
+#  altimetry_climatology_file       :: model eta climatology, for assimilating AVISO altimetry  
+# 
+#===============================================================================
+# Author      :: Stephen G. Penny
+# Institution :: University of Maryland (UMD) 
+#                Department of Atmospheric and Oceanic Science (AOSC), and
+#                National Centers for Environmental Prediction (NCEP)
+#                National Oceanograpic and Atmospheric Administration (NOAA)
+# Email       :: Steve.Penny@noaa.gov
+#===============================================================================
+
 set -e
-#module load mpt
-#module load intel
-#module load netcdf
-#module load nco
+ncatted=/sw/xe6/nco/4.0.8/sles11.1_netcdf4.2.0_gnu4.7.0/bin/ncatted
 
 echo "LETKF preparation step"
 echo "processing cycle: ${YYYYMMDDHH}"
@@ -24,7 +51,6 @@ mkdir -p ${workdir2}
 MEM3=`printf %.3d ${MEMBERID}`
 
 #STEVE: active code:
-#DO_SFCFLUXES=1  #This is input via the xml script
 TMPDIR=${EXP_DATA}/${YYYYMMDDHH}
 IY=${YYYYMMDDHH:0:4}
 IM=${YYYYMMDDHH:4:2}
@@ -59,8 +85,9 @@ do
   IH=$NH
   echo "processing cycle as: $IY$IM$ID$IH"
 
-
+  #-----------------------------------------------------------------------------
   # FIRST, link the background model data
+  #-----------------------------------------------------------------------------
 
   ln -f $workdir_fcst/$IY$IM$ID.$IH$IN$IS.ocean_temp_salt.res.nc     gs${ISLOT2}$MEM3.ocean_temp_salt.res.nc
   ln -f $workdir_fcst/$IY$IM$ID.$IH$IN$IS.ocean_velocity.res.nc      gs${ISLOT2}$MEM3.ocean_velocity.res.nc
@@ -70,7 +97,7 @@ do
   fi
 
   #STEVE: add 'fill value' to netcdf files for identification of missing values
-  cp /sw/xe6/nco/4.0.8/sles11.1_netcdf4.2.0_gnu4.7.0/bin/ncatted .
+  cp $ncatted .
   ncatted -O -a _FillValue,temp,o,f,-1.e+34 gs${ISLOT2}$MEM3.ocean_temp_salt.res.nc
   ncatted -O -a _FillValue,salt,o,f,-1.e+34 gs${ISLOT2}$MEM3.ocean_temp_salt.res.nc
   ncatted -O -a _FillValue,u,o,f,-1.e+34 gs${ISLOT2}$MEM3.ocean_velocity.res.nc
@@ -80,15 +107,8 @@ do
     ncatted -O -a _FillValue,eta_t,o,f,-1.e+34 gs${ISLOT2}$MEM3.ocean_barotropic.res.nc
   fi
 
-  # FIRST (a), Link background files to the letkf working directory:
-  #STEVE: this should NOT be necessary with new external obs operator for letkf:
-# for file in `ls -d ${workdir}/gs${ISLOT2}$MEM3.*`; do
-#   echo "linking $file to ${workdir2}..."
-#   ln -f $file ${workdir2}/
-# done
-
   #STEVE: need a template for the output analysis files:
-  #       MUST COPY, NOT LINK
+  #       MUST COPY, NOT LINK. The files WILL be overwritten.
   if [ "${ISLOT2}" -eq "${ATIME}" ]; then #STEVE: trying to only do it once per member...
     cp ${workdir}/gs${ISLOT2}$MEM3.ocean_temp_salt.res.nc ${workdir2}/anal$MEM3.ocean_temp_salt.res.nc
     cp ${workdir}/gs${ISLOT2}$MEM3.ocean_velocity.res.nc  ${workdir2}/anal$MEM3.ocean_velocity.res.nc
@@ -99,46 +119,20 @@ do
     #STEVE: may want to zero these out for peace of mind...
   fi
 
-  # If assimilating altimetry, compute mean t/s fields for Linear operator steric height estimate:
-  if [ "$USE_ALTIMETRY" -eq "1" ]; then
-    # STEVE: this is inefficient, since it is repeated across all members. improve when appropriate...
-    cp /sw/xe6/nco/4.0.8/sles11.1_netcdf4.2.0_gnu4.7.0/bin/ncea .
-    if [ ! -f "mean.ocean_temp_salt.res.nc" ]; then #STEVE: if the script has to be re-run, then don't recompute this:
-      ncea $workdir_alt/$IY$IM$ID.$IH$IN$IS.ocean_temp_salt.res.nc mean.ocean_temp_salt.res.nc
-    else
-      echo "NOTICE: Using precomputed mean.ocean_temp_salt.res.nc..."
-      echo "        (presumably, this is a re-run of letkf_prepc.ksh)"
-    fi
+  #-----------------------------------------------------------------------------
+  # SECOND, link the observations
+  #-----------------------------------------------------------------------------
 
-    if [ ! -f "Lxbar.grd" ]; then
-      # For u/v/sbc/eta, use anal template files as dummy values (not used in subsequent computation)
-      # (Copying just to be safe, so nothing important gets overwritten - could be made more efficient)
-      cp ${workdir}/gs${ISLOT2}$MEM3.ocean_velocity.res.nc      mean.ocean_velocity.res.nc
-      cp ${workdir}/gs${ISLOT2}$MEM3.ocean_sbc.res.nc           mean.ocean_sbc.res.nc
-      cp ${workdir}/gs${ISLOT2}$MEM3.ocean_barotropic.res.nc    mean.ocean_barotropic.res.nc
-      # Run code to compute L() of mean T/S field
-      $LDIR/cLx.x
-
-      if [ ! -f "Lxbar.grd" ]; then
-        echo "Error, Lxbar.grd file not produced, and needed for $OBSOPexe when using altimetry. Exiting..."
-        exit 3
-      else
-        rm mean.ocean_velocity.res.nc
-        rm mean.ocean_sbc.res.nc
-        rm mean.ocean_barotropic.res.nc
-      fi
-    fi
-  fi
-  
-  # SECOND (b), link the observations
-  #Use different observation source collection for different slots.
-  # (e.g. only use surface obs at time of analysis, use profiles through analysis cycle window)
+  # The next conditional gives the ability to use different observation source 
+  # collection for different slots. (e.g. only use surface obs at time of 
+  # analysis, use profiles through analysis cycle window)
   echo "For ISLOT2=$ISLOT2, and ATIME=${ATIME}"
   if [ "$ISLOT2" -eq "${ATIME}" ]; then
     OBSDIR=$OBSDIR5
   else
     OBSDIR=$OBSDIR1
   fi
+
   echo "Processing obs: ${OBSDIR}/$IY$IM$ID.dat to obs${ISLOT2}${MEM3}.dat"
   ln -f $INPUT_INIT/grid_spec.nc .
   cp $LDIR/$OBSOPexe .
@@ -148,11 +142,11 @@ do
   ln -f ${workdir}/gs${ISLOT2}$MEM3.ocean_sbc.res.nc       gues.ocean_sbc.res.nc
   if [ "$USE_ALTIMETRY" -eq "1" ]; then
     ln -f ${workdir}/gs${ISLOT2}$MEM3.ocean_barotropic.res.nc       gues.ocean_barotropic.res.nc
-    echo "Linking: $mETACLM to here..."
-    if [ -f "$mETACLM" ]; then
-      ln -f $mETACLM .
+    echo "Linking: $altimetry_climatology_file to here..."
+    if [ -f "$altimetry_climatology_file" ]; then
+      ln -f $altimetry_climatology_file .
     else
-      echo "$mETACLM does not exist..."
+      echo "$altimetry_climatology_file does not exist..."
       echo "Exiting..."
       exit 1
     fi
@@ -180,40 +174,11 @@ do
   if [ "$USE_ALTIMETRY" -eq "1" ]; then
     ln -f ${workdir}/gs${ISLOT2}$MEM3.ocean_barotropic.res.nc       ${workdir2}/gs${ISLOT2}$MEM3.ocean_barotropic.res.nc
   fi
-# ls ${workdir2}
-
-#ln -s $OBSDIR/$IYYYY$IMM$IDD$IHH.dat obsin.dat
-#ln -s $OUTPUT/gues/$MEM/$IYYYY$IMM$IDD$IHH.grd gs01${MEM3}.grd
-#ln -fs $OUTPUT/gues/$MEM/$IYYYY$IMM$IDD$IHH.grd gues.grd
-#./$OBSOPE -obsin $OBSDIR/$IYYYY$IMM$IDD$IHH.dat -gues $OUTPUT/gues/${MEM3}/$IYYYY$IMM$IDD$IHH.grd -obsout obs${ISLOT2}${MEM3}.dat > obsope.log
-#mv obsout.dat obs01${MEM3}.dat
 
   #STEVE: the hard-link limit is running out (65000 max), so best to delete unnecessary links
   rm -f grid_spec.nc
-  rm -f ncea
   rm -f ncatted
-  rm -f aEtaCds9399.nc
 
 done #DONE FCST loop
-
-#STEVE: DO_SFCFLUXES
-if [ "${DO_SFCFLUXES}" -eq "1" ]; then
-  #STEVE: for now, this is hard-coded into LETKF. Later, change this to a namelist option
-  #       so that it can be turned off if desired to shorten runtime.
-    ln -f ${workdir_inpt}/RA2_daily_dlw.nc    ${workdir2}/SFC_${MEM3}_daily_dlw.nc
-    ln -f ${workdir_inpt}/RA2_daily_dsw.nc    ${workdir2}/SFC_${MEM3}_daily_dsw.nc
-    ln -f ${workdir_inpt}/RA2_daily_LONGWV.nc ${workdir2}/SFC_${MEM3}_daily_LONGWV.nc
-    ln -f ${workdir_inpt}/RA2_daily_PRATE.nc  ${workdir2}/SFC_${MEM3}_daily_PRATE.nc
-    ln -f ${workdir_inpt}/RA2_daily_pres.nc   ${workdir2}/SFC_${MEM3}_daily_pres.nc
-    ln -f ${workdir_inpt}/RA2_daily_q2m.nc    ${workdir2}/SFC_${MEM3}_daily_q2m.nc
-    ln -f ${workdir_inpt}/RA2_daily_QFLUX.nc  ${workdir2}/SFC_${MEM3}_daily_QFLUX.nc
-    ln -f ${workdir_inpt}/RA2_daily_SHRTWV.nc ${workdir2}/SFC_${MEM3}_daily_SHRTWV.nc
-    ln -f ${workdir_inpt}/RA2_daily_t2m.nc    ${workdir2}/SFC_${MEM3}_daily_t2m.nc
-    ln -f ${workdir_inpt}/RA2_daily_TAUX.nc   ${workdir2}/SFC_${MEM3}_daily_TAUX.nc
-    ln -f ${workdir_inpt}/RA2_daily_TAUY.nc   ${workdir2}/SFC_${MEM3}_daily_TAUY.nc
-    ln -f ${workdir_inpt}/RA2_daily_TFLUX.nc  ${workdir2}/SFC_${MEM3}_daily_TFLUX.nc
-    ln -f ${workdir_inpt}/RA2_daily_U10.nc    ${workdir2}/SFC_${MEM3}_daily_U10.nc
-    ln -f ${workdir_inpt}/RA2_daily_V10.nc    ${workdir2}/SFC_${MEM3}_daily_V10.nc
-fi
 
 exit 0

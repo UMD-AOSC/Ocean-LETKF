@@ -69,6 +69,7 @@
     <!ENTITY OBSDIR1 "&troot;/OBS/synthetic/letkf_fmt/PROFS_gerr_TS">
     <!ENTITY OBSDIR5 "&troot;/OBS/synthetic/letkf_fmt/PROFS_gerr_TS">
     <!ENTITY USE_ALTIMETRY "0">
+    <!ENTITY ACLIM "aEtaCds9399.nc">
 
 <!--
     STEVE: All letkf exe's below are stored in &LDIR;
@@ -187,6 +188,11 @@
       <envar>
         <name>USE_ALTIMETRY</name>
         <value>&USE_ALTIMETRY;</value>
+      </envar>
+
+      <envar>
+        <name>altimetry_climatology_file</name>
+        <value>&ACLIM;</value>
       </envar>
 
       <dependency>
@@ -375,6 +381,11 @@
         <value>&USE_ALTIMETRY;</value>
       </envar>
 
+      <envar>
+        <name>altimetry_climatology_file</name>
+        <value>&ACLIM;</value>
+      </envar>
+
       <dependency>
         <or>
           <and>
@@ -453,6 +464,11 @@
       <envar>
         <name>USE_ALTIMETRY</name>
         <value>&USE_ALTIMETRY;</value>
+      </envar>
+
+      <envar>
+        <name>altimetry_climatology_file</name>
+        <value>&ACLIM;</value>
       </envar>
 
       <dependency>

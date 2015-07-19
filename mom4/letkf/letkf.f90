@@ -27,7 +27,7 @@ PROGRAM letkf
 !   03/18/2014 Steve Penny adapted to use on Gaea at NCEP/GFDL
 !
 !-------------------------------------------------------------------------------
-! $Author: Steve Penny, Takemasa Miyoshi $
+! $Authors: Steve Penny, Takemasa Miyoshi $
 !===============================================================================
 
   USE common
@@ -229,7 +229,7 @@ PROGRAM letkf
   !(DRIFTERS)
   ! Update drifter position by shifting entire modeled trajectories to the new observed
   ! position at the observed time.
-  ! This can be done independently because the drifter xyz coordinates are considered
+  ! This can be done independently because each drifter id's xyz coordinates are considered
   ! part of the model state vector, appended to the model grid coordinates.
   ! Using LETKF's grid-based localization strategy, there is no difference.
   if (DO_DRIFTERS) then

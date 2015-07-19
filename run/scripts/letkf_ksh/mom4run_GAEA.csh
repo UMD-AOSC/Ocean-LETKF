@@ -1,7 +1,13 @@
 #!/bin/csh -f
-#PBS -r y                                                              #This job is restartable
-#PBS -S /bin/sh                                                        #Do not change this - it keeps your job from issuing a false alarm
-#PBS -E                                                                #Do not change this - it gives your job more and more useful Moab environment variables
+#
+# The following PBS controls are only used if this is submitted directly.
+# The xml-controlled scripts will call this and use the xml-defined
+# settings to run these commands.
+#
+#PBS -r y                           #This job is restartable
+#PBS -S /bin/sh                     #Do not change this - it keeps your job from issuing a false alarm
+#PBS -E                             #Do not change this - it gives your job more and more useful Moab environment variables
+#
 # -- Request 120 cores
 #PBS -l size=120
 # 
@@ -59,11 +65,6 @@ set root          = /lustre/f1/unswept/Steve.Penny/mom4p1 #$cwd:h         # The 
 set executable    = $root/exec_$platform/$type/fms_$type.x      # executable created after compilation
 set mppnccombine  = $root/bin/mppnccombine.$platform  # path to executable mppnccombine
 set time_stamp    = $root/bin/time_stamp.csh          # path to cshell to generate the date
-#STEVE: copy all of these to the experiment directory prior to running:
-#       (this is to avoid referencing the $HOME directory)
-#set executable    = $expdir/fms_$type.x      # executable created after compilation
-#set mppnccombine  = $expdir/mppnccombine.$platform  # path to executable mppnccombine
-#set time_stamp    = $expdir/time_stamp.csh          # path to cshell to generate the date
 
 #===========================================================================
 # The user need not change any of the following
@@ -72,7 +73,6 @@ set time_stamp    = $root/bin/time_stamp.csh          # path to cshell to genera
 #
 # Users must ensure the correct environment file exists for their platform.
 #
-#source $root/bin/environs.$platform  # environment variables and loadable modules
 
 # Check if the user has extracted the input data
   if ( ! -d $inputDataDir ) then
@@ -139,6 +139,8 @@ if ( ! -d $expdir/INPUT   ) mkdir -p $expdir/INPUT
 #    mpiexec_mpt -np $npes $executable > $expdir/fmt.out
      echo "Calling: aprun -n $npes $executable > $expdir/fmt.out"
      cp $executable $expdir/
+     #ISSUE: aprun is not universal, update to make this 
+     #       mpi run command an input
      aprun -n $npes $expdir/fms_$type.x > $expdir/fmt.out
   else
      $executable:t > fms.out
@@ -218,12 +220,8 @@ if ( ! -d $expdir/INPUT   ) mkdir -p $expdir/INPUT
 
   unset echo
 
-#Get the ctl files
-#cp $root/data/$name/*.ctl $workdir/$name/RESTART
-#cd $workdir
-
 echo end_of_run
-echo "NOTE: Natural end-of-script."
+echo "NOTE: mom4run_GAEA.csh:: Natural end-of-script."
 
 exit 0
   
