@@ -1,0 +1,1 @@
+        setenv NC_BLKSZ 64K 

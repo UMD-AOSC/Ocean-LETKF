@@ -1,0 +1,38 @@
+# Template for IBM xlf and xlc compilers
+#typical use with netCDF:
+# mkmf -t template.ibm -c"-Duse_libMPI -Duse_netCDF" path_names /usr/local/include
+# next two definitions are site-dependent, set by environment
+
+#NETCDF_ROOT = /usrx/local/netcdf-4.1.3
+NETCDF_ROOT = /gpfs/t3/climate/save/wx24db
+#NETCDF_ROOT = /nwprod
+
+VERBOSE = -v
+#CPPFLAGS = -Wp,-C,$(VERBOSE)
+#CPPFLAGS = 
+FFLAGS_OPT = -O2
+#FFLAGS_OPT =  -O0
+#FFLAGS_DEBUG = $(VERBOSE) -g -bnoquiet 
+#FFLAGS_DEBUG = -g -C -qextchk -v -bnoquiet -qcheck=all
+#FFLAGS_DEBUG = -g -C -v -qfullpath -qcheck
+#FFLAGS_DEBUG = -g -v -qinitauto=0
+#FFLAGS_DEBUG = -g -v -qsave=defaultinit
+#CFLAGS_OPT = -q64 -O2 -qtune=auto -qarch=auto -qmaxmem=-1
+CFLAGS_OPT = 
+
+FC = mpxlf90_r
+LD = mpxlf90_r
+CC = mpcc_r
+LD = $(FC)
+
+# LIBS will need site-specific customization
+# LNETCDF = "-L$(NETCDF_ROOT)/lib -lnetcdf"
+LNETCDF = "$(NETCDF_ROOT)/lib/libnetcdf.a"
+INETCDF = "-I$(NETCDF_ROOT)/include"
+
+FFLAGS = -qsuffix=f=f90:cpp=F90:f=f -qarch=auto -qmaxmem=-1 -qdpc -qrealsize=8 \
+	-qintsize=4 -qstrict -q64 -qwarn64 $(INETCDF) $(FFLAGS_OPT)
+CFLAGS = -q64 -qstrict $(INETCDF) $(VERBOSE) $(CFLAGS_OPT)
+#LDFLAGS = -brename:.flush,.flush_ -brename:.mld_id,.mld_id_ -q64 -qwarn64 $(LNETCDF)
+LDFLAGS = -brename:.flush,.flush_ -brename:.mld_id,.mld_id_ -q64 -qwarn64 $(FFLAGS_OPT) $(LNETCDF)
+

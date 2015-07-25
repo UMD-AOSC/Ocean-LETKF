@@ -1,6 +1,6 @@
 #STEVE:
 For the conversion to potential temperature from in situ temperature,
-we want to use this function in the Gibbs-Sea Water (GSW) package:
+we want to use this function in the TEOS Gibbs-Sea Water (GSW) package:
 
 McDougall, T.J. and P.M. Barker, 2011: Getting started with TEOS-10 and the Gibbs Seawater (GSW) 
       Oceanographic Toolbox, 28pp., SCOR/IAPSO WG127, ISBN 978-0-646-55621-5.

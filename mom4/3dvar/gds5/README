@@ -1,0 +1,3 @@
+This is a transition code to transfer Dave's 3DVar-GODAS to
+a new 3DVar-GODAS system that is more model-independent
+and follows the code structure of the LETKF code.

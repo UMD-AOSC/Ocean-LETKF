@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/projects/!svn/ver/30158/godas/trunk/godas4p1/g4p1/src/3dvar_solo
+END
+godas_data.F90
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/projects/!svn/ver/30021/godas/trunk/godas4p1/g4p1/src/3dvar_solo/godas_data.F90
+END
+godas_rstr.F90
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/projects/!svn/ver/30158/godas/trunk/godas4p1/g4p1/src/3dvar_solo/godas_rstr.F90
+END
+godas_solo.F90
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/projects/!svn/ver/30158/godas/trunk/godas4p1/g4p1/src/3dvar_solo/godas_solo.F90
+END
+ocean_context.F90
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/projects/!svn/ver/30158/godas/trunk/godas4p1/g4p1/src/3dvar_solo/ocean_context.F90
+END
+ocean_types.F90
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/30085/godas/trunk/godas4p1/g4p1/src/3dvar_solo/ocean_types.F90
+END
+godas.F90
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/30158/godas/trunk/godas4p1/g4p1/src/3dvar_solo/godas.F90
+END
+ocean_grids.F90
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/30085/godas/trunk/godas4p1/g4p1/src/3dvar_solo/ocean_grids.F90
+END
+godas_obs.F90
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/projects/!svn/ver/30158/godas/trunk/godas4p1/g4p1/src/3dvar_solo/godas_obs.F90
+END
+godas_types.F90
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/30158/godas/trunk/godas4p1/g4p1/src/3dvar_solo/godas_types.F90
+END
