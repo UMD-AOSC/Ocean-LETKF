@@ -2,7 +2,7 @@
 Main repository for the Ocean-LETKF development
 
 # Configuration:  
-I am attempting to move all amchine-specific details to 'config/'
+I am attempting to move all machine-specific details to 'config/'
 
 # Parallel decomposition:  
 Currently, the code reads in the entire model grid and sends each grid point to a different processor, in an alternating fashion.
