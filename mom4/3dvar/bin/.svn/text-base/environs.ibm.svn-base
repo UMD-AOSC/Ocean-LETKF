@@ -1,0 +1,4 @@
+        setenv LDR_CNTRL MAXDATA=0xD0000000@DSA
+#       setenv NC_BLKSZ 1M
+#       setenv NETCDF_DIR /usrx/local/netcdf-4.1.3
+        setenv OBJECT_MODE 64

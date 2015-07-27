@@ -14,3 +14,6 @@ ln -fs ../common/common_mom4.f90 ./
 ln -fs ../common/common_mpi_mom4.f90 ./
 ln -fs ../common/common_obs_mom4.f90 ./
 
+ln -fs ../obs/params_obs.f90
+ln -fs ../obs/vars_obs.f90
+
