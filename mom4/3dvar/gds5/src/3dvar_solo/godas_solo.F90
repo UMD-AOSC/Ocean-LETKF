@@ -4,7 +4,6 @@ program main
   use fms_mod,                  only: fms_init, fms_end, open_namelist_file, check_nml_error
   use fms_mod,                  only: close_file, file_exist, uppercase
   use fms_io_mod,               only: fms_io_exit
-  use mpp_domains_mod,          only: domain2d, mpp_get_compute_domain
   use mpp_io_mod,               only: mpp_open, MPP_RDONLY, MPP_ASCII, MPP_OVERWR, MPP_APPEND, mpp_close, MPP_SINGLE
   use mpp_mod,                  only: mpp_error, FATAL, NOTE, mpp_pe, mpp_npes, mpp_set_current_pelist
   use mpp_mod,                  only: stdlog, stdout, mpp_root_pe, mpp_clock_id, mpp_sync
@@ -13,23 +12,17 @@ program main
   use time_interp_external_mod, only: time_interp_external_init
   use time_manager_mod,         only: set_calendar_type, time_type !, increment_date
   use time_manager_mod,         only: set_date !set_time, set_date, get_time, get_date, month_name
-  use time_manager_mod,         only: GREGORIAN, JULIAN, NOLEAP, THIRTY_DAY_MONTHS, NO_CALENDAR
+  use time_manager_mod,         only: JULIAN
   use time_manager_mod,         only: operator( <= ), operator( < ), operator( >= )
   use time_manager_mod,         only: operator( + ),  operator( - ), operator( / )
   use time_manager_mod,         only: operator( * ), operator( /= ), operator( > )
-! use time_manager_mod,         only: date_to_string
 
-! use ocean_domains_mod,          only: get_local_indices, get_global_indices
   use ocean_types_mod,            only: ocean_grid_type, ocean_domain_type
   use ocean_types_mod,            only: ocean_time_type
 
   use godas_types_mod,            only: ocean_prog_tracer_type, ocean_external_mode_type
   use godas_types_mod,            only: ocean_cor_tracer_type, ocean_rstr_tracer_type
   use godas_types_mod,            only: ocean_obsz_type, ocean_obs0_type
-! use godas_obs_mod,              only: godas_obsz_init, godas_obs0_init, godas_obsa_init
-! use godas_mod,                  only: godas_init, godas_increment, godas_end
-! use godas_rstr_mod,             only: godas_rstr_init
-
   use ocean_context_mod,      only: ocean_context
 
   implicit none

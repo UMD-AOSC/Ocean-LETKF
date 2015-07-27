@@ -567,7 +567,7 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
 
 END SUBROUTINE obs_local
 
-SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
+PURE SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 !===============================================================================
 ! Identify the observations within the local region
 !===============================================================================
@@ -598,8 +598,8 @@ SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 
     do ip=ib,ie
       if(nn > nobs) then
-        WRITE(6,*) 'FATALERROR, NN > NOBS', NN, NOBS
-        stop 1  !STEVE: (added)
+!       WRITE(6,*) 'FATALERROR, NN > NOBS', NN, NOBS
+!       stop 1  !STEVE: (added)
       endif
       ! Index for observation used
       nobs_use(nn) = ip
@@ -754,7 +754,7 @@ SUBROUTINE obs_local_setup_old(ij,nn,minlon,maxlon,minlat,maxlat,imin,imax,jmin,
 END SUBROUTINE obs_local_setup_old
 
 !(OCEAN) STEVE: add checks for atlantic/pacific basin boundary
-subroutine atlpac (xlat, xlon_in, lxap)
+PURE SUBROUTINE atlpac (xlat, xlon_in, lxap)
 REAL(r_size), INTENT(IN) :: xlat, xlon_in
 REAL(r_size), INTENT(OUT) :: lxap
 REAL(r_size) :: xlon
@@ -809,6 +809,6 @@ xlon = modulo(xlon_in,360.0)
     endif
   endif
 
-end subroutine atlpac
+END SUBROUTINE atlpac
 
 END MODULE letkf_local

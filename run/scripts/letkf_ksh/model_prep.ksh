@@ -26,9 +26,20 @@
 #  
 #
 #===============================================================================
+# $ Author: Steve Penny $
+#===============================================================================
 
 set -e
 wgrib=/sw/xe6/wgrib/1.8.1.0b/sles11.1_gnu4.3.4/bin/wgrib
+
+#module load hdf5/1.8.11
+#module load netcdf/4.3.3.1
+#module load intel/12.1.3.293
+#module load nco/4.3.1
+#module load wgrib/1.8.1.0b
+#module load wgrib2/2.0.1
+#module load cdo/1.6.9
+#module load ncarg
 
 echo "================================================================================"
 echo "Model preparation step"
@@ -103,7 +114,7 @@ else
 # ln -fs $EXP_DATA/INPUT/sst_ice_clim.nc ${workdir2}/INPUT  
 # ln -fs $EXP_DATA/INPUT/input.nml ${workdir2}/INPUT
   rm -f ${workdir2}/INPUT/input.nml
-  cp -f $SBCDIR/input.nml ${workdir2}/INPUT/
+  cp -f $INPUT_INIT/input.nml ${workdir2}/INPUT/
 
   #STEVE: copy last timestep's RESTART files to here
   workdir0=${EXP_DATA}/$PY$PM$PD$PH/model/${MEMBERID}
@@ -212,7 +223,7 @@ ln -f $INPUT_INIT/../salt12.nc .    # Salinity climatology file
 echo "$IY  $IM  $ID  $IH  $IN  $IS" >> ${workdir}/time_stamp.out
 echo "In: $PWD"
 echo "Running:"
-cp $wgrib ${workdir}
+#cp $wgrib ${workdir}
 if [ $USE_EFLX -eq 1 ]; then
   echo "${SBCDIR}/$mDS ${workdir2} $FLXDIR $FLXDIR2 $SSTDIR $days"
   ${SBCDIR}/$mDS ${workdir2} $FLXDIR $FLXDIR2/$MEM2 $SSTDIR $days

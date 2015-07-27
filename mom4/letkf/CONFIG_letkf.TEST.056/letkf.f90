@@ -3,12 +3,33 @@ PROGRAM letkf
 !
 ! [PURPOSE:] Main program of LETKF
 !
-! [HISTORY:]
+!===============================================================================
+! MODULE: letkf_local
+! 
+! USES:
+!  use common
+!  use common_mpi
+!  use common_mom4
+!  use common_mpi_mom4
+!  use common_letkf
+!  use letkf_obs
+!  use letkf_tools
+!  use params_letkf
+!  use params_model
+!  use params_obs
+!
+! DESCRIPTION: 
+!   This is the main program for the letkf data assimilation.
+!
+! REVISION HISTORY:
 !   01/16/2009 Takemasa Miyoshi created for atmospheric analysis
 !   04/26/2011 Steve Penny converted to OCEAN for use with mom4
 !   03/18/2014 Steve Penny adapted to use on Gaea at NCEP/GFDL
 !
-!==============================================================================
+!-------------------------------------------------------------------------------
+! $Authors: Steve Penny, Takemasa Miyoshi $
+!===============================================================================
+
   USE common
   USE common_mpi
   USE common_mom4
@@ -208,7 +229,7 @@ PROGRAM letkf
   !(DRIFTERS)
   ! Update drifter position by shifting entire modeled trajectories to the new observed
   ! position at the observed time.
-  ! This can be done independently because the drifter xyz coordinates are considered
+  ! This can be done independently because each drifter id's xyz coordinates are considered
   ! part of the model state vector, appended to the model grid coordinates.
   ! Using LETKF's grid-based localization strategy, there is no difference.
   if (DO_DRIFTERS) then
@@ -225,6 +246,10 @@ PROGRAM letkf
     OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
   endif
   rtimer00=rtimer
+
+  !--
+  ! Could call 3DVar here for hybrid...
+  !--
 
   !----------------------------------------------------------------------------
   ! Write analysis ensemble

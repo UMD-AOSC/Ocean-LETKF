@@ -13,9 +13,20 @@ source ../../config/$MACHINE.fortran.sh
 source ../../config/$MACHINE.netcdf.sh
 #source ../../config/$MACHINE.mpi.sh
 
-MEM=028
+sh ulnkcommon.sh
+sh lnkcommon.sh
+rm -f *.mod
+rm -f *.o
+
+# Ensemble size
+# STEVE: figure out how to read from params_letkf.f90 and put here (e.g. with awk/perl/etc.)
+#        -> grep and sed seem to work ok:
+#        (Set the ensemble size in params_letkf.f90, it will read it in here)
+MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1/'`
+echo "MEM=$MEM"
+MEM3=`printf %.3d ${MEM}`
 name=DRIFTERS
-PGM=letkf.$name.$MEM
+PGM=letkf.$name.$MEM3
 
 #STEVE: put the directory for netcdf here:
 NETCDF_ROOT=/cell_root/software/netcdf/4.3.2/intel/2013.1.039/openmpi/1.8.1/hdf5/1.8.13/hdf4/4.2.10/sys
@@ -28,18 +39,14 @@ INC=$INC_NETCDF
 #F90s=ftn #STEVE: in case we need a different compiler for serial runs
 OMP=
 PWD=`pwd`
-#F90OPT='-O3'
+#F90_OPT='-O3'
 # explanation of -mcmodel=medium and -shared-intel: http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
 INLINE= #"-Q -qinline"
-DEBUG_OPT= #'-g -qfullpath -v -C -qsigtrap=xl__trcedump' # -qflttrap=en:nanq -qsigtrap'
+F90_DEBUG= #'-g -qfullpath -v -C -qsigtrap=xl__trcedump' # -qflttrap=en:nanq -qsigtrap'
 BLAS=1 #0: no blas 1: using blas
 
 INCLUDE_MPI= 
 LIB_MPI= #"-lmpi"
-sh ulnkcommon.sh
-sh lnkcommon.sh
-rm -f *.mod
-rm -f *.o
 
 cat netlib.f > netlib2.f
 if test $BLAS -eq 1
@@ -53,23 +60,28 @@ else
 fi
 
 OBJECT_FLAG='-c' #STEVE: for some reason, mpxlf doesn't use -c, but rather -g
-$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG SFMT.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG common.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG common_mpi.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG common_mtx.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG netlib2.f
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG common_letkf.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $INC_NETCDF $OBJECT_FLAG common_mom4.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG common_obs_mom4.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG $INC_NETCDF common_mpi_mom4.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_obs.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_drifters_local.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.o letkf_tools.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG $INC_NETCDF letkf_drifters_local.o letkf_drifters.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf.f90
-#$F90 $OMP $F90OPT $DEBUG_OPT -o ${PGM} *.o $LIB_NETCDF $LBLAS $LIB_MPI
-$F90 $OMP $F90OPT $DEBUG_OPT $INLINE -o ${PGM} *.o $LIB_MPI $LIB_NETCDF $LBLAS
+$F90 $OMP $F90_OPT $F90_DEBUG $INLINE $OBJECT_FLAG SFMT.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $INLINE $OBJECT_FLAG common.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG common_mpi.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $INLINE $OBJECT_FLAG common_mtx.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $INLINE $OBJECT_FLAG netlib2.f
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG params_letkf.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG common_letkf.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG params_model.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_model.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $INLINE $INC_NETCDF $OBJECT_FLAG common_mom4.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG params_obs.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_obs.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG common_obs_mom4.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG $INC_NETCDF common_mpi_mom4.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf_obs.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf_drifters_local.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf_local.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf_local.o letkf_tools.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG $INC_NETCDF letkf_drifters_local.o letkf_drifters.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf.f90
+#$F90 $OMP $F90_OPT $F90_DEBUG -o ${PGM} *.o $LIB_NETCDF $LBLAS $LIB_MPI
+$F90 $OMP $F90_OPT $F90_DEBUG $INLINE -o ${PGM} *.o $LIB_MPI $LIB_NETCDF $LBLAS
 
 #STEVE: keep a record of the build:
 mkdir -p CONFIG_$PGM

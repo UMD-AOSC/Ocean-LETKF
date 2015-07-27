@@ -1,4 +1,10 @@
 module godas_mod
+!===============================================================================
+! MODULE:
+!  godas_mod
+!
+! PUPOSE:
+!  perform the 3DVar analysis
 !
 !<CONTACT EMAIL="Steve.Penny@noaa.gov"> Steve Penny
 !</CONTACT>
@@ -21,37 +27,37 @@ module godas_mod
 !  </DATA>
 !</NAMELIST>
 !
+!===============================================================================
+! Authors: Steve Penny, Dave Behringer
+!===============================================================================
 
 !ISSUE: remove dependencies on the ocean model code (e.g. the FMS system):
-USE fms_mod,           ONLY: open_namelist_file, check_nml_error, close_file, file_exist
-USE fms_mod,           ONLY: read_data, write_data
+USE fms_mod,           ONLY: open_namelist_file, check_nml_error, close_file
+USE fms_mod,           ONLY: write_data
 USE fms_mod,           ONLY: FATAL, WARNING, NOTE, stdout, stdlog
-USE mpp_mod,           ONLY: mpp_error, mpp_pe, mpp_npes, mpp_root_pe
-USE mpp_mod,           ONLY: mpp_sync, ALL_PES
-USE mpp_mod,           ONLY: mpp_broadcast, mpp_transmit
+USE mpp_mod,           ONLY: mpp_error, mpp_pe, mpp_npes
+USE mpp_mod,           ONLY: mpp_sync
+USE mpp_mod,           ONLY: mpp_broadcast
 USE mpp_domains_mod,   ONLY: mpp_update_domains
 USE mpp_domains_mod,   ONLY: mpp_global_sum, BITWISE_EXACT_SUM
 USE mpp_domains_mod,   ONLY: mpp_get_compute_domains
 USE mpp_io_mod,        ONLY: mpp_open, mpp_close
-USE mpp_io_mod,        ONLY: MPP_WRONLY, MPP_RDONLY, MPP_IEEE32, MPP_DIRECT, MPP_SEQUENTIAL
+USE mpp_io_mod,        ONLY: MPP_RDONLY, MPP_IEEE32, MPP_SEQUENTIAL
 USE mpp_io_mod,        ONLY: MPP_SINGLE, MPP_MULTI
-USE time_manager_mod,  ONLY: time_type, set_date, get_date, set_time, get_time, print_date
-USE time_manager_mod,  ONLY: increment_time, decrement_time, repeat_alarm
+USE time_manager_mod,  ONLY: time_type, set_time, get_time
+USE time_manager_mod,  ONLY: increment_time, decrement_time
 USE time_manager_mod,  ONLY: operator(-), operator(>), operator(<), operator(<=)
-! USE diag_manager_mod,  ONLY: register_diag_field, send_data
 USE constants_mod,     ONLY: pi
 
 USE ocean_domains_mod,          ONLY: get_local_indices, get_global_indices
 USE ocean_types_mod,            ONLY: ocean_grid_type, ocean_domain_type
 USE ocean_types_mod,            ONLY: ocean_time_type
-USE ocean_parameters_mod,       ONLY: missing_value
-USE ocean_util_mod,             ONLY: write_timestamp
 USE godas_types_mod,            ONLY: ocean_prog_tracer_type
 USE godas_types_mod,            ONLY: ocean_external_mode_type
 USE godas_types_mod,            ONLY: ocean_cor_tracer_type, ocean_rstr_tracer_type
 USE godas_types_mod,            ONLY: ocean_obsz_type, ocean_obs0_type
-USE godas_data_mod,             ONLY: id_cor, id_rstr
-USE godas_data_mod,             ONLY: num_cor_tracers, num_rstr_tracers, rstr_time
+USE godas_data_mod,             ONLY: id_cor
+USE godas_data_mod,             ONLY: num_cor_tracers
 USE godas_data_mod,             ONLY: sst_damp, sss_damp
 USE godas_data_mod,             ONLY: kass, kass2, ksalt, nsgobs, nsgsobs, maxits, npits, jemx
 USE godas_data_mod,             ONLY: no_asm_rep, asm_cnt, obs_trk_cnt
@@ -76,13 +82,9 @@ USE godas_data_mod,             ONLY: g_cg, d_cg, f_cg, e_cg, t_cg, h_cg
 USE godas_data_mod,             ONLY: g_cg_s, d_cg_s, f_cg_s, e_cg_s, t_cg_s, h_cg_s
 USE godas_data_mod,             ONLY: gds_freq, alrm_dur
 USE godas_data_mod,             ONLY: assrestrt, rstrestrt, restore_sfc, save_all_inv, debug_godas, ovr_alrm
-USE godas_data_mod,             ONLY: single_incr, apply_incr, asm_ts_seq, asm_sfc_split, godas_at_end
+USE godas_data_mod,             ONLY: single_incr, asm_ts_seq, asm_sfc_split, godas_at_end
 USE godas_data_mod,             ONLY: asm_Tz, asm_Sz, asm_T0, asm_S0, asm_Al
 USE godas_data_mod,             ONLY: spd
-
-USE godas_obs_mod,              ONLY: godas_obs_track
-USE godas_rstr_mod,             ONLY: godas_rstr_comp
-!
 
 IMPLICIT NONE
 
@@ -104,7 +106,7 @@ INTEGER         :: index_salt
 INTEGER         :: asm_code
 
 TYPE data_type
-   CHARACTER(len=3) :: gridname
+   CHARACTER(len=3)   :: gridname
    CHARACTER(len=128) :: fieldname_code ! used in user's code (e.g. mdl_tvv, mdl_svv, etc.)
    CHARACTER(len=128) :: fieldname_file ! fieldname used in the data file (not used)
    CHARACTER(len=128) :: file_name      ! name of data file
@@ -118,9 +120,6 @@ TYPE(data_type), DIMENSION(max_table) :: data_table
 
 REAL          :: aeval, dbsq
 
-! for ascii output
-! INTEGER :: unit=6
-
 PUBLIC :: godas_init, godas_increment, godas_end
 
 !STEVE: for debugging:
@@ -133,13 +132,13 @@ namelist /godas_nml/ num_cor_tracers, kass, nsgobs, nsgsobs, maxits, npits, &
                      sz_wndw_bwd, t0_wndw_fwd, t0_wndw_bwd, s0_wndw_fwd, &
                      s0_wndw_bwd, al_wndw_fwd, al_wndw_bwd, assrestrt, &
                      save_all_inv, asm_ts_seq, asm_sfc_split, godas_at_end, &
-                     restore_sfc, num_rstr_tracers, rstr_time, sst_damp, sss_damp, &
+                     restore_sfc, sst_damp, sss_damp, &
                      rstrestrt, debug_godas
 
 CONTAINS
 
 
-!#######################################################################
+!===============================================================================
 ! <FUNCTION NAME="godas_init">
 !
 ! <DESCRIPTION>
@@ -147,6 +146,7 @@ CONTAINS
 ! the T_cor array.
 ! </DESCRIPTION>
 !
+!===============================================================================
 FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
                     result (T_cor)
 
@@ -238,8 +238,6 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
   al_wndw_bwd         = 14          !
   assrestrt           = .true.      !
   restore_sfc         = .false.     !
-  num_rstr_tracers    = 2           !
-  rstr_time(:)        = -1          !
   rstrestrt           = .true.      !
   sst_damp            = 0.1         !
   sss_damp            = 0.1         !
@@ -267,7 +265,6 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
   endif
   kass2 = kass + ksalt
 
-  if (.not. restore_sfc) num_rstr_tracers = 0
   if (restore_sfc) asm_sfc_split = .true.
 
   if (.not. asm_sfc_split) then
@@ -286,33 +283,33 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
     rt0w = 0.0
     rs0w = 0.0
     ralw = 0.0
-  else
-    wndw_secs = 0
-    if (tz_wndw_fwd > tz_wndw_bwd) then
-      rtzw = 1.0 / real(tz_wndw_fwd)
-    else
-      rtzw = 1.0 / real(tz_wndw_bwd)
-    endif
-    if (sz_wndw_fwd > sz_wndw_bwd) then
-      rszw = 1.0 / real(sz_wndw_fwd)
-    else
-      rszw = 1.0 / real(sz_wndw_bwd)
-    endif
-    if (t0_wndw_fwd > t0_wndw_bwd) then
-      rt0w = 1.0 / real(t0_wndw_fwd)
-    else
-      rt0w = 1.0 / real(t0_wndw_bwd)
-    endif
-    if (s0_wndw_fwd > s0_wndw_bwd) then
-      rs0w = 1.0 / real(s0_wndw_fwd)
-    else
-      rs0w = 1.0 / real(s0_wndw_bwd)
-    endif
-    if (al_wndw_fwd > al_wndw_bwd) then
-      ralw = 1.0 / real(al_wndw_fwd)
-    else
-      ralw = 1.0 / real(al_wndw_bwd)
-    endif
+! else
+!   wndw_secs = 0
+!   if (tz_wndw_fwd > tz_wndw_bwd) then
+!     rtzw = 1.0 / real(tz_wndw_fwd)
+!   else
+!     rtzw = 1.0 / real(tz_wndw_bwd)
+!   endif
+!   if (sz_wndw_fwd > sz_wndw_bwd) then
+!     rszw = 1.0 / real(sz_wndw_fwd)
+!   else
+!     rszw = 1.0 / real(sz_wndw_bwd)
+!   endif
+!   if (t0_wndw_fwd > t0_wndw_bwd) then
+!     rt0w = 1.0 / real(t0_wndw_fwd)
+!   else
+!     rt0w = 1.0 / real(t0_wndw_bwd)
+!   endif
+!   if (s0_wndw_fwd > s0_wndw_bwd) then
+!     rs0w = 1.0 / real(s0_wndw_fwd)
+!   else
+!     rs0w = 1.0 / real(s0_wndw_bwd)
+!   endif
+!   if (al_wndw_fwd > al_wndw_bwd) then
+!     ralw = 1.0 / real(al_wndw_fwd)
+!   else
+!     ralw = 1.0 / real(al_wndw_bwd)
+!   endif
   endif
 
   if (sst_damp .lt. 0.0) sst_damp = 0.0
@@ -337,12 +334,7 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
   alrm_dur = set_time(mtss, 0)
 
 ! for now "godas_at_end" depends on gds_step = length_of_run in seconds
-
-  if (godas_at_end) then
-    scl_incr = float(mtss) / float(gds_step)
-  else
-    scl_incr = float(mtss) / float(gds_step)
-  endif
+  scl_incr = float(mtss) / float(gds_step)
 
   ! allocate T_cor
   allocate( T_cor  (num_cor_tracers) )
@@ -372,7 +364,6 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
   do n=1,num_cor_tracers
 #ifndef STATIC_MEMORY
     allocate( T_cor(n)%fcor(isd:ied,jsd:jed,nk) )
-
 #endif
     T_cor(n)%fcor(:,:,:)        = 0.0
   enddo
@@ -404,7 +395,7 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
 !
 ! ----------------------------------------------
 ! compute vertical covariance matrix
-!-----------------------------------------------
+! ----------------------------------------------
 !
   allocate (cvn(kass,kass))
   allocate (cvnsalt(kass,kass))
@@ -552,7 +543,6 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
               if (dodebug .and. k==30 .and. j==410) print *, "mdl_tvv:: i,j,k=",i,j,k
 !             vtmp(i,j,k) = tbvrf * buf(i,j,k)
               vtmp(i,j,k) = tbvrf * buf(MODULO(i-1,ieg)+1,MODULO(j-1,jeg)+1,k)
-!!             vtmp(i,j,k) = buf(i,j,k)
               if (dodebug .and. k==30 .and. j==410) print *, "vtmp(i,j,k) = ",vtmp(i,j,k)
             enddo
           enddo
@@ -573,7 +563,6 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
 !             if (dodebug) print *, "mdl_svv:: i,j,k=",i,j,k
 !             vsal(i,j,k) = sbvrf * buf(i,j,k)
               vsal(i,j,k) = sbvrf * buf(MODULO(i-1,ieg)+1,MODULO(j-1,jeg)+1,k)
-!!             vsal(i,j,k) = buf(i,j,k)
 !             if (dodebug) print *, "vsal(i,j,k) = ",vsal(i,j,k)
             enddo
           enddo
@@ -610,7 +599,6 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
           do i=isd,ied
 !           vtmp_s(i,j) = tbv0f * buf2(i,j)
             vtmp_s(i,j) = tbv0f * buf2(MODULO(i-1,ieg)+1,MODULO(j-1,jeg)+1)
-!           vtmp_s(i,j) = buf2(i,j)
           enddo
         enddo
 !
@@ -630,7 +618,6 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
           do i=isd,ied
 !           vsal_s(i,j) = sbv0f * buf2(i,j)
             vsal_s(i,j) = sbv0f * buf2(MODULO(i-1,ieg)+1,MODULO(j-1,jeg)+1)
-!           vsal_s(i,j) = buf2(i,j)
           enddo
         enddo
 !
@@ -714,43 +701,6 @@ FUNCTION godas_init (Grid, Domain, Time, T_prog, num_cor, debug) &
     endif
   enddo
 
-  ! register diagnostics  (only if godas_at_end=.false.)
-
-! if (.not. godas_at_end) then
-!   do n=1,num_cor_tracers
-!     range_array(1) = T_cor(n)%min_range
-!     range_array(2) = T_cor(n)%max_range
-!     id_cor(n) = register_diag_field ('ocean_model', trim(T_cor(n)%name), &
-!          Grd%tracer_axes(1:3),                                             &
-!          Time%model_time, trim(T_cor(n)%longname), trim(T_cor(n)%units), &
-!          missing_value=missing_value, range=range_array)
-!   enddo
-! endif
-
-  !STEVE: dave said I can comment this part out
-  !       It reads in an existing increment. Why? I don't know.
-! if (godas_at_end) then
-!   do n=1,num_cor_tracers
-!     if (.not. T_cor(n)%init) then
-!       write (stdout(),'(/a,a)') 'Expecting to read a GODAS restart file, ', T_cor(n)%file_in
-!     endif
-
-!     T_cor(n)%fcor(:,:,:) = 0.0
-! 
-!     if (file_exist(T_cor(n)%file_in)) then
-!       CALL read_data(T_cor(n)%file_in, T_cor(n)%name_in, T_cor(n)%fcor(:,:,:), Dom%domain2d, timelevel=1)
-
-!       if (.not. single_incr) then
-!         T_cor(n)%fcor(:,:,:) = scl_incr * T_cor(n)%fcor(:,:,:)
-!         write (stdout(),'(/a,1pe12.3)') 'GODAS restart increment rescaled: ',scl_incr
-!       endif
-
-!     else
-!       write (stdout(),'(/a)')'GODAS restart not found, increments set to zero.'
-!     endif
-!   enddo
-! endif
-
   godas_module_initialized = .true.
   if (dodebug) print *, "DONE godas_init."
 
@@ -758,176 +708,14 @@ END FUNCTION godas_init
 ! </FUNCTION> NAME="godas_init">
 
 
-!#######################################################################
-! <SUBROUTINE NAME="godas_increment">
-!
-! <DESCRIPTION>
-! Apply corrections from analysis.  Update analysis at specified interval.
-! </DESCRIPTION>
-!
-SUBROUTINE godas_increment (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A, T_rstr)
-
-  TYPE(ocean_time_type), intent(in)                    :: Time
-  TYPE(ocean_prog_tracer_type), intent(inout)          :: T_prog(:)
-  TYPE(ocean_external_mode_type), intent(inout)        :: Ext_mode
-  TYPE(ocean_cor_tracer_type), intent(inout)           :: T_cor(num_cor_tracers)
-  TYPE(ocean_obsz_type), intent(inout)                 :: obs_Z(:)
-  TYPE(ocean_obs0_type), intent(inout)                 :: obs_0(:)
-  TYPE(ocean_obs0_type), intent(inout)                 :: obs_A(:)
-  TYPE(ocean_rstr_tracer_type), intent(inout)          :: T_rstr(:)
-
-  INTEGER         :: n, taup1, pe
-  INTEGER         :: year, month, day, hour, minute, second
-  INTEGER :: i, j, k
-
-! if godas_at_end=.true. no action is taken here. instead a single analysis is called
-!  in SUBROUTINE godas_end
-
-  if (dodebug) print *, "STEVE: In godas_increment ======================================="
-
-  if (.not. godas_at_end) then
-
-    if (dodebug) print *, "STEVE: .not. godas_at_end"
-
-    pe = mpp_pe()
-
-    if (dodebug) print *, "STEVE: call get_date"
-    CALL get_date(Time%model_time, year, month, day, hour, minute, second)
-    if (dodebug) print *, "STEVE: year, month, day, hour, minute, second = ", year, month, day, hour, minute, second
-
-    if (repeat_alarm(Time%model_time, gds_freq, alrm_dur) .or. ovr_alrm) then
-      if (dodebug) print *, "STEVE:"
-      if (dodebug) print *, "repeat_alarm(Time%model_time, gds_freq, alrm_dur) = ", repeat_alarm(Time%model_time, gds_freq, alrm_dur)
-      if (dodebug) print *, "ovr_alrm = ", ovr_alrm
-      if (asm_ts_seq) then
-        asm_code = temp_code
-        CALL godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
-        asm_code = salt_code
-        CALL godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
-      else
-        if (dodebug) print *, "STEVE: calling godas_analysis for both T and S from godas_at_end..."
-        asm_code = ts_code
-        CALL godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
-      endif
-      if (asm_sfc_split) then
-        if (restore_sfc) then
-          do n=1,num_cor_tracers
-            T_cor(n)%fcor(:,:,1) = 0.0
-          enddo
-          CALL godas_rstr_comp (Time, T_prog, T_rstr)
-        else
-          asm_code = temp_code
-          CALL godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
-          asm_code = salt_code
-          CALL godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
-        endif
-      endif
-      apply_incr = .true.
-      CALL godas_obs_track(Time, obs_Z, obs_0, obs_A)
-
-!  scl_incr = (time step) / (time between analyses)
-      if (.not. single_incr) then
-        do n=1,num_cor_tracers
-          T_cor(n)%fcor(:,:,:) = scl_incr * T_cor(n)%fcor(:,:,:)
-        enddo
-        if (restore_sfc) then
-          do n=1,1,num_rstr_tracers
-            T_rstr(n)%frstr(:,:) = scl_incr * T_rstr(n)%frstr(:,:)
-          enddo
-        endif
-      endif
-
-      if (ovr_alrm) then
-        asm_cnt = 2
-        ovr_alrm = .false.
-      else
-        asm_cnt = 1
-      endif
-    else if (asm_cnt .lt. no_asm_rep) then
-      if (dodebug) print *, "STEVE:"
-      if (dodebug) print *, "asm_cnt .lt. no_asm_rep = ", asm_cnt, no_asm_rep
-      if (asm_ts_seq) then
-        asm_code = temp_code
-        CALL godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
-        asm_code = salt_code
-        CALL godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
-      else
-        if (dodebug) print *, "STEVE: calling godas_analysis for both T and S..."
-        asm_code = ts_code
-        CALL godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
-      endif
-      if (asm_sfc_split) then
-        if (restore_sfc) then
-          CALL godas_rstr_comp (Time, T_prog, T_rstr)
-        else
-          asm_code = temp_code
-          CALL godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
-          asm_code = salt_code
-          CALL godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
-        endif
-      endif
-
-!  scl_incr = (time step) / (time between analyses)
-      if (.not. single_incr) then
-        do n=1,num_cor_tracers
-          T_cor(n)%fcor(:,:,:) = scl_incr * T_cor(n)%fcor(:,:,:)
-        enddo
-        if (restore_sfc) then
-          do n=1,1,num_rstr_tracers
-            T_rstr(n)%frstr(:,:) = scl_incr * T_rstr(n)%frstr(:,:)
-          enddo
-        endif
-      endif
-
-      asm_cnt = asm_cnt + 1
-    else
-      asm_cnt = asm_cnt + 1
-    endif
-
-  endif
-
-! apply increments 
-!  increments may be applied once after each analysis cycle or applied in equal parts
-!  at each time step between analyses. 
-!  setting the namelist logical single_incr=.true. selects the single application and
-!  and sets no_asm_rep=1.
-!
-  taup1   = Time%taup1
-  do n=1,num_cor_tracers
-    where (T_prog(index_temp)%field(:,:,:,taup1) > 0.0) &
-      T_prog(n)%field(:,:,:,taup1) = T_prog(n)%field(:,:,:,taup1) + T_cor(n)%fcor(:,:,:)
-  enddo
-
-  if (restore_sfc) then
-    do n=1,num_rstr_tracers
-      T_prog(n)%field(:,:,1,taup1) = T_prog(n)%field(:,:,1,taup1) + T_rstr(n)%frstr(:,:)
-    enddo
-  endif
-
-! if using the single application zero out the increments after one use
-!
-  if (single_incr) then
-    do n=1,num_cor_tracers
-       T_cor(n)%fcor(:,:,:) = 0.0
-    enddo
-    if (restore_sfc) then
-      do n=1,num_rstr_tracers
-        T_rstr(n)%frstr(:,:) = 0.0
-      enddo
-    endif
-  endif
-
-END SUBROUTINE godas_increment
-! </SUBROUTINE> NAME="godas_increment">
-
-
-!#######################################################################
+!===============================================================================
 ! <SUBROUTINE NAME="godas_analysis">
 !
 ! <DESCRIPTION>
 ! Perform an analysis.
 ! </DESCRIPTION>
 !
+!===============================================================================
 SUBROUTINE godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
 
   TYPE(ocean_time_type), intent(in)                    :: Time
@@ -1145,13 +933,14 @@ END SUBROUTINE godas_analysis
 ! </SUBROUTINE> NAME="godas_analysis"
 
 
-!#######################################################################
+!===============================================================================
 ! <SUBROUTINE NAME="godas_analysis_sfc">
 !
 ! <DESCRIPTION>
 ! Perform a surface analysis. Temperature and salinity must be done individually.
 ! </DESCRIPTION>
 !
+!===============================================================================
 SUBROUTINE godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
 
   TYPE(ocean_time_type), intent(in)                    :: Time
@@ -1321,14 +1110,15 @@ END SUBROUTINE godas_analysis_sfc
 ! </SUBROUTINE> NAME="godas_analysis_sfc"
 
 
-!#######################################################################
+!===============================================================================
 ! <SUBROUTINE NAME="godas_end">
 !
 ! <DESCRIPTION>
 ! Write GODAS restarts
 ! </DESCRIPTION>
 !
-SUBROUTINE godas_end(Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A, T_rstr)
+!===============================================================================
+SUBROUTINE godas_end(Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
 
   TYPE(ocean_time_type), intent(in)                    :: Time
   TYPE(ocean_prog_tracer_type), intent(inout)          :: T_prog(:)
@@ -1337,8 +1127,6 @@ SUBROUTINE godas_end(Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A, T_rstr)
   TYPE(ocean_obsz_type), intent(inout)                 :: obs_Z(:)
   TYPE(ocean_obs0_type), intent(inout)                 :: obs_0(:)
   TYPE(ocean_obs0_type), intent(inout)                 :: obs_A(:)
-  TYPE(ocean_rstr_tracer_type), intent(inout)          :: T_rstr(:)
-! LOGICAL :: ens_ocean
 
   INTEGER :: num_prog_tracers
   INTEGER :: i, len, m, n, taup1, pe
@@ -1353,7 +1141,6 @@ SUBROUTINE godas_end(Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A, T_rstr)
 
   pe = mpp_pe()
   write(stdout(), '(a)') 'Later a GODAS restart will be written'
-
   if (dodebug) print *, "STEVE: in godas_end ===================================="
 
   if (godas_at_end) then
@@ -1378,36 +1165,14 @@ SUBROUTINE godas_end(Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A, T_rstr)
       CALL godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
     endif
     if (asm_sfc_split) then
-      if (restore_sfc) then
-        do n=1,num_cor_tracers
-          T_cor(n)%fcor(:,:,1) = 0.0
-        enddo
-        CALL godas_rstr_comp (Time, T_prog, T_rstr)
-      else
-        if (asm_T0) then
-          asm_code = temp_code
-          CALL godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
-        endif
-        if (asm_S0) then
-          asm_code = salt_code
-          CALL godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
-        endif
+      if (asm_T0) then
+        asm_code = temp_code
+        CALL godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
       endif
-    endif
-!   CALL godas_obs_track(Time, obs_Z, obs_0, obs_A)
-
-! write a restart file of GODAS increments
-
-    do n=1,num_cor_tracers
-!     CALL write_data(trim(T_cor(n)%file_out), trim(T_cor(n)%name), T_cor(n)%fcor(:,:,:), domain = Dom%domain2d, append_pelist_name = ens_ocean)
-      CALL write_data(trim(T_cor(n)%file_out), trim(T_cor(n)%name), T_cor(n)%fcor(:,:,:), domain = Dom%domain2d)
-    enddo
-
-    if (restore_sfc) then
-      do n=1,num_rstr_tracers
-!       CALL write_data(trim(T_rstr(n)%file_out), trim(T_rstr(n)%name), T_rstr(n)%frstr(:,:), domain = Dom%domain2d, append_pelist_name = ens_ocean)
-        CALL write_data(trim(T_rstr(n)%file_out), trim(T_rstr(n)%name), T_rstr(n)%frstr(:,:), domain = Dom%domain2d)
-      enddo
+      if (asm_S0) then
+        asm_code = salt_code
+        CALL godas_analysis_sfc (Time, T_prog, T_cor, obs_0)
+      endif
     endif
 
 !STEVE: ADD -> write a restart file of GODAS temp and salt after increments
@@ -1422,18 +1187,10 @@ SUBROUTINE godas_end(Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A, T_rstr)
         where(outdata < Tmin) outdata = Tmin 
         where(outdata > Tmax) outdata = Tmax 
       endif
-      
-!     CALL write_data(outfile2, trim(T_prog(n)%name), T_prog(n)%field(:,:,:,3) + T_cor(n)%fcor(:,:,:), domain = Dom%domain2d)
       CALL write_data(outfile2, trim(T_prog(n)%name), outdata, domain = Dom%domain2d)
       !STEVE: note: dave has a dimension for time - itt(0), taum1(1), tau(2), and taup1(3). 
       ! The old versions of MOM(2-3) used these, but I don't believe MOM4+ do. He stores the data in index 3 at the moment.
     enddo
-
-!   if (restore_sfc) then
-!     do n=1,num_rstr_tracers
-!       CALL write_data(trim(T_rstr(n)%file_out), trim(T_rstr(n)%name), T_rstr(n)%frstr(:,:), domain = Dom%domain2d)
-!     enddo
-!   endif
 
   endif
 
@@ -1441,13 +1198,14 @@ END SUBROUTINE godas_end
 ! </SUBROUTINE> NAME="godas_end"
 
 
-!!#######################################################################
-!! <SUBROUTINE NAME="init_weights">
-!!
-!! <DESCRIPTION>
-!! Compute the the weights for the lp-smoother
-!! </DESCRIPTION>
-!!
+!===============================================================================
+! <SUBROUTINE NAME="init_weights">
+!
+! <DESCRIPTION>
+! Compute the the weights for the lp-smoother
+! </DESCRIPTION>
+!
+!===============================================================================
 SUBROUTINE init_weights
 
   INTEGER       :: pe, pes, npes, len
@@ -1484,8 +1242,6 @@ SUBROUTINE init_weights
   re = 6370.0e3
   re2 = re**2
 
-! hrscl = hrscl * 111.324e3
-! b2 = 0.25*hrscl**2
   b2 = (hrscl * pi / 360.0)**2
   acon = b2/float(npits)
 
@@ -1614,7 +1370,6 @@ SUBROUTINE init_weights
         wsnd(1) = s1(ii,jj)
       endif
       len = 2
-!     CALL mpp_transmit (wsnd,len,ALL_PES,wsnd,len,pes)
       !STEVE: wsnd == real, len == integer, pes == integer
       CALL mpp_broadcast(wsnd,len,pes)
       if (jj .ge. jbg .and. jj .le. jfn) then
@@ -1748,7 +1503,6 @@ SUBROUTINE init_weights
             wsnd(1) = s1(ii,jj)
           endif
           len = 2
-!         CALL mpp_transmit (wsnd,len,ALL_PES,wsnd,len,pes)
           CALL mpp_broadcast(wsnd,len,pes)
           if (jj .ge. jbg .and. jj .le. jfn) then
             do i=isc,iec
@@ -1779,15 +1533,15 @@ END SUBROUTINE init_weights
 ! </SUBROUTINE> NAME="init_weights"
 
 
-!!
-!!#######################################################################
-!! <SUBROUTINE NAME="vertical_covariance"
-!!
-!! <DESCRIPTION>
-!! Compute the vertical covariance matrix.
-!! A smoother is used.  The scale is proportional to layer thickness.
-!! </DESCRIPTION>
-!!
+!===============================================================================
+! <SUBROUTINE NAME="vertical_covariance"
+!
+! <DESCRIPTION>
+! Compute the vertical covariance matrix.
+! A smoother is used.  The scale is proportional to layer thickness.
+! </DESCRIPTION>
+!
+!===============================================================================
   SUBROUTINE vertical_covariance
 
   INTEGER, PARAMETER                :: kex = 10, nitz = 100
@@ -1896,14 +1650,14 @@ END SUBROUTINE init_weights
   END SUBROUTINE vertical_covariance
 ! </SUBROUTINE> NAME="vertical_covariance"
 
-!!
-!!#######################################################################
-!! <SUBROUTINE NAME="init_grad">
-!!
-!! <DESCRIPTION>
-!! Compute the initial estimate of the gradient of the functional (g)
-!! </DESCRIPTION>
-!!
+!===============================================================================
+! <SUBROUTINE NAME="init_grad">
+!
+! <DESCRIPTION>
+! Compute the initial estimate of the gradient of the functional (g)
+! </DESCRIPTION>
+!
+!===============================================================================
 SUBROUTINE init_grad (Time, T_prog, Ext_mode, obs_Z, obs_0, obs_A)
 !
   TYPE(ocean_time_type), intent(in)                 :: Time
@@ -2173,10 +1927,6 @@ SUBROUTINE init_grad (Time, T_prog, Ext_mode, obs_Z, obs_0, obs_A)
         else
           if (obs_A(n)%obs_time <= Time%model_time .and. diff_time < gds_freq) obs_A(n)%stat = 1
         endif
-!       ov = obs_A(n)%a00 * (Ext_mode%eta_t(i,j,taup1) - eta_clm(i,j)) + &
-!            obs_A(n)%a01 * (Ext_mode%eta_t(i,jp,taup1) - eta_clm(i,jp)) + &
-!            obs_A(n)%a11 * (Ext_mode%eta_t(ip,jp,taup1) - eta_clm(ip,jp)) + &
-!            obs_A(n)%a10 * (Ext_mode%eta_t(ip,j,taup1) - eta_clm(ip,j))
         ov = obs_A(n)%a00 * (Ext_mode%eta_t(i,j) - eta_clm(i,j)) + &
              obs_A(n)%a01 * (Ext_mode%eta_t(i,jp) - eta_clm(i,jp)) + &
              obs_A(n)%a11 * (Ext_mode%eta_t(ip,jp) - eta_clm(ip,jp)) + &
@@ -2221,14 +1971,13 @@ SUBROUTINE init_grad (Time, T_prog, Ext_mode, obs_Z, obs_0, obs_A)
   END SUBROUTINE init_grad
 ! </SUBROUTINE> NAME="init_grad"
 
-!!
-!!#######################################################################
-!! <SUBROUTINE NAME="init_grad_sfc">
-!!
-!! <DESCRIPTION>
-!! Compute the initial estimate of the gradient of the functional (g)
-!! </DESCRIPTION>
-!!
+!===============================================================================
+! <SUBROUTINE NAME="init_grad_sfc">
+!
+! <DESCRIPTION>
+! Compute the initial estimate of the gradient of the functional (g)
+! </DESCRIPTION>
+!===============================================================================
 SUBROUTINE init_grad_sfc (Time, T_prog, obs_0)
 !
   TYPE(ocean_time_type), intent(in)                 :: Time
@@ -2380,14 +2129,13 @@ SUBROUTINE init_grad_sfc (Time, T_prog, obs_0)
 ! </SUBROUTINE> NAME="init_grad_sfc"
 
 
-!!
-!!#######################################################################
-!! <SUBROUTINE NAME="comp_f">
-!!
-!! <DESCRIPTION>
-!! Compute the 
-!! </DESCRIPTION>
-!!
+!===============================================================================
+! <SUBROUTINE NAME="comp_f">
+!
+! <DESCRIPTION>
+! Compute the 
+! </DESCRIPTION>
+!===============================================================================
 SUBROUTINE comp_f (obs_Z, obs_0, obs_A)
 !
   TYPE(ocean_obsz_type), intent(in)        :: obs_Z(:)
@@ -2549,14 +2297,13 @@ noos = 0
 ! </SUBROUTINE> NAME="comp_f"
 
 
-!!
-!!#######################################################################
-!! <SUBROUTINE NAME="comp_f_sfc">
-!!
-!! <DESCRIPTION>
-!! Compute the
-!! </DESCRIPTION>
-!!
+!===============================================================================
+! <SUBROUTINE NAME="comp_f_sfc">
+!
+! <DESCRIPTION>
+! Compute the
+! </DESCRIPTION>
+!===============================================================================
 SUBROUTINE comp_f_sfc (obs_0)
 !
   TYPE(ocean_obs0_type), intent(in)        :: obs_0(:)
@@ -2636,7 +2383,7 @@ noos = noos+1
 
 
 
-!#######################################################################
+!===============================================================================
 ! <SUBROUTINE NAME="eg_lpsmthr">
 !
 ! <DESCRIPTION>
@@ -2645,6 +2392,7 @@ noos = noos+1
 ! [e] is made by a series of multiplications by 1+laplacian.
 ! </DESCRIPTION>
 !
+!===============================================================================
 SUBROUTINE eg_lpsmthr
 
   INTEGER         :: nit, n, i, j, k, kk, ka, kp, kkp
@@ -2866,7 +2614,7 @@ END SUBROUTINE eg_lpsmthr
 ! </SUBROUTINE> NAME="eg_lpsmthr"
 
 
-!#######################################################################
+!===============================================================================
 ! <SUBROUTINE NAME="eg_lpsmthr_sfc">
 !
 ! <DESCRIPTION>
@@ -2874,7 +2622,7 @@ END SUBROUTINE eg_lpsmthr
 ! error covariance matrix [e] to get the vector h. The approximation to
 ! [e] is made by a series of multiplications by 1+laplacian.
 ! </DESCRIPTION>
-!
+!===============================================================================
 SUBROUTINE eg_lpsmthr_sfc
 
   INTEGER         :: nit, n, i, j, k, kk, ka, kp, kkp

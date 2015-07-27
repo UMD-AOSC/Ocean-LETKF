@@ -27,16 +27,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   REAL(r_size),INTENT(OUT) :: yobs
-! REAL(r_size) :: rh(nlon,nlat,nlev)
   INTEGER :: i,j,k
-! INTEGER :: is,ie,js,je,ks,ke
   INTEGER :: intelm
-! ie = CEILING( ri )
-! is = ie-1
-! je = CEILING( rj )
-! js = je-1
-! ke = CEILING( rk )
-! ks = ke-1
 
   intelm = NINT(elm)
   SELECT CASE (intelm)
@@ -203,9 +195,9 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
 END SUBROUTINE phys2ijk
 
-SUBROUTINE itpl_2d(var,ri,rj,var5)
+PURE SUBROUTINE itpl_2d(var,ri,rj,var5)
 !===============================================================================
-! Interpolation
+! Bilinear nterpolation in 2D
 !===============================================================================
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlon,nlat)
@@ -249,7 +241,7 @@ SUBROUTINE itpl_2d(var,ri,rj,var5)
   RETURN
 END SUBROUTINE itpl_2d
 
-SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
+PURE SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
 !===============================================================================
 ! Interpolation in 3D
 !===============================================================================

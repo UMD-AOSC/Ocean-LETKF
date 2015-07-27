@@ -41,7 +41,24 @@ INTEGER,PARAMETER :: id_atm_t_obs=5285      !(OCEAN) (ATMOS)
 INTEGER,PARAMETER :: id_atm_q_obs=5281      !(OCEAN) (ATMOS)
 INTEGER,PARAMETER :: id_atm_ps_obs=5280     !(OCEAN) (ATMOS)
 
-INTEGER :: obs1nrec = 6                     ! The number of records in the obs1-formatted file (previous 6, 7 adds a time record).
-INTEGER :: obs2nrec = 9                     ! The number of records in the obs2-formatted file (previous 8, 9 adds a time record).
+!ISSUE: make these namelist controllable:
+INTEGER, PARAMETER :: obs1nrec = 6                     ! The number of records in the obs1-formatted file (previous 6, 7 adds a time record).
+INTEGER, PARAMETER :: obs2nrec = 9                     ! The number of records in the obs2-formatted file (previous 8, 9 adds a time record).
+
+LOGICAL, PARAMETER :: DO_POTTEMP_to_INSITU = .false. ! Conversion to observation space. This is needed if the
+                                                     ! observations aren't converted to potential temperature
+                                                     ! (as is done by most - NCEP, SODA, NASA/GMAO, etc.). But
+                                                     ! unlike that approach, this does not require synthetic salinity
+                                                     ! observations to be constructed from climatologies.
+                                                     ! This approach is theoretically better, but investigation must
+                                                     ! be done to ensure model biases to not cause significant errors.
+                                                     ! (a warning from J. Carton of potential difficulty)
+                                                     !
+                                                     ! Only one can be true, this one takes prioirty
+                                                     !
+LOGICAL, PARAMETER :: DO_INSITU_to_POTTEMP = .false. ! Technically, this would require matching an observed salinity
+                                                     ! measurement with each observed in situ temperature measurement
+                                                     ! and using it to compute the potential temperature. The opposite
+                                                     ! process is quite a bit easier.
 
 END MODULE params_obs

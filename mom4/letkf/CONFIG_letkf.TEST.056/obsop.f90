@@ -3,21 +3,15 @@ PROGRAM obsop
 ! PROGRAM: obsop
 ! 
 ! USES:
-!   use common
-!   use common_mom4
-!   use common_obs_mom4
+!  use common
+!  use params_model
+!  use vars_model
+!  use common_mom4
+!  use params_obs
+!  use vars_obs
+!  use common_obs_mom4
+!  use params_letkf,     ONLY: DO_ALTIMETRY, DO_DRIFTERS
 !
-! PUBLIC TYPES:
-!                 implicit none
-!                 [save]
-!
-!                 <type declaration>
-!     
-! PUBLIC MEMBER FUNCTIONS:
-!           <function>                     ! Description      
-!
-! PUBLIC DATA MEMBERS:
-!           <type> :: <variable>           ! Variable description
 !
 ! DESCRIPTION: 
 !   This program acts as the observation operator. It inputs observations (yo)
@@ -35,16 +29,20 @@ PROGRAM obsop
 !   04/03/2013 Takemasa Miyoshi created for SPEEDY atmospheric model.
 ! 
 !-------------------------------------------------------------------------------
-! $Author: Steve Penny $
+! $Author: Steve Penny, Takemasa Miyoshi $
 !===============================================================================
+
   USE common
   USE params_model
   USE vars_model
   USE common_mom4
-  USE params_obs
+  USE params_obs,                ONLY: nobs, id_t_obs, id_s_obs, id_u_obs, id_v_obs
+  USE params_obs,                ONLY: id_eta_obs
+  USE params_obs,                ONLY: DO_INSITU_to_POTTEMP, DO_POTTEMP_to_INSITU
   USE vars_obs
   USE common_obs_mom4
-  USE params_letkf,     ONLY: DO_ALTIMETRY, DO_DRIFTERS
+  USE params_letkf,              ONLY: DO_ALTIMETRY, DO_DRIFTERS
+  USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z
 
   IMPLICIT NONE
 
@@ -108,6 +106,9 @@ PROGRAM obsop
   !STEVE: for adaptive obs:
   LOGICAL :: oerfile_exists
   REAL(r_size) :: oberr
+
+  ! For potential temperature conversion to in situ:
+  REAL(r_size) :: p,pt,sp
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_mom4 module, and process command line options
@@ -194,20 +195,20 @@ PROGRAM obsop
     !---------------------------------------------------------------------------
     ! Filter out observations that are out of range for the grid
     !---------------------------------------------------------------------------
-    IF(CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) THEN
+    if (CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) then
       if (verbose) WRITE(6,'(A)') '* X-coordinate out of range'
       if (verbose) WRITE(6,'(A,F6.2,A,F6.2)') '*   ri=',ri,', olon=', rlon(n)
       cnt_xout = cnt_xout + 1
       CYCLE
-    END IF
-    IF(CEILING(rj) < 2 .OR. nlat < CEILING(rj)) THEN
+    endif
+    if (CEILING(rj) < 2 .OR. nlat < CEILING(rj)) then
       if (verbose) WRITE(6,'(A)') '* Y-coordinate out of range'
       if (verbose) WRITE(6,'(A,F6.2,A,F6.2)') '*   rj=',rj,', olat=',rlat(n)
       cnt_yout = cnt_yout + 1
       CYCLE
-    END IF
+    endif
     !STEVE: check against kmt, not nlev (OCEAN)
-    IF(CEILING(rk) > nlev) THEN
+    if (CEILING(rk) > nlev) then
       CALL itpl_2d(kmt0,ri,rj,dk)
       WRITE(6,'(A)') '* Z-coordinate out of range'
       WRITE(6,'(A,F6.2,A,F10.2,A,F6.2,A,F6.2,A,F10.2)') &
@@ -215,10 +216,10 @@ PROGRAM obsop
            & ', (lon,lat)=(',rlon(n),',',rlat(n),'), kmt0=',dk
       cnt_zout = cnt_zout + 1
       CYCLE
-    END IF
-    IF(CEILING(rk) < 2 .AND. rk < 1.00001d0) THEN    !(OCEAN)
+    endif
+    if (CEILING(rk) < 2 .AND. rk < 1.00001d0) then   !(OCEAN)
       rk = 1.00001d0                                 !(OCEAN)
-    END IF                                           !(OCEAN)
+    endif                                            !(OCEAN)
 
     !---------------------------------------------------------------------------
     ! Check the observation against boundaries
@@ -248,7 +249,7 @@ PROGRAM obsop
       !STEVE: check this, case 1 allows more observations, case 2 is more restrictive
       select case (bdyobs)
       case(1)
-        IF(kmt(NINT(ri),NINT(rj)) .lt. 1) THEN
+        if (kmt(NINT(ri),NINT(rj)) .lt. 1) then
           if (debug_obsfilter) then
             WRITE(6,'(A)') '* coordinate is on or too close to land, according to kmt'
             WRITE(6,'(A,F6.2,A,F6.2)') '*   ri=',ri,', rj=',rj
@@ -256,7 +257,7 @@ PROGRAM obsop
           endif
           cnt_nearland = cnt_nearland + 1
           CYCLE
-        ELSEIF (kmt(NINT(ri),NINT(rj)) .lt. rk) THEN
+        elseif (kmt(NINT(ri),NINT(rj)) .lt. rk) then
           if (debug_obsfilter) then
             WRITE(6,'(A)') '* coordinate is on or too close to underwater topography, according to kmt'
             WRITE(6,'(A,F6.2,A,F6.2,A,F6.2)') '*   ri=',ri,', rj=',rj, ', rk=',rk
@@ -264,7 +265,7 @@ PROGRAM obsop
           endif
           cnt_nearland = cnt_nearland + 1
           CYCLE
-        ENDIF
+        endif
       case(2)
         if(kmt(CEILING(ri),CEILING(rj)) .lt. 1 .or. &
              kmt(CEILING(ri),FLOOR(rj)) .lt. 1 .or. &
@@ -395,6 +396,28 @@ PROGRAM obsop
     ! observation operator (computes H(x)) for specified member
     !---------------------------------------------------------------------------
     CALL Trans_XtoY(elem(n),ri,rj,rk,v3d,v2d,ohx(n))
+    
+    if (DO_POTTEMP_to_INSITU .and. elem(n) .eq. id_t_obs) then
+      !STEVE: eventually use pressure from model output,
+      !       for now, use computation:
+      p = p_from_z(rlev(n),rlat(n))
+
+      ! Assign the temperature from above:
+      pt = ohx(n)
+
+      ! Need the salinity value here too:
+      CALL Trans_XtoY(REAL(id_s_obs,r_size),ri,rj,rk,v3d,v2d,sp)
+
+      !STEVE: for some reason, realtime GTS data is
+      !       distributed using depth as the vertical
+      !       coordinate rather than pressure:
+      !       http://www.argo.ucsd.edu/Argo_date_guide.html#gtsusers
+      ohx(n) = t_from_pt(pt,sp,p,rlon(n),rlat(n))
+
+    elseif (DO_INSITU_to_POTTEMP) then  
+      STOP "obsop.f90::post-Trans_XtoY::  DO_INSITU_to_POTTEMP case must be coded."
+    endif
+
     if (dodebug .and. DO_ALTIMETRY .and. elem(n) .eq. id_eta_obs) then
       WRITE(6,*) "post-Trans_XtoY:: id_eta_obs, ohx(n) = ", ohx(n)
     endif
@@ -437,7 +460,7 @@ INTEGER, DIMENSION(3) :: values
 
 ! STEVE: add input error handling!
 ! inputs are in the format "-x xxx"
-DO i=1,COMMAND_ARGUMENT_COUNT(),2
+do i=1,COMMAND_ARGUMENT_COUNT(),2
   CALL GET_COMMAND_ARGUMENT(i,arg1)
   PRINT *, "In grd2cor.f90::"
   PRINT *, "Argument ", i, " = ",TRIM(arg1)
@@ -468,7 +491,7 @@ DO i=1,COMMAND_ARGUMENT_COUNT(),2
       PRINT *, "(with value : ", trim(arg2), " )"
       stop 1
   end select
-ENDDO
+enddo
 
 END SUBROUTINE process_command_line
 
