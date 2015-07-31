@@ -58,6 +58,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   RETURN
 END SUBROUTINE Trans_XtoY
 
+
 SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 !===============================================================================
 ! Coordinate conversion
@@ -191,8 +192,6 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
   END IF
 
-  RETURN
-
 END SUBROUTINE phys2ijk
 
 PURE SUBROUTINE itpl_2d(var,ri,rj,var5)
@@ -283,6 +282,7 @@ PURE SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
 
   RETURN
 END SUBROUTINE itpl_3d
+
 
 SUBROUTINE monit_dep(nn,elm,dep,qc)
 !===============================================================================
@@ -516,6 +516,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 
   RETURN
 END SUBROUTINE get_nobs
+
 
 SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
 !===============================================================================
