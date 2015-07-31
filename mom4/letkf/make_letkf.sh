@@ -11,6 +11,7 @@ set -ex
 source ../../config/machine.sh
 source ../../config/$MACHINE.fortran.sh
 source ../../config/$MACHINE.netcdf.sh
+source ../../config/$MACHINE.mpi.sh
 
 # Ensemble size
 # STEVE: figure out how to read from params_letkf.f90 and put here (e.g. with awk/perl/etc.)
@@ -27,7 +28,7 @@ PGM=letkf.$name.$MEM3
 
 OMP=
 PWD=`pwd`
-BLAS=1 #0: no blas 1: using blas
+#BLAS=1 #0: no blas 1: using blas
 #STEVE: ask about blas on zeus
 sh ulnkcommon.sh
 sh lnkcommon.sh

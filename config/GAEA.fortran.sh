@@ -8,6 +8,7 @@ F90_INLINE= #"-Q -qinline"
 F90_DEBUG= #'-g -qfullpath -v -C -qsigtrap=xl__trcedump' # -qflttrap=en:nanq -qsigtrap'
 F90_IEEE='-fltconsistency' #'-Kieee' #'-fltconsistency'
 F90_OBJECT_FLAG='-c' #STEVE: for some reason, mpxlf doesn't use -c, but rather -g
+BLAS=1
 
 #F90_OPT='-ip -mcmodel=medium -shared-intel -fast -O2'
 #F90_OPT='-ftz -ip -ipo -O2 -parallel -i_dynamic -what -fpp -fno-alias -stack_temps -safe_cray_ptr -fast'
