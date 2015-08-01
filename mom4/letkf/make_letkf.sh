@@ -11,18 +11,24 @@ set -ex
 source ../../config/machine.sh
 source ../../config/$MACHINE.fortran.sh
 source ../../config/$MACHINE.netcdf.sh
+source ../../config/$MACHINE.mpi.sh
 
 # Ensemble size
 # STEVE: figure out how to read from params_letkf.f90 and put here (e.g. with awk/perl/etc.)
-MEM=056
+#        -> grep and sed seem to work ok:
+#        (Set the ensemble size in params_letkf.f90, it will read it in here)
+MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1/'`
+echo "MEM=$MEM"
+MEM3=`printf %.3d ${MEM}`
+
 # Experiment name
 name=TEST
 # Executable for letkf
-PGM=letkf.$name.$MEM
+PGM=letkf.$name.$MEM3
 
 OMP=
 PWD=`pwd`
-BLAS=1 #0: no blas 1: using blas
+#BLAS=1 #0: no blas 1: using blas
 #STEVE: ask about blas on zeus
 sh ulnkcommon.sh
 sh lnkcommon.sh

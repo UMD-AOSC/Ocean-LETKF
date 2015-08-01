@@ -1,0 +1,13 @@
+#!/bin/csh -f
+
+unalias *
+
+alias printf    /usr/bin/printf
+alias egrep     /bin/egrep
+alias paste     /usr/bin/paste
+alias sed       /bin/sed
+alias tr        /usr/bin/tr
+alias cvs       /usr/bin/cvs
+
+printf "%-29s %-16s %-15s %-18s %8s %s\n" `cvs -q status $argv |egrep "Status|Sticky Tag|Working revision" |paste -s |sed "s/Result of merge//g;s/Sticky Tag://g;s/... ... .. ..:..:.. ....//g;s/Working revision://g;s/File:/=/g;s/Status://g;s/(none)/(none) _ _/g;s/no file //g;s/- MISSING from RCS file./NONE YET/g;s/Unknown/Unknown Not_checked_out -- --/g;s/Entry /Entry_/g;s/Locally /Locally_/g;s/No entry for //g;s/Unresolved Conflict/Unresolved_Conflict/g;s/No revision control file/-- No_file/g;s/New /New_/g;s/Needs /Needs_/g" |tr = "\n" `  
+

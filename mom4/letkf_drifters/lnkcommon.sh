@@ -3,9 +3,6 @@
 set -e
 
 
-# Get letkf files
-ln -fs ../letkf/*.f90 .
-
 COMMONDIR=../../common
 ln -fs $COMMONDIR/SFMT.f90 ./
 ln -fs $COMMONDIR/common.f90 ./
@@ -19,3 +16,15 @@ ln -fs ../common/common_mom4.f90 ./
 ln -fs ../common/common_mpi_mom4.f90 ./
 ln -fs ../common/common_obs_mom4.f90 ./
 
+# Get letkf files
+#ln -fs ../letkf/*.f90 .
+ln -fs ../letkf/params_letkf.f90 ./
+ln -fs ../letkf/params_model.f90 ./
+ln -fs ../letkf/vars_model.f90 ./
+ln -fs ../letkf/letkf_obs.f90 ./
+ln -fs ../letkf/letkf_local.f90 ./
+ln -fs ../letkf/letkf_tools.f90 ./
+ln -fs ../letkf/letkf.f90 ./
+
+ln -fs ../obs/params_obs.f90 ./
+ln -fs ../obs/vars_obs.f90 ./

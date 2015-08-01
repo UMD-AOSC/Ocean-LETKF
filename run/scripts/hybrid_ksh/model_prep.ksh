@@ -125,7 +125,7 @@ else
     fi
 
     echo "Using Model forecast from previous step as initial conditions for ocean_velocity and ocean_sbc ..."
-    workdir_analysis=${EXP_DATA}/$PY$PM$PD$PH/model/00
+    workdir_analysis=${EXP_DATA}/$PY$PM$PD$PH/model/$MEM2
 
     # VELOCITY Restart Files:
     srcfile=$workdir_analysis/RESTART/ocean_velocity.res.nc

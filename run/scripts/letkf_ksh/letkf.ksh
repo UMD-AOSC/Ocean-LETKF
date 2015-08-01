@@ -1,11 +1,44 @@
 #!/bin/ksh --login
+#===============================================================================
+# SCRIPT:
+# letkf_prepc.ksh
+#
+# PURPOSE:
+# This script prepares background and observation data for letkf 
+# This 'compact' version runs all processing for each member 
+# (as opposed to a separate instance not each member & timeslot)
+#
+# MODULES USED:
+#  (e.g. on Gaea)
+#  module swap PrgEnv-pgi PrgEnv-intel
+#  module load netcdf
+#
+# INPUTS:
+#  YYYYMMDDHH    :: string containing 4-digit year, 2-digit month, 2-digit day, 2-digit hour
+#  MEMBERID      :: Ensemble member number
+#  EXP_DATA      :: directory containing experiment output data
+#  NSLOTS        :: number of timeslots to use for 4D-LETKF (e.g. "5" for 5 days)
+#  days          :: forecast length (in integer days)
+#  OBSOPexe      :: execuatable for LETKF observation operator
+#  OBSDIR1       :: Observation directory, primary
+#  OBSDIR5       :: Observation directory to use for analysis time only
+#  INPUT_INIT    :: Directory containing static model input files
+#  LDIR          :: directory of letkf executable and obsoperator executable
+#  USE_ALTIMETRY :: flag to assimilate altimetry data (1==true,0==false)
+#  altimetry_climatology_file       :: model eta climatology, for assimilating AVISO altimetry  
+# 
+#===============================================================================
+# Author      :: Stephen G. Penny
+# Institution :: University of Maryland (UMD) 
+#                Department of Atmospheric and Oceanic Science (AOSC), and
+#                National Centers for Environmental Prediction (NCEP)
+#                National Oceanograpic and Atmospheric Administration (NOAA)
+# Email       :: Steve.Penny@noaa.gov
+#===============================================================================
+
 set -e
 set -x
 set -v
-
-#module load intel
-#module load netcdf/4.1.3-intel
-#module load nco
 
 echo "LETKF run step"
 echo "Processing cycle: ${YYYYMMDDHH}"
@@ -82,22 +115,16 @@ fi
 # (This is needed to read and write mom4p1 netcdf files in letkf)
 ln -f $INPUT_INIT/grid_spec.nc grid_spec.nc
 if [ "$USE_ALTIMETRY" -eq "1" ]; then
-  if [ -f $mETACLM ]; then
-    ln -f $mETACLM aEtaCds9399.nc
+  if [ -f $altimetry_climatology_file ]; then
+    ln -f $altimetry_climatology_file aEtaCds9399.nc
   else
-    echo "The aEtaCds9399.nc is not present: $mETACLM"
+    echo "The aEtaCds9399.nc is not present: $altimetry_climatology_file"
   fi
 else
   echo "NOT using ALTIMETRY"
   echo "USE_ALTIMETRY = $USE_ALTIMETRY"
-  echo "mETACLM = $mETACLM"
+  echo "altimetry_climatology_file = $altimetry_climatology_file"
 fi
-
-# This is for assimilating the surface forcing fields
-#cp $LDIR/coeff_m2s.nc coeff_m2s.nc
-#cp $LDIR/coeff_s2m.nc coeff_s2m.nc
-cp $REGRID/coeff_m2s.nc coeff_m2s.nc
-cp $REGRID/coeff_s2m.nc coeff_s2m.nc
 
 # START RUN LETKF ################################################
 cp $LDIR/$LETKFexe .
@@ -105,15 +132,6 @@ echo "Running LETKF..."
 aprun -n $PBS_NP $LETKFexe
 echo "This is the LETKF run for cycle ${YYYYMMDDHH}" > ${workdir}/letkf.out
 # END   RUN LETKF ################################################
-
-# DO_SFCFLUXES
-#On the next analysis cycle in the model_prep stage, add the perturbations to the SFC fields for each member.
-if [ $DO_SFCFLUXES ]; then
-  cp /sw/xe6/nco/4.0.8/sles11.1_netcdf4.2.0_gnu4.7.0/bin/ncatted .
-  for file in `ls -d ${workdir}/SFA_*.nc`; do
-    ncatted -O -a units,TIME,c,c,"days since $AY-$AM-$AD 12:00:00" $file
-  done
-fi
 
 ### process outputs
 #if test -f infl_mul.grd

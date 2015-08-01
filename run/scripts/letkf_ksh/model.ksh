@@ -1,9 +1,37 @@
 #!/bin/ksh --login
-set -e
+#===============================================================================
+# SCRIPT:
+# model.ksh
+#
+# PURPOSE:
+# This script calls the ocean model using a pre-defined calling script.
+# A separate instance can be called for each ensemble member.
+#
+# MODULES USED:
+#  (e.g. on Gaea)
+#  module swap PrgEnv-pgi PrgEnv-intel
+#  module load netcdf
+#
+# INPUTS:
+#  YYYYMMDDHH    :: string containing 4-digit year, 2-digit month, 2-digit day, 2-digit hour
+#  MEMBERID      :: Ensemble member number
+#  EXP_DATA      :: directory containing experiment output data
+#  days          :: forecast length (in integer days)
+#  MOM4run       :: runscript for ocean model
+#  mtype         :: model type (either 'solo' or 'coupled', defined at model compilation time)
+#  TMPDIR        ::
+#  
+# 
+#===============================================================================
+# Author      :: Stephen G. Penny
+# Institution :: University of Maryland (UMD) 
+#                Department of Atmospheric and Oceanic Science (AOSC), and
+#                National Centers for Environmental Prediction (NCEP)
+#                National Oceanograpic and Atmospheric Administration (NOAA)
+# Email       :: Steve.Penny@noaa.gov
+#===============================================================================
 
-#module load intel
-#module load netcdf
-#module load nco
+set -e
 
 echo "Model step"
 echo "Processing cycle: ${YYYYMMDDHH}"
@@ -25,7 +53,7 @@ IS=00
 
 # Start date of next analysis cycle
 date=/bin/date
-inc=$days #5
+inc=$days
 inc_units=days
 TY=`$date -d "$IY-$IM-$ID $inc $inc_units" +%Y`
 TM=`$date -d "$IY-$IM-$ID $inc $inc_units" +%m`

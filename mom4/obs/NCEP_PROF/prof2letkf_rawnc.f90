@@ -8,11 +8,16 @@ PROGRAM prof2letkf_rawnc
 ! on the temperature gradients, or read from an observation error file
 ! (e.g. when doing adaptive obs error)
 !
+! Either the in situ temperatures will have to be converted to potential temperature,
+! or the obs operator will have to transform the model potential temperature to
+! in situ equivalent. The latter will be easier because there is no guarantee
+! that temperature and salinity are observed simultaneously.
+!
 !===============================================================================
 
 USE common,       ONLY: r_sngl, r_size, slen
 USE params_model, ONLY: nlev
-USE params_obs
+USE params_obs,   ONLY: id_t_obs, id_s_obs
 
 IMPLICIT NONE
 
@@ -43,7 +48,7 @@ TYPE argo_data
   CHARACTER(9) :: plat      ! Platform
   CHARACTER(3) :: ptyp      ! Profile type
   CHARACTER(3) :: sid       ! Source id
-  INTEGER :: qkey           ! Quality key
+  CHARACTER(1) :: qkey      ! Quality key
   INTEGER :: typ    ! observation variable type (e.g., PRES_TYPE)
   INTEGER :: nlevs  ! number of levels with data, counting from the top, including levels with missing data that have obs below them.
   INTEGER :: id     ! id number used in observation files to identify the observation
@@ -138,196 +143,214 @@ CHARACTER(9), ALLOCATABLE, DIMENSION(:) :: plat
 CHARACTER(1), ALLOCATABLE, DIMENSION(:) :: qkey
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: temp, salt, stde
 !REAL(r_size), DIMENSION(nlev,maxcnt) :: temp, salt, stde
-REAL(r_size), ALLOCATABLE, DIMENSION(:) :: depth ! profile depths
+REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: depth ! profile depths
 REAL(r_size) :: val
 INTEGER :: cnt, nlv
+LOGICAL :: dodebug=.true.
+REAL(r_size) :: missing_value=9.969209968386869E+036
+REAL(r_sngl) :: mvc=999
 
 !-------------------------------------------------------------------------------
 ! Open netcdf file
 !-------------------------------------------------------------------------------
 istat = NF90_OPEN(infile,NF90_NOWRITE,ncid)
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   WRITE(6,'(A)') 'netCDF OPEN ERROR on ', infile
   STOP
-END IF
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the number of records
 !-------------------------------------------------------------------------------
 istat = NF90_INQ_DIMID(ncid,'count',dimid)
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_DIMID count failed"
   STOP
-ENDIF
+endif
 istat = NF90_INQUIRE_DIMENSION(ncid,dimid,dimname,cnt)
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "count NF90_INQUIRE_DIMENSION failed"
   STOP
-ENDIF
+endif
 print *, "**************************"
 print *, "Record Count is = ", cnt
 print *, "**************************"
-if (maxcnt < cnt) then
-  print *, "ERROR: maxcnt must be increased to > ", cnt
-  stop 1
-endif
 
 !-------------------------------------------------------------------------------
 ! Read the number of stored depths
 !-------------------------------------------------------------------------------
 istat = NF90_INQ_DIMID(ncid,'depth',dimid)
-IF(istat /= NF90_NOERR) THEN 
+if (istat /= NF90_NOERR) then 
   print *, "NF90_INQ_DIMID depth failed"
   STOP
-ENDIF
+endif
 istat = NF90_INQUIRE_DIMENSION(ncid,dimid,dimname,nlv)
-IF(istat /= NF90_NOERR) THEN
-  print *, "depth_dim NF90_INQUIRE_DIMENSION failed"
+if (istat /= NF90_NOERR) then
+  print *, "nlv NF90_INQUIRE_DIMENSION failed"
   STOP
-ENDIF
+endif
+print *, "**************************"
+print *, "Number of depths is = ", nlv
+print *, "**************************"
 
 !-------------------------------------------------------------------------------
 ! Read the length of string type 1
 !-------------------------------------------------------------------------------
 istat = NF90_INQ_DIMID(ncid,'len1',dimid)
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_DIMID dimid failed"
   STOP
-ENDIF
+endif
 istat = NF90_INQUIRE_DIMENSION(ncid,dimid,dimname,len1)
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQUIRE_DIMENSION len1 failed"
   STOP
-ENDIF
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the length of string type 2
 !-------------------------------------------------------------------------------
 istat = NF90_INQ_DIMID(ncid,'len2',dimid)
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_DIMID len2 failed"
   STOP
-ENDIF
+endif
 istat = NF90_INQUIRE_DIMENSION(ncid,dimid,dimname,len2)
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQUIRE_DIMENSION len2 failed"
   STOP
-ENDIF
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the depths
 !-------------------------------------------------------------------------------
+ALLOCATE(depth(nlv,cnt))
 istat = NF90_INQ_VARID(ncid,'depth',varid)   
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID depth failed"
   STOP
-ENDIF
-istat = NF90_GET_VAR_DOUBLE(ncid,varid,grid_z)
-IF(istat /= NF90_NOERR) THEN
-  print *, "NF90_GET_VAR_DOUBLE depth failed"
+endif
+istat = NF90_GET_VAR(ncid,varid,depth)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR depth failed"
   STOP
-!ELSE
-!  print *, "depth = ", depth
+ELSE
+  print *, "depth(:,1) = ", depth(:,1)
 !  STOP 0
-ENDIF
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the longitude coordinates
 !-------------------------------------------------------------------------------
+ALLOCATE(xlon(cnt))
 istat = NF90_INQ_VARID(ncid,'xlon',varid)  
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID xlon failed"
   STOP
-ENDIF
-istat = NF90_GET_VAR_DOUBLE(ncid,varid,xlon)
-IF(istat /= NF90_NOERR) THEN
-  print *, "NF90_GET_VAR_DOUBLE xlon failed"
+endif
+istat = NF90_GET_VAR(ncid,varid,xlon)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR xlon failed"
   STOP
-ENDIF
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the latitude coordinates
 !-------------------------------------------------------------------------------
+ALLOCATE(ylat(cnt))
 istat = NF90_INQ_VARID(ncid,'ylat',varid)   
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID ylat failed"
   STOP
-ENDIF
-istat = NF90_GET_VAR_DOUBLE(ncid,varid,ylat)
-IF(istat /= NF90_NOERR) THEN
-  print *, "NF90_GET_VAR_DOUBLE ylat failed"
+endif
+istat = NF90_GET_VAR(ncid,varid,ylat)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR ylat failed"
   STOP
-ENDIF
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the time as 'hour'
 !-------------------------------------------------------------------------------
+ALLOCATE(hour(cnt))
 istat = NF90_INQ_VARID(ncid,'hour',varid)   
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID hour failed"
   STOP
-ENDIF
-istat = NF90_GET_VAR_DOUBLE(ncid,varid,hour)
-IF(istat /= NF90_NOERR) THEN
-  print *, "NF90_GET_VAR_DOUBLE hour failed"
+endif
+istat = NF90_GET_VAR(ncid,varid,hour)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR hour failed"
   STOP
-ENDIF
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the platform
 !-------------------------------------------------------------------------------
+ALLOCATE(plat(cnt))
 istat = NF90_INQ_VARID(ncid,'plat',varid)   
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID plat failed"
   STOP
-ENDIF
-istat = NF90_GET_VAR_TEXT(ncid,varid,plat)
-IF(istat /= NF90_NOERR) THEN
-  print *, "NF90_GET_VAR_DOUBLE plat failed"
+endif
+istat = NF90_GET_VAR(ncid,varid,plat)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR plat failed"
   STOP
-ENDIF
+else
+  print *, "plat(1) = ", plat(1)
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the profile type
 !-------------------------------------------------------------------------------
+ALLOCATE(ptyp(cnt))
 istat = NF90_INQ_VARID(ncid,'ptyp',varid)   
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID ptyp failed"
   STOP
-ENDIF
-istat = NF90_GET_VAR_TEXT(ncid,varid,ptyp)
-IF(istat /= NF90_NOERR) THEN
-  print *, "NF90_GET_VAR_DOUBLE ptyp failed"
+endif
+istat = NF90_GET_VAR(ncid,varid,ptyp)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR ptyp failed"
   STOP
-ENDIF
+else
+  print *, "ptyp(1) = ", ptyp(1)
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the Source ID
 !-------------------------------------------------------------------------------
+ALLOCATE(sid(cnt))
 istat = NF90_INQ_VARID(ncid,'sid',varid)   
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID sid failed"
   STOP
-ENDIF
-istat = NF90_GET_VAR_TEXT(ncid,varid,sid)
-IF(istat /= NF90_NOERR) THEN
-  print *, "NF90_GET_VAR_DOUBLE sid failed"
+endif
+istat = NF90_GET_VAR(ncid,varid,sid)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR sid failed"
   STOP
-ENDIF
+else
+  print *, "sid(1) = ", sid(1)
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the Quality Key
 !-------------------------------------------------------------------------------
+ALLOCATE(qkey(cnt))
 istat = NF90_INQ_VARID(ncid,'qkey',varid)   
-IF(istat /= NF90_NOERR) THEN
+if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID qkey failed"
   STOP
-ENDIF
-istat = NF90_GET_VAR_TEXT(ncid,varid,qkey)
-IF(istat /= NF90_NOERR) THEN
-  print *, "NF90_GET_VAR_DOUBLE qkey failed"
+endif
+istat = NF90_GET_VAR(ncid,varid,qkey)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR qkey failed"
   STOP
-ENDIF
+else
+  print *, "qkey(1) = ", qkey(1)
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the observed profile data (temperature or salinity)
@@ -335,27 +358,29 @@ ENDIF
 if (typ .eq. id_t_obs) then
   ALLOCATE(temp(nlv,cnt))
   istat = NF90_INQ_VARID(ncid,'temp',varid)   
-  IF(istat /= NF90_NOERR) THEN
+  if (istat /= NF90_NOERR) then
     print *, "NF90_INQ_VARID temp failed"
     STOP
-  ENDIF
-  istat = NF90_GET_VAR_DOUBLE(ncid,varid,temp)
+  endif
+  istat = NF90_GET_VAR(ncid,varid,temp)
+  if (dodebug) print *, "temp(:,1) = ", temp(:,1)
 elseif (typ .eq. id_s_obs) then
   ALLOCATE(salt(nlv,cnt))
   istat = NF90_INQ_VARID(ncid,'salt',varid)   
-  IF(istat /= NF90_NOERR) THEN
+  if (istat /= NF90_NOERR) then
     print *, "NF90_INQ_VARID salt failed"
     STOP
-  ENDIF
-  istat = NF90_GET_VAR_DOUBLE(ncid,varid,salt)
+  endif
+  istat = NF90_GET_VAR(ncid,varid,salt)
+  if (dodebug) print *, "salt(:,1) = ", salt(:,1)
 endif
-IF(istat /= NF90_NOERR) STOP
+if (istat /= NF90_NOERR) STOP
 
 !-------------------------------------------------------------------------------
 ! Close the netcdf file
 !-------------------------------------------------------------------------------
 istat = NF90_CLOSE(ncid)
-IF(istat /= NF90_NOERR) STOP
+if (istat /= NF90_NOERR) STOP
 
 !-------------------------------------------------------------------------------
 ! STEVE: need to compute the standard error as Dave did based on vertical temperature gradient
@@ -381,23 +406,23 @@ do i=1,cnt
       val = salt(k,i)
       err = stde(k,i) !s_eprof(k)
     endif
-    if (val > -99) then
+    if (val < mvc .and. depth(k,i) < mvc) then
       n = n+1
       !print *, "n,i,k,depth, val = ", n,i,k,grid_z(k), val
-      print *, "n,lon,lat,depth,hour,val,err = ", n,xlon(i),ylat(i),grid_z(k),hour(i),val,err
+      print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k,i),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
       obs_data(n)%typ = typ
       obs_data(n)%x_grd(1) = xlon(i)
       obs_data(n)%x_grd(2) = ylat(i)
-      obs_data(n)%x_grd(3) = depth(k)
+      obs_data(n)%x_grd(3) = depth(k,i)
       obs_data(n)%hour = hour(i)
       obs_data(n)%value = val
       obs_data(n)%oerr = err
       obs_data(n)%rid = i
       obs_data(n)%lid = k
-      obs_data(n)%plat = plat
-      obs_data(n)%ptyp = ptyp
-      obs_data(n)%sid  = sid
-      obs_data(n)%qkey = qkey
+      obs_data(n)%plat = plat(i)
+      obs_data(n)%ptyp = ptyp(i)
+      obs_data(n)%sid  = sid(i)
+      obs_data(n)%qkey = qkey(i)
     endif
   enddo
 enddo

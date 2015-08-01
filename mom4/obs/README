@@ -1,0 +1,11 @@
+# Observation Operator
+
+  This directory is the initiation of a set of observation operators for each new
+  data 'class'. I am assuming that it will be most convenient and efficient to 
+  process all similar data type (e.g. profiles, including temperature and salinity
+  from Argo, XBTs, CTDs, etc.) in its own observation operator program.
+
+  Ultimately, this should allow distributed work effort on each new data type,
+  possibily even allowing the satellite data providers to compute their own
+  observation operators for rapid inclusion into the operational ocean data
+  assimilation system.

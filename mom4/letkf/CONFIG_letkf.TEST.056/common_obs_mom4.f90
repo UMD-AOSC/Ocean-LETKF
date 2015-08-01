@@ -27,16 +27,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   REAL(r_size),INTENT(OUT) :: yobs
-! REAL(r_size) :: rh(nlon,nlat,nlev)
   INTEGER :: i,j,k
-! INTEGER :: is,ie,js,je,ks,ke
   INTEGER :: intelm
-! ie = CEILING( ri )
-! is = ie-1
-! je = CEILING( rj )
-! js = je-1
-! ke = CEILING( rk )
-! ks = ke-1
 
   intelm = NINT(elm)
   SELECT CASE (intelm)
@@ -65,6 +57,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
 
   RETURN
 END SUBROUTINE Trans_XtoY
+
 
 SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 !===============================================================================
@@ -199,13 +192,11 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
   END IF
 
-  RETURN
-
 END SUBROUTINE phys2ijk
 
-SUBROUTINE itpl_2d(var,ri,rj,var5)
+PURE SUBROUTINE itpl_2d(var,ri,rj,var5)
 !===============================================================================
-! Interpolation
+! Bilinear nterpolation in 2D
 !===============================================================================
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlon,nlat)
@@ -249,7 +240,7 @@ SUBROUTINE itpl_2d(var,ri,rj,var5)
   RETURN
 END SUBROUTINE itpl_2d
 
-SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
+PURE SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
 !===============================================================================
 ! Interpolation in 3D
 !===============================================================================
@@ -291,6 +282,7 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
 
   RETURN
 END SUBROUTINE itpl_3d
+
 
 SUBROUTINE monit_dep(nn,elm,dep,qc)
 !===============================================================================
@@ -474,6 +466,8 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
         PRINT '(I6,2F7.2,F10.2,2F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6)
       elseif (dodebug .and. nrec .eq. 8) then
         PRINT '(I6,2F7.2,F10.2,4F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8)
+      elseif (dodebug .and. nrec .eq. 9) then
+        PRINT '(I6,2F7.2,F10.2,5F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
       endif
       IF(ios /= 0) EXIT
       SELECT CASE(NINT(wk(1)))
@@ -523,7 +517,8 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   RETURN
 END SUBROUTINE get_nobs
 
-SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
+
+SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
 !===============================================================================
 ! Read in observations
 !===============================================================================
@@ -536,13 +531,15 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
   REAL(r_size),INTENT(OUT) :: rlev(nn)
   REAL(r_size),INTENT(OUT) :: odat(nn)
   REAL(r_size),INTENT(OUT) :: oerr(nn)
-  REAL(r_sngl) :: wk(6)
+  REAL(r_size), OPTIONAL, INTENT(OUT) :: obhr(nn)
+  REAL(r_sngl), ALLOCATABLE :: wk(:) !obs1nrec
   !REAL(r_size) :: wk(6) !(OCEAN) STEVE: I changed this because the netcdf observation files are stored as double precision
   INTEGER :: n,iunit
   ! STEVE: for general grid
   LOGICAL :: dodebug = .false.
   LOGICAL :: process_obs = .true.
 
+  ALLOCATE(wk(obs1nrec))
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   DO n=1,nn
@@ -553,13 +550,16 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
     rlev(n) = REAL(wk(4),r_size)
     odat(n) = REAL(wk(5),r_size)
     oerr(n) = REAL(wk(6),r_size)
+    if (obs1nrec > 6) then
+      obhr(n) = REAL(wk(7),r_size)
+    endif
     !STEVE: error check
     if (oerr(n) .le. 0) then
       print *, "common_obs_mom4.f90::read_obs:: WARNING!"
       print *, "STEVE: oerr <= 0, must be > 0 ..." 
       print *, "STEVE: oerr(",n,") = ", oerr(n)
       PRINT '(I6,2F7.2,F10.2,2F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6)
-!     stop 9
+      stop 9
     endif
     
     ! Special processing for obs:
@@ -633,7 +633,8 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
   RETURN
 END SUBROUTINE read_obs
 
-SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
+
+SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
 !===============================================================================
 ! Read in observations with appended H(xb) for each ob
 !===============================================================================
@@ -647,40 +648,36 @@ SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
   REAL(r_size),INTENT(OUT) :: odat(nn)
   REAL(r_size),INTENT(OUT) :: oerr(nn)
   REAL(r_size),INTENT(OUT) :: ohx(nn)
+  REAL(r_size),OPTIONAL,INTENT(OUT) :: obhr(nn)
   INTEGER,INTENT(OUT) :: oqc(nn)
-  REAL(r_sngl) :: wk(8)
+  REAL(r_sngl),ALLOCATABLE :: wk(:)
   INTEGER :: n,iunit
 
+  ALLOCATE(wk(obs2nrec))
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  DO n=1,nn
+  do n=1,nn
     READ(iunit) wk
-!   SELECT CASE(NINT(wk(1)))
-!   CASE(id_u_obs)
-!     wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!   CASE(id_v_obs)
-!     wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!   CASE(id_t_obs)
-!     wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!   CASE(id_q_obs)
-!     wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!  END SELECT
     elem(n) = REAL(wk(1),r_size)
     rlon(n) = REAL(wk(2),r_size)
     rlat(n) = REAL(wk(3),r_size)
     rlev(n) = REAL(wk(4),r_size)
     odat(n) = REAL(wk(5),r_size)
     oerr(n) = REAL(wk(6),r_size)
-    ohx(n) = REAL(wk(7),r_size)
+    ohx(n)  = REAL(wk(7),r_size)
     oqc(n)  = NINT(wk(8))
-  END DO
+    if (obs2nrec>8) then
+      obhr(n) = REAL(wk(9),r_size)
+    endif
+  enddo
+
   CLOSE(iunit)
 
-  RETURN
 END SUBROUTINE read_obs2
 
+
 !STEVE: adding for support
-SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
+SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
 !===============================================================================
 ! Write out observations
 !===============================================================================
@@ -693,27 +690,33 @@ SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr)
   REAL(r_size),INTENT(IN) :: rlev(nn)
   REAL(r_size),INTENT(IN) :: odat(nn)
   REAL(r_size),INTENT(IN) :: oerr(nn)
-  REAL(r_sngl) :: wk(6)
+  REAL(r_size),OPTIONAL,INTENT(IN) :: obhr(nn)
+  REAL(r_sngl),ALLOCATABLE :: wk(:)
 ! REAL(r_size) :: wk(6) !(OCEAN) STEVE: I changed this because the netcdf observation files are stored as double precision
   INTEGER :: n,iunit
 
+  ALLOCATE(wk(obs1nrec))
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  DO n=1,nn
+  do n=1,nn
     wk(1) = REAL(elem(n),r_sngl)
     wk(2) = REAL(rlon(n),r_sngl)
     wk(3) = REAL(rlat(n),r_sngl)
     wk(4) = REAL(rlev(n),r_sngl)
     wk(5) = REAL(odat(n),r_sngl)
     wk(6) = REAL(oerr(n),r_sngl)
+    if (obs1nrec>6) then
+      wk(7) = REAL(obhr(n),r_sngl)
+    endif
     WRITE(iunit) wk
-  END DO
+  enddo
+
   CLOSE(iunit)
 
-  RETURN
 END SUBROUTINE write_obs
 
-SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
+
+SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
 !===============================================================================
 ! Write out observations with appended H(xb) for each ob
 !===============================================================================
@@ -727,14 +730,16 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
   REAL(r_size),INTENT(IN) :: odat(nn)
   REAL(r_size),INTENT(IN) :: oerr(nn)
   REAL(r_size),INTENT(IN) :: ohx(nn)
+  REAL(r_size),OPTIONAL,INTENT(IN) :: obhr(nn)
   INTEGER,INTENT(IN) :: oqc(nn)
-  REAL(r_sngl) :: wk(8)
+  REAL(r_sngl),ALLOCATABLE :: wk(:)
   INTEGER :: n,iunit
-  LOGICAL :: dodebug=.false.
-
+  LOGICAL, PARAMETER :: dodebug=.false.
+ 
+  ALLOCATE(wk(obs2nrec))
   iunit=92
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  DO n=1,nn
+  do n=1,nn
     wk(1) = REAL(elem(n),r_sngl)  ! ID for observation type
     wk(2) = REAL(rlon(n),r_sngl)  ! Ob lon
     wk(3) = REAL(rlat(n),r_sngl)  ! Ob lat
@@ -743,12 +748,17 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc)
     wk(6) = REAL(oerr(n),r_sngl)  ! Estimated observation error
     wk(7) = REAL(ohx(n),r_sngl)   ! Model forecast transformed to observation space: H(xb)
     wk(8) = REAL(oqc(n),r_sngl)   ! Quality control ID (1==keep, 0==discard) for use in assimilation
-    if (dodebug) PRINT '(I6,2F7.2,F10.2,4F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8)
+    if (obs2nrec>8) then
+      wk(9) = REAL(obhr(n),r_sngl)   ! Quality control ID (1==keep, 0==discard) for use in assimilation
+      if (dodebug) PRINT '(I6,2F7.2,F10.2,6F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
+    else
+      if (dodebug) PRINT '(I6,2F7.2,F10.2,6F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8)
+    endif
     WRITE(iunit) wk
-  END DO
+  enddo
+
   CLOSE(iunit)
 
-  RETURN
 END SUBROUTINE write_obs2
 
 END MODULE common_obs_mom4
