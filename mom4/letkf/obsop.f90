@@ -7,16 +7,16 @@ PROGRAM obsop
 !   use common_mom4
 !   use common_obs_mom4
 !
-! !PUBLIC TYPES:
+! PUBLIC TYPES:
 !                 implicit none
 !                 [save]
 !
 !                 <type declaration>
 !     
-! !PUBLIC MEMBER FUNCTIONS:
+! PUBLIC MEMBER FUNCTIONS:
 !           <function>                     ! Description      
 !
-! !PUBLIC DATA MEMBERS:
+! PUBLIC DATA MEMBERS:
 !           <type> :: <variable>           ! Variable description
 !
 ! DESCRIPTION: 
@@ -37,11 +37,17 @@ PROGRAM obsop
 !-------------------------------------------------------------------------------
 ! $Author: Steve Penny $
 !===============================================================================
-  use common
-  use common_mom4
-  use common_obs_mom4
+  USE common
+  USE params_model
+  USE vars_model
+  USE common_mom4
+  USE params_obs
+  USE vars_obs
+  USE common_obs_mom4
+  USE params_letkf,     ONLY: DO_ALTIMETRY, DO_DRIFTERS
 
   IMPLICIT NONE
+
   CHARACTER(slen) :: obsinfile='obsin.dat'    !IN (default)
   CHARACTER(slen) :: guesfile='gues'          !IN (default) i.e. prefix to '.ocean_temp_salt.res.nc'
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
@@ -62,13 +68,12 @@ PROGRAM obsop
   REAL(r_size), ALLOCATABLE :: o3d(:,:,:,:)
   REAL(r_size), ALLOCATABLE :: o2d(:,:,:)
   REAL(r_size) :: dk,tg,qg
-  INTEGER :: nobs
   REAL(r_size) :: ri,rj,rk
   INTEGER :: n
 
   !STEVE: for (DRIFTERS)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsid(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obstime(:)
+! REAL(r_size),ALLOCATABLE,SAVE :: obsid(:)
+! REAL(r_size),ALLOCATABLE,SAVE :: obstime(:)
   !STEVE:
   REAL(r_size),DIMENSION(nid_obs),PARAMETER :: & !STEVE: use this to scale the input observations
               obserr_scaling=(/ 1.00d0, 1.00d0, 1.00d0, 1.00d0, 1.0d0, 1.0d0, 1.0d0 /)

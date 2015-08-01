@@ -1,1 +1,4 @@
 #STEVE: Put machine-specific code in this directory to be sourced by all scripts throughout the code base.
+
+# The goal is to be able to set the 'MACHINE' variable in machine.sh and allow all other compile scripts 
+# in all repository subdirectories to be updated accordingly

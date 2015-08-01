@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NETCDF_DIR=$NETCDF_DIR
-NETCDF_INC="=I${NETCDF}/include"
-NETCDF_LIB="-L${NETCDF}/lib -lnetcdf -lnetcdff"
+NETCDF_INC="-I${NETCDF_DIR}/include"
+NETCDF_LIB="-L${NETCDF_DIR}/lib -lnetcdf -lnetcdff"
 
 
