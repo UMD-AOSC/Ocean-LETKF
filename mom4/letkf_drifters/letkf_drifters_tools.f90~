@@ -1,4 +1,4 @@
-MODULE letkf_drifters
+MODULE letkf_drifters_tools
 ! Original Author: Prof. Stephen G. Penny
 !                  Department of Atmospheric and Oceanic Science
 !                  University of Maryland College Park
@@ -18,13 +18,14 @@ MODULE letkf_drifters
 ! x, y and z-coordinates.
 !
 !
-
-!USE common_mpi
-USE common_letkf, ONLY : nbv  ! nbv := number of ensemble members
-USE common_mpi_mom4
-USE common_mom4
-USE letkf_obs,    ONLY : nobs
-USE letkf_drifters_local,  ONLY : obs_local  !(DRIFTERS) NOTE: this is a slightly modified version of letkf_local.f90
+USE common
+USE common_mpi  
+USE common_letkf    !nbv := number of ensemble members
+USE letkf_obs, ONLY : nobs
+USE letkf_drifters_local, ONLY : obs_local  !(DRIFTERS) NOTE: this is a slightly modified version of letkf_local.f90
+USE params_letkf
+USE params_model
+USE params_obs
 
 !STEVE: for (DRIFTERS)
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:,:), SAVE :: v4d          !(DRIFTERS) num_drifters x num_times x nbv x nv4d 
@@ -38,7 +39,7 @@ INTEGER, SAVE :: num_times    !read in from model output, updated by observation
 !LOGICAL, PARAMETER :: DO_DRIFTERS = .false. !STEVE: this is in common_mom4.f90
 
 ! Inflation parameter for (DRIFTERS)
-REAL(r_size),PARAMETER :: cov_infl_mul = 1.01d0 !-1.01d0 !multiplicative inflation
+!REAL(r_size),PARAMETER :: cov_infl_mul = 1.01d0 !-1.01d0 !multiplicative inflation
 
 ! For parallel mpi operations:
 INTEGER,SAVE :: nid1                             !STEVE: this is the number of gridpoints to run on this (myrank) processor
@@ -46,7 +47,7 @@ INTEGER,SAVE :: nid1max                          !STEVE: the largest number of g
 INTEGER,ALLOCATABLE,SAVE :: nid1node(:)
 
 ! Variable localization:
-INTEGER, PARAMETER :: nid_dobs = nv4d
+! INTEGER, PARAMETER :: nid_dobs = nv4d
 REAL(r_size),PARAMETER :: var_local(nv4d,nid_dobs) = RESHAPE( &
 !           X      Y      Z
    & (/ 1.0d0, 1.0d0, 1.0d0,  & ! X
@@ -96,11 +97,108 @@ SUBROUTINE set_common_drifters
 
 END SUBROUTINE set_common_drifters
 
+SUBROUTINE read_obs2_drifters(cfile,nn,elem,rlon,rlat,rlev,obid,oerr,oqc,otime)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  INTEGER,INTENT(IN) :: nn  ! LUYU: number of drifters
+  REAL(r_size),INTENT(OUT) :: rlon(3*nn)
+  REAL(r_size),INTENT(OUT) :: rlat(3*nn)
+  REAL(r_size),INTENT(OUT) :: rlev(3*nn)
+  REAL(r_size),INTENT(OUT) :: oerr(3*nn)
+  REAL(r_size),INTENT(OUT) :: otime(3*nn)
+  REAL(r_size),INTENT(OUT) :: elem(3*nn) ! element number: id_x_obs, id_y_obs, id_z_obs
+  INTEGER,INTENT(OUT) :: obid(3*nn)
+  INTEGER,INTENT(OUT) :: oqc(3*nn)
+  REAL(r_sngl) :: wk(7)
+  INTEGER :: n,i,ii,iunit  
+
+  iunit=91
+  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  read(iunit,*)  ! LUYU: necessary, if the data format is the same as the one of background data.
+  read(iunit,*) 
+  DO n=1,nn
+    DO i = 1,3
+      READ(iunit) wk
+!   SELECT CASE(NINT(wk(1)))
+!   CASE(id_u_obs)
+!     wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!   CASE(id_v_obs)
+!     wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!   CASE(id_t_obs)
+!     wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!   CASE(id_q_obs)
+!     wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!  END SELECT
+      ii = 3 * (n-1) + i
+      SELECT CASE(INT(i))
+        CASE(1)
+          elem(ii) = id_x_obs  ! id_x_obs = 1111
+        CASE(2)
+          elem(ii) = id_y_obs  ! id_y_obs = 2222
+        CASE(3)
+          elem(ii) = id_z_obs  ! id_z_obs = 3333
+      END SELECT
+
+      obid(ii) = INT(wk(1),r_size)
+      rlon(ii) = REAL(wk(2),r_size)
+      rlat(ii) = REAL(wk(3),r_size)
+      rlev(ii) = REAL(wk(4),r_size)
+      oerr(ii) = REAL(wk(5),r_size)
+       oqc(ii) = INT(wk(6))
+     otime(ii) = REAL(wk(7),r_size)
+    END DO
+  END DO
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE read_obs2_drifters
+
+SUBROUTINE write_obs2_drifters(cfile,nn,elem,rlon,rlat,rlev,obid,oerr,ohx,oqc,otime)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  INTEGER,INTENT(IN) :: nn
+  REAL(r_size),INTENT(IN) :: elem(nn) ! element number
+  REAL(r_size),INTENT(IN) :: rlon(nn)
+  REAL(r_size),INTENT(IN) :: rlat(nn)
+  REAL(r_size),INTENT(IN) :: rlev(nn)
+  REAL(r_size),INTENT(IN) :: oerr(nn)
+  REAL(r_size),INTENT(IN) :: ohx(nn)
+  INTEGER,INTENT(IN) :: obid(nn)
+  INTEGER,INTENT(IN) :: oqc(nn)
+  REAL(r_size),INTENT(IN) :: otime(nn)
+  REAL(r_sngl) :: wk(9)
+  INTEGER :: n,iunit
+  LOGICAL :: dodebug=.false.
+
+  iunit=92
+  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  DO n=1,nn
+    wk(1) = REAL(elem(n),r_sngl)  ! Type of observation x,y,z
+    wk(2) = REAL(rlon(n),r_sngl)  ! Ob lon
+    wk(3) = REAL(rlat(n),r_sngl)  ! Ob lat
+    wk(4) = REAL(rlev(n),r_sngl)  ! Ob level
+    wk(5) = INT(obid(n))  ! ID for the drifters
+    wk(6) = REAL(oerr(n),r_sngl)  ! Estimated observation error
+    wk(7) = REAL(ohx(n),r_sngl)   ! Model forecast transformed to observation space: H(xb)
+    wk(8) = INT(oqc(n))   ! Quality control ID (1==keep, 0==discard) for use in assimilation
+    wk(9) = REAL(otime(n),r_sngl)  ! Ob time
+    if (dodebug) PRINT '(I6,2F7.2,F10.2,4F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
+    WRITE(iunit) wk
+  END DO
+  CLOSE(iunit)
+
+  RETURN
+
+END SUBROUTINE write_obs2_drifters
+
 ! The second routine called by letkf.f90:
 SUBROUTINE das_drifters(gues4d,anal4d)
   ! das_letkf went through all model grid points. Now we're going to go through
   ! each drifter_id, as if we had appended them to the model state vector.
-  USE common_letkf, ONLY : letkf_core
+  
+  USE common_letkf, ONLY: letkf_core
+  USE params_model
+
   IMPLICIT NONE
   REAL(r_size),INTENT(INOUT) :: gues4d(nid1,num_times,nbv,nv4d) ! background ensemble
   REAL(r_size),INTENT(OUT) :: anal4d(nid1,num_times,nbv,nv4d) ! analysis ensemble
@@ -163,7 +261,7 @@ SUBROUTINE das_drifters(gues4d,anal4d)
   ALLOCATE(hdxf(1:nobstotal,1:nbv),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   WRITE(6,*) "... done."
 
-  main : DO ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
+  DO ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
     if (dodebug) WRITE(6,*) "ij = ", ij
 
     ! For each coordinate, x,y,and z:
@@ -186,7 +284,7 @@ SUBROUTINE das_drifters(gues4d,anal4d)
 
     ENDDO
 
-  ENDDO main
+  ENDDO
 
   DEALLOCATE(hdxf,rdiag,rloc,dep)
 
@@ -204,7 +302,7 @@ SUBROUTINE Trans_DtoY(elm,ri,rj,rk,v4d_in,yobs)        !(OCEAN)
   REAL(r_size),INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
   REAL(r_size),INTENT(IN) :: v4d_in(num_drifters,num_times,nv4d)
-  REAL(r_size),INTENT(OUT) :: yobs
+  REAL(r_size),INTENT(OUT) :: yobs  
   INTEGER :: i,j,k
   INTEGER :: intelm
 
@@ -237,7 +335,7 @@ END SUBROUTINE Trans_DtoY
 SUBROUTINE drift2ijk(elem,oid,otime,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: elem
-  REAL(r_size),INTENT(IN) :: oid
+  INTEGER     ,INTENT(IN) :: oid
   REAL(r_size),INTENT(IN) :: otime 
   REAL(r_size),INTENT(IN) :: rlon
   REAL(r_size),INTENT(IN) :: rlat
@@ -251,11 +349,11 @@ SUBROUTINE drift2ijk(elem,oid,otime,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
   !(DRIFTERS) num_times x nv4d x num_drifters
   ! If this is a drifter observation, then what we need is a time interpolation:
-  if (elem .eq. iv4d_x) then
+  if (elem .eq. id_x_obs) then   ! ??, id_x_obs or iv4d_x
     rk = 1
-  elseif (elem .eq. iv4d_y) then
+  elseif (elem .eq. id_y_obs) then  ! ??, id_y_obs
     rk = 2
-  elseif (elem .eq. iv4d_z) then
+  elseif (elem .eq. id_z_obs) then  ! ??, id_z_obs
     rk = 3
   else
     WRITE(6,*) "This observation is not a drifter! Stopping..."
@@ -696,4 +794,4 @@ SUBROUTINE ensmean_drifters(nid,v4d_sub,v4dm)
 END SUBROUTINE ensmean_drifters
 
 
-END MODULE letkf_drifters
+END MODULE letkf_drifters_tools
