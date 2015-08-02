@@ -17,3 +17,7 @@ ln -fs ../common/common_obs_mom4.f90 ./
 ln -fs ../obs/params_obs.f90
 ln -fs ../obs/vars_obs.f90
 
+# for drifters (DRIFTERS)
+ln -fs ../letkf_drifters/letkf_drifters_tools.f90 ./
+
+
