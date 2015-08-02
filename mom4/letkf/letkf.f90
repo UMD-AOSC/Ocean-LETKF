@@ -40,6 +40,7 @@ PROGRAM letkf
   USE params_letkf
   USE params_model
   USE params_obs
+! USE letkf_drifters_tools
 
   IMPLICIT NONE
   REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
@@ -56,6 +57,10 @@ PROGRAM letkf
   INTEGER :: fid=21
   LOGICAL :: dortout=.true.    ! Force 'realtime' output (helps with parallel debugging)
   LOGICAL :: dodebug0=.false.  ! Debug flag for various routines
+
+  ! For drifters: (DRIFTERS)
+! REAL(r_size),ALLOCATABLE :: gues4d(:,:,:,:,:)
+! REAL(r_size),ALLOCATABLE :: anal4d(:,:,:,:,:)
 
   NAMELIST /params_model_nml/ gridfile, SSHclm_file
   NAMELIST /params_obs_nml/   nslots,nbslot,sigma_obs,sigma_obs0,sigma_obsv,sigma_obst,gross_error
@@ -203,7 +208,7 @@ PROGRAM letkf
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('gues',nbv,gues3d,gues2d)
   if (DO_DRIFTERS) then
-!   CALL write_ensmspr_drifters('gues',nbv,gues4d)
+!   CALL write_ensmspr_drifters('gues',gues4d)
   endif
 
   !STEVE: debug
@@ -263,7 +268,7 @@ PROGRAM letkf
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('anal',nbv,anal3d,anal2d)
   if (DO_DRIFTERS) then
-!   write_ensmspr_drifters('anal',anal4d)
+!   CALL write_ensmspr_drifters('anal',anal4d)
   endif
 
   !-----------------------------------------------------------------------------

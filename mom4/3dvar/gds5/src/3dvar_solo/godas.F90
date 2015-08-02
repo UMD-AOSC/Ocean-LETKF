@@ -737,7 +737,7 @@ SUBROUTINE godas_analysis (Time, T_prog, Ext_mode, T_cor, obs_Z, obs_0, obs_A)
   pe = mpp_pe()
 
 !-----------------------------------------------------------------------
-!  Find the first interation of the gradient of the functional (g^1)
+!  Find the first iteration of the gradient of the functional (g^1)
 !  by setting the intial guess for the correction field to zero (T^1 = 0),
 !  comparing the model with the observations, weighting their difference
 !  with the inverse of the observation error covariance (F) and projecting
