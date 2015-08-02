@@ -261,7 +261,7 @@ SUBROUTINE das_drifters(gues4d,anal4d)
   ALLOCATE(hdxf(1:nobstotal,1:nbv),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   WRITE(6,*) "... done."
 
-  DO ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
+  DO ij=1,nij0 !STEVE: go through every possible coordinate of the grid in list form...
     if (dodebug) WRITE(6,*) "ij = ", ij
 
     ! For each coordinate, x,y,and z:
@@ -683,7 +683,7 @@ SUBROUTINE gather_drifters_mpi(nrank,v4d_sub,v4d_all)
   DO n=1,nv4d
     DO k=1,num_times
       j = j+1
-      bufs(1:nij1,j) = REAL(v4d_sub(:,k,n),r_sngl)
+      bufs(1:nij0,j) = REAL(v4d_sub(:,k,n),r_sngl)
     END DO
   END DO
 
@@ -731,8 +731,8 @@ END SUBROUTINE buf_to_drft
 SUBROUTINE write_ensmspr_drifters(file,v4d_sub)
   CHARACTER(4),INTENT(IN) :: file
   REAL(r_size),INTENT(IN) :: v4d_sub(nid1,num_times,nbv,nv4d)
-  REAL(r_size) :: v4dm(nij1,num_times,nv4d)
-  REAL(r_size) :: v4ds(nij1,num_times,nv4d)
+  REAL(r_size) :: v4dm(nij0,num_times,nv4d)
+  REAL(r_size) :: v4ds(nij0,num_times,nv4d)
   REAL(r_sngl) :: v4d_all(nlon,nlat,nlev,nv4d)
   INTEGER :: i,k,m,n,j
   CHARACTER(11) :: filename='file000.grd'
