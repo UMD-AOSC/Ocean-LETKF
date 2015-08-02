@@ -23,3 +23,6 @@ assigned to that node.
 
 * The current strategy is to perform an even load balance across all processors.
 **The new strategy must be to minimize node-to-node communications.
+
+# To correct merge conflict:
+https://help.github.com/articles/resolving-a-merge-conflict-from-the-command-line/
