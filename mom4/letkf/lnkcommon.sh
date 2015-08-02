@@ -18,6 +18,6 @@ ln -fs ../obs/params_obs.f90
 ln -fs ../obs/vars_obs.f90
 
 # for drifters (DRIFTERS)
-ln -fs ../letkf_drifters/letkf_drifters_tools.f90 ./
+#ln -fs ../letkf_drifters/letkf_drifters_tools.f90 ./
 
 
