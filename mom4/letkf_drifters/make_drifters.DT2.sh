@@ -50,6 +50,11 @@ fi
 OBJECT_FLAG='-c' #STEVE: for some reason, mpxlf doesn't use -c, but rather -g
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG common.f90
+$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG params_letkf.f90
+$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG params_model.f90
+$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG params_obs.f90
+$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG vars_model.f90
+$F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG vars_obs.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG common_mpi.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG common_mtx.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $INLINE $OBJECT_FLAG netlib2.f
@@ -61,18 +66,19 @@ $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_obs.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_drifters_local.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.o letkf_tools.f90
-$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG $INC_NETCDF letkf_drifters_local.o letkf_drifters.f90
+$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG $INC_NETCDF letkf_drifters_local.o letkf_drifters_tools.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf.f90
 #$F90 $OMP $F90OPT $DEBUG_OPT -o ${PGM} *.o $LIB_NETCDF $LBLAS $LIB_MPI
-$F90 $OMP $F90OPT $DEBUG_OPT $INLINE -o ${PGM} *.o $LIB_MPI $LIB_NETCDF $LBLAS
+#$F90 $OMP $F90OPT $DEBUG_OPT $INLINE -o ${PGM} *.o $LIB_MPI $LIB_NETCDF $LBLAS
 
 #STEVE: keep a record of the build:
 mkdir -p CONFIG_$PGM
 cp *.f90 CONFIG_$PGM/
+echo "finish keeping the record."
 
-rm -f *.mod
-rm -f *.o
-rm -f netlib2.f
+rm -rf *.mod
+rm -rf *.o
+rm -rf netlib2.f
 sh ulnkcommon.sh
 
 echo "STEVE: min temp is set to -4 ºC and max salt is set to 50.0 psu incommon_mom4:: write_grd4"
