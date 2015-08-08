@@ -78,7 +78,7 @@ $F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf_drifters_local.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf_local.o letkf_tools.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG $INC_NETCDF letkf_drifters_local.o letkf_drifters.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG $INC_NETCDF letkf_drifters_local.o letkf_drifters_tools.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $OBJECT_FLAG letkf.f90
 #$F90 $OMP $F90_OPT $F90_DEBUG -o ${PGM} *.o $LIB_NETCDF $LBLAS $LIB_MPI
 $F90 $OMP $F90_OPT $F90_DEBUG $INLINE -o ${PGM} *.o $LIB_MPI $LIB_NETCDF $LBLAS
