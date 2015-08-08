@@ -26,6 +26,7 @@ USE letkf_drifters_local, ONLY : obs_local  !(DRIFTERS) NOTE: this is a slightly
 USE params_letkf
 USE params_model
 USE params_obs
+USE common_mom4, ONLY: check !STEVE: added to compile on Gaea
 
 !STEVE: for (DRIFTERS)
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:,:), SAVE :: v4d          !(DRIFTERS) num_drifters x num_times x nbv x nv4d 

@@ -41,7 +41,7 @@ PROGRAM letkf
   USE params_letkf
   USE params_model
   USE params_obs
-  USE letkf_drifters_tools !LUYU: add the drifters tool
+! USE letkf_drifters_tools !LUYU: add the drifters tool
 
   IMPLICIT NONE
   REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
@@ -131,9 +131,9 @@ PROGRAM letkf
   !-----------------------------------------------------------------------------
   CALL set_common_mom4
   CALL set_common_mpi_mom4
-  if (DO_DRIFTERS) then
-    CALL set_common_drifters
-  endif
+! if (DO_DRIFTERS) then
+!   CALL set_common_drifters
+! endif
 
   !-----------------------------------------------------------------------------
   ! Allocate dynamic arrays
@@ -206,9 +206,9 @@ PROGRAM letkf
   !-----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('gues',nbv,gues3d,gues2d)
-  if (DO_DRIFTERS) then
-   CALL write_ensmspr_drifters('gues',gues4d) !Original: CALL write_ensmspr_drifters('gues',nbv,gues4d)
-  endif
+! if (DO_DRIFTERS) then
+!  CALL write_ensmspr_drifters('gues',gues4d) !Original: CALL write_ensmspr_drifters('gues',nbv,gues4d)
+! endif
 
   !STEVE: debug
   if (dodebug0) CALL write_ens_mpi_grd('test',1,gues3d,gues2d)
@@ -236,9 +236,9 @@ PROGRAM letkf
   ! This can be done independently because each drifter id's xyz coordinates are considered
   ! part of the model state vector, appended to the model grid coordinates.
   ! Using LETKF's grid-based localization strategy, there is no difference.
-  if (DO_DRIFTERS) then
-    CALL das_drifters(gues4d,anal4d)
-  endif
+! if (DO_DRIFTERS) then
+!   CALL das_drifters(gues4d,anal4d)
+! endif
 
   !-----------------------------------------------------------------------------
   ! Check timer for computing letkf analysis
@@ -260,15 +260,15 @@ PROGRAM letkf
   !----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ens_mpi('anal',nbv,anal3d,anal2d)
-  if (DO_DRIFTERS) then
-   CALL write_ens_drifters('anal',anal4d)
-  endif
+! if (DO_DRIFTERS) then
+!  CALL write_ens_drifters('anal',anal4d)
+! endif
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('anal',nbv,anal3d,anal2d)
-  if (DO_DRIFTERS) then
-   CALL write_ensmspr_drifters('anal',anal4d)
-  endif
+! if (DO_DRIFTERS) then
+!  CALL write_ensmspr_drifters('anal',anal4d)
+! endif
 
   !-----------------------------------------------------------------------------
   ! Check timer for writing analysis ensemble, mean, and spread
