@@ -98,6 +98,8 @@ MODULE common_mom4
   LOGICAL :: dodebug = .false.
 
 CONTAINS
+
+
 !-----------------------------------------------------------------------
 ! Set the parameters
 !-----------------------------------------------------------------------
@@ -258,6 +260,8 @@ SUBROUTINE set_common_mom4
 
   RETURN
 END SUBROUTINE set_common_mom4
+
+
 !-----------------------------------------------------------------------
 ! File I/O
 !-----------------------------------------------------------------------
@@ -581,6 +585,7 @@ SUBROUTINE read_grd(infile,v3d,v2d)
   RETURN
 END SUBROUTINE read_grd
 
+
 SUBROUTINE read_grd4(infile,v3d,v2d)
 !===============================================================================
 ! Read in a set of netcdf-format mom4 restart files in single precision
@@ -828,6 +833,7 @@ SUBROUTINE read_grd4(infile,v3d,v2d)
 
 END SUBROUTINE read_grd4
 
+
 SUBROUTINE write_grd(outfile,v3d,v2d)
 !===============================================================================
 ! Write out a set of netcdf-format mom4 restart files
@@ -978,7 +984,8 @@ SUBROUTINE write_grd(outfile,v3d,v2d)
 
 END SUBROUTINE write_grd
 
-subroutine check(status)
+
+SUBROUTINE check(status)
 !===============================================================================
 ! Check the error status of the netcdf command
 !===============================================================================
@@ -989,7 +996,8 @@ subroutine check(status)
     print *, trim(nf90_strerror(status))
     stop "Stopped"
   end if
-end subroutine check
+END SUBROUTINE check
+
 
 SUBROUTINE write_grd4(outfile,v3d_in,v2d_in)
 !===============================================================================

@@ -11,7 +11,7 @@ set -ex
 source ../../config/machine.sh
 source ../../config/$MACHINE.fortran.sh
 source ../../config/$MACHINE.netcdf.sh
-#source ../../config/$MACHINE.mpi.sh
+source ../../config/$MACHINE.mpi.sh
 
 sh ulnkcommon.sh
 sh lnkcommon.sh
@@ -28,25 +28,8 @@ MEM3=`printf %.3d ${MEM}`
 name=DRIFTERS
 PGM=letkf.$name.$MEM3
 
-#STEVE: put the directory for netcdf here:
-NETCDF_ROOT=/cell_root/software/netcdf/4.3.2/intel/2013.1.039/openmpi/1.8.1/hdf5/1.8.13/hdf4/4.2.10/sys
-NETCDFF_ROOT=/cell_root/software/netcdf-fortran/4.4.1/netcdf/4.3.2/intel/2013.1.039/openmpi/1.8.1/sys
-LIB_NETCDF="-L$NETCDFF_ROOT/lib -lnetcdff -L$NETCDF_ROOT/lib -lnetcdf"
-INC_NETCDF="-I$NETCDFF_ROOT/include -I$NETCDF_ROOT/include"
-INC=$INC_NETCDF
-
-#F90=ftn
-#F90s=ftn #STEVE: in case we need a different compiler for serial runs
 OMP=
 PWD=`pwd`
-#F90_OPT='-O3'
-# explanation of -mcmodel=medium and -shared-intel: http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
-INLINE= #"-Q -qinline"
-F90_DEBUG= #'-g -qfullpath -v -C -qsigtrap=xl__trcedump' # -qflttrap=en:nanq -qsigtrap'
-BLAS=1 #0: no blas 1: using blas
-
-INCLUDE_MPI= 
-LIB_MPI= #"-lmpi"
 
 cat netlib.f > netlib2.f
 if test $BLAS -eq 1
