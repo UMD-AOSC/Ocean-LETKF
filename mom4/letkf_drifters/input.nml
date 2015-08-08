@@ -1,0 +1,23 @@
+&params_model_nml
+ gridfile  = 'grid_spec.nc', 
+ SSHclm_file = 'aEtaCds9399.nc'
+/
+
+&params_obs_nml
+ nslots = 5,
+ nbslot = 5,
+ sigma_obs = 720.0d3,
+ sigma_obs0 = 200.0d3,
+ gross_error = 3.0d0
+/
+
+&params_letkf_nml
+ DO_DRIFTERS = T,
+ DO_ALTIMETRY = T,
+ DO_NO_VERT_LOC = T,
+ localization_method = 1
+ cov_infl_mul = 1.0d0,
+ sp_infl_add = 0.d0,
+ DO_INFL_RESET = T
+/
+

@@ -9,7 +9,7 @@ PUBLIC
 !-------------------------------------------------------------------------------
 ! Ensemble Size
 !-------------------------------------------------------------------------------
-INTEGER,PARAMETER :: nbv=56
+INTEGER,PARAMETER :: nbv=10
 
 
 !-------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ LOGICAL :: DO_INFL_RESET = .true. !(DO_SFCFLUXES) STEVE: for inflating only the 
 ! From common_mom4.f90
 !-------------------------------------------------------------------------------
 ! For (DRIFTERS)
-LOGICAL :: DO_DRIFTERS=.true.
+LOGICAL :: DO_DRIFTERS=.false.
 ! For (SFCFLUX)
 LOGICAL :: DO_SFCFLUX=.false.
 ! For (ALTIMETRY)
