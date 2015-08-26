@@ -1,11 +1,20 @@
 #!/bin/sh
 set -exv
 
+# sh make_obsop.sh $MEM
 source ../../config/machine.sh
 source ../../config/$MACHINE.fortran.sh
 source ../../config/$MACHINE.netcdf.sh
 
-MEM=056
+MEM=$1
+if [ ${MEM} -lt 100 ]; then
+  MEM=0${MEM}
+fi
+
+if [ ${MEM} -lt 10 ]; then
+  MEM=0${MEM}
+fi 
+
 PGM=obsop.$MEM
 #F90OPT='-ftz -ip -ipo -O2 -parallel -i_dynamic -what -fpp -fno-alias -stack_temps -safe_cray_ptr -fast'
 
@@ -29,8 +38,8 @@ $F90 $OMP $F90_OPT $F90_OBJECT_FLAG common_obs_mom4.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_oceanographic_toolbox.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_pot_to_insitu.f90
 #--
-$F90 $OMP $F90OPT $F90_OBJECT_FLAG obsop.f90
-$F90 $OMP $F90OPT -o ${PGM} *.o $NETCDF_LIB
+$F90 $OMP $F90_OPT $F90_OBJECT_FLAG obsop.f90
+$F90 $OMP $F90_OPT -o ${PGM} *.o $NETCDF_LIB
 
 rm -f *.mod
 rm -f *.o

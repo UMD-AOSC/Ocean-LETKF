@@ -18,6 +18,7 @@ MODULE letkf_drifters_tools
 ! x, y and z-coordinates.
 !
 !
+USE netcdf
 USE common
 USE common_mpi  
 USE common_letkf    !nbv := number of ensemble members
@@ -26,7 +27,6 @@ USE letkf_drifters_local, ONLY : obs_local  !(DRIFTERS) NOTE: this is a slightly
 USE params_letkf
 USE params_model
 USE params_obs
-USE common_mom4, ONLY: check !STEVE: added to compile on Gaea
 
 !STEVE: for (DRIFTERS)
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:,:), SAVE :: v4d          !(DRIFTERS) num_drifters x num_times x nbv x nv4d 
@@ -62,18 +62,23 @@ CONTAINS
 SUBROUTINE set_common_drifters
   IMPLICIT NONE
   INTEGER :: i,j,n !,ibv 
-  CHARACTER(32) :: drefile
+  CHARACTER(32) :: drifile
 
   WRITE(6,'(A)') 'Hello from set_common_drifters'
 
   !test_drifters:
-  num_drifters=10
-  num_times=90
+  num_drifters=5
+  num_times=20
+  nprocs=1
   !alternative: read this from a file
 
   ! Next, split up the drifters to the different processors:
   i = MOD(num_drifters,nprocs)
-  nid1max = (num_drifters - i)/nprocs + 1
+  IF ( nprocs > 0 ) THEN
+    nid1max = (num_drifters - i)/nprocs + 1
+  ELSE
+    nid1max = num_drifters
+  END IF
   WRITE(6,*) "nid1max = ", nid1max
   IF(myrank < i) THEN
     nid1 = nid1max
@@ -91,35 +96,33 @@ SUBROUTINE set_common_drifters
   END DO
 
   ! For this processor, allocate enough space for its assigned drifters
-  ALLOCATE(v4d(nid1max,num_times,nbv,nv4d))
+  !ALLOCATE(v4d(nid1max,num_times,nbv,nv4d))
 
   ! Read the ensemble of drifter files into this data structure
-  CALL read_ens_drifters('gues',v4d)
+  !CALL read_ens_drifters('gues',v4d)
 
 END SUBROUTINE set_common_drifters
 
-SUBROUTINE read_obs2_drifters(cfile,nn,elem,rlon,rlat,rlev,obid,oerr,oqc,otime)
+SUBROUTINE read_obs2_drifters(cfile,nn,elem,rlon,rlat,rlev,obid,oerr,otime)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn  ! LUYU: number of drifters
-  REAL(r_size),INTENT(OUT) :: rlon(3*nn)
-  REAL(r_size),INTENT(OUT) :: rlat(3*nn)
-  REAL(r_size),INTENT(OUT) :: rlev(3*nn)
-  REAL(r_size),INTENT(OUT) :: oerr(3*nn)
-  REAL(r_size),INTENT(OUT) :: otime(3*nn)
-  REAL(r_size),INTENT(OUT) :: elem(3*nn) ! element number: id_x_obs, id_y_obs, id_z_obs
-  INTEGER,INTENT(OUT) :: obid(3*nn)
-  INTEGER,INTENT(OUT) :: oqc(3*nn)
+  REAL(r_size),INTENT(OUT) :: rlon(nn)
+  REAL(r_size),INTENT(OUT) :: rlat(nn)
+  REAL(r_size),INTENT(OUT) :: rlev(nn)
+  REAL(r_size),INTENT(OUT) :: oerr(nn)
+  REAL(r_size),INTENT(OUT) :: otime(nn)
+  REAL(r_size),INTENT(OUT) :: elem(nn) ! element number: id_x_obs, id_y_obs, id_z_obs
+  INTEGER,INTENT(OUT) :: obid(nn)
   REAL(r_sngl) :: wk(7)
-  INTEGER :: n,i,ii,iunit  
+  INTEGER :: n,iunit  
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  read(iunit,*)  ! LUYU: necessary, if the data format is the same as the one of background data.
-  read(iunit,*) 
+  !read(iunit,*)  ! LUYU: necessary, if the data format is the same as the one of background data.
+  !read(iunit,*) 
   DO n=1,nn
-    DO i = 1,3
-      READ(iunit) wk
+    READ(iunit) wk
 !   SELECT CASE(NINT(wk(1)))
 !   CASE(id_u_obs)
 !     wk(4) = wk(4) * 100.0 ! hPa -> Pa
@@ -130,24 +133,13 @@ SUBROUTINE read_obs2_drifters(cfile,nn,elem,rlon,rlat,rlev,obid,oerr,oqc,otime)
 !   CASE(id_q_obs)
 !     wk(4) = wk(4) * 100.0 ! hPa -> Pa
 !  END SELECT
-      ii = 3 * (n-1) + i
-      SELECT CASE(INT(i))
-        CASE(1)
-          elem(ii) = id_x_obs  ! id_x_obs = 1111
-        CASE(2)
-          elem(ii) = id_y_obs  ! id_y_obs = 2222
-        CASE(3)
-          elem(ii) = id_z_obs  ! id_z_obs = 3333
-      END SELECT
-
-      obid(ii) = INT(wk(1),r_size)
-      rlon(ii) = REAL(wk(2),r_size)
-      rlat(ii) = REAL(wk(3),r_size)
-      rlev(ii) = REAL(wk(4),r_size)
-      oerr(ii) = REAL(wk(5),r_size)
-       oqc(ii) = INT(wk(6))
-     otime(ii) = REAL(wk(7),r_size)
-    END DO
+    elem(n) = INT(wk(1),r_size)
+    rlon(n) = REAL(wk(2),r_size)
+    rlat(n) = REAL(wk(3),r_size)
+    rlev(n) = REAL(wk(4),r_size)
+    obid(n) = INT(wk(5),r_size)
+    oerr(n) = REAL(wk(6),r_size)
+    otime(n) = REAL(wk(7),r_size)
   END DO
   CLOSE(iunit)
 
@@ -237,7 +229,7 @@ SUBROUTINE das_drifters(gues4d,anal4d)
   ! FCST PERTURBATIONS
   !
   ALLOCATE(mean4d(nid1,num_times,nv4d))
-! CALL ensmean_grd(nbv,nid1,gues4d,mean4d)
+  CALL ensmean_drifters(nid1,gues4d,mean4d)
   !STEVE: nid1 is each one of the grid points
 
   DO n=1,nv4d
@@ -302,7 +294,7 @@ SUBROUTINE Trans_DtoY(elm,ri,rj,rk,v4d_in,yobs)        !(OCEAN)
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
-  REAL(r_size),INTENT(IN) :: v4d_in(num_drifters,num_times,nv4d)
+  REAL(r_sngl),INTENT(IN) :: v4d_in(num_drifters,num_times,nv4d)
   REAL(r_size),INTENT(OUT) :: yobs  
   INTEGER :: i,j,k
   INTEGER :: intelm
@@ -387,7 +379,7 @@ END SUBROUTINE drift2ijk
 ! NOTE: input data for one drifter id, at all times
 SUBROUTINE itpl_4d(var,rt,var5)
   IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: var(:) ! dim = num_times
+  REAL(r_sngl),INTENT(IN) :: var(:) ! dim = num_times
 ! REAL(r_size),INTENT(IN) :: var(:,:) ! num_times,3 = (nlon,nlat,nlev)
   REAL(r_size),INTENT(IN) :: rt ! model time matched to observation timestamp
   REAL(r_size),INTENT(OUT) :: var5
@@ -495,46 +487,75 @@ SUBROUTINE drft_to_buf(drft,buf)
   RETURN
 END SUBROUTINE drft_to_buf
 
+SUBROUTINE read_dimension(file,num_drifters,num_times)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: file 
+  INTEGER, INTENT(OUT) :: num_drifters,num_times
+  CHARACTER(16) :: dummy_char
+  CHARACTER(8*12) :: header_line
+  INTEGER :: fid = 33
+  CHARACTER(24) :: drfile
+
+  drfile = trim(file)//'.drifters_inp.txt' ! (DRIFTERS)
+
+  print *, 'Hello from read_dimension.'
+
+  ! Open the DRIFTERS file postprocessed from mom4p1 netcdf output files
+  open(fid,FILE=drfile,ACCESS='sequential')
+  read(fid,'(A16,I8,A16,I8)')  dummy_char, num_drifters, dummy_char, num_times
+  close(fid)
+
+  RETURN
+END SUBROUTINE read_dimension
+
 SUBROUTINE read_drifters(file,v4d_all)
   IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: file
+  CHARACTER(*),INTENT(IN) :: file 
   REAL(r_sngl),INTENT(OUT) :: v4d_all(num_drifters,num_times,nv4d)
   REAL :: dlon, dlat, ddepth, dtemp, dsalt, dtime
   INTEGER :: ditime, dids
   CHARACTER(16) :: dummy_char
   CHARACTER(8*12) :: header_line
   INTEGER :: di, ti
-  INTEGER :: fid = 33
+  INTEGER :: fid = 33, dodebug = 1 
   CHARACTER(24) :: drfile
 
-  drfile = trim(file)//'.drifters_out.txt' ! (DRIFTERS)
+  drfile = trim(file)//'.drifters_inp.txt' ! (DRIFTERS)
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open the XYZ drifters positions file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  print *, 'Hello from read_drifters.'
 
   ! Open the DRIFTERS file postprocessed from mom4p1 netcdf output files
-  open(fid,FILE=drfile)
+  open(fid,FILE=drfile,ACCESS='sequential')
   read(fid,'(A16,I8,A16,I8)')  dummy_char, num_drifters, dummy_char, num_times
   read(fid,*) header_line
+  
+  ALLOCATE(drifter_times(num_times))
+  ALLOCATE(drifter_ids(num_drifters))
 
   ! Read all positions (and possibly temp and salt)  of each drifter:
-  do di=1,num_drifters
-    do ti=1,num_times
+  DO di=1,num_drifters
+    DO ti=1,num_times
       read(fid,'(I12,6F12.4,I12)') dids, dlon, dlat, ddepth, dtemp, dsalt, dtime, ditime
-      if (di .eq. 1) drifter_times(ti) = dtime  !
+      drifter_ids(di) = dids
+      IF (dodebug .eq. 1) THEN
+        print *, dids, dlon, dlat, ddepth, dtemp, dsalt, dtime, ditime
+      END IF
+      IF (di .eq. 1) drifter_times(ti) = dtime  !
       v4d_all(di,ti,1) = dlon
       v4d_all(di,ti,2) = dlat
       v4d_all(di,ti,3) = ddepth
-      if (nv4d .ge. 5) then
+      IF (nv4d .ge. 5) THEN
         ! If we have temperature and slinity observations at each position,
         ! we can assimilate this data too
         v4d_all(di,ti,4) = dtemp
         v4d_all(di,ti,5) = dsalt
-      endif
-    enddo
-    drifter_ids(di) = dids
-  enddo
+      END IF
+    END DO
+  END DO
+  close(fid)
 
 END SUBROUTINE read_drifters
 
@@ -793,6 +814,19 @@ SUBROUTINE ensmean_drifters(nid,v4d_sub,v4dm)
 
   RETURN
 END SUBROUTINE ensmean_drifters
+
+SUBROUTINE check(status)
+!===============================================================================
+! Check the error status of the netcdf command
+!===============================================================================
+  USE netcdf
+  IMPLICIT NONE
+  integer, intent (in) :: status
+  if(status /= nf90_noerr) then 
+    print *, trim(nf90_strerror(status))
+    stop "Stopped"
+  end if
+END SUBROUTINE check
 
 
 END MODULE letkf_drifters_tools
