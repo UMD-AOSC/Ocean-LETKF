@@ -1,0 +1,3 @@
+The 3DVar is borrowed from NCEP's GODAS, but is in the process of being stripped down
+to the bare essentials for use in the NCEP Hybrid-GODAS system that combines
+the original NCEP GODAS 3DVar with the new NCEP GODAS LETKF.
