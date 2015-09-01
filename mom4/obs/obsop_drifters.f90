@@ -1,4 +1,39 @@
 PROGRAM obsop_drifters
+!===============================================================================
+! PROGRAM: obsop_drifters
+! 
+! USES:
+!  use common
+!  use params_model
+!  use vars_model
+!  use common_mom4
+!  use params_obs
+!  use vars_obs
+!  use common_obs_mom4
+!  use params_letkf
+!  use letkf_drifters_local
+!  use letkf_drifters_tools
+!
+!
+! DESCRIPTION: 
+!   This program acts as the observation operator. It inputs observations (yo)
+!   and a single forecast (xf) and computes the innovations (yo-H(xf))
+!   associated with that member.
+!
+! USAGE:
+! A separate instance is run independently for each member and timeslot
+! All observations are typically preprocessed to the letkf obs format, then
+! here they are read in and converted to the letkf obs2 format w/ H(x) data 
+! for each member added in a new column.
+! 
+! !REVISION HISTORY:
+!   08/15/2015 Luyu Sun modified for processing surface drifters
+!   04/03/2014 Steve Penny modified for use with OCEAN at NCEP.
+!   04/03/2013 Takemasa Miyoshi created for SPEEDY atmospheric model.
+! 
+!-------------------------------------------------------------------------------
+! $Author: Luyu Sun, Steve Penny, Takemasa Miyoshi $
+!===============================================================================
   
   USE common ! use r_size 
   USE common_obs_mom4 ! use get_nobs   

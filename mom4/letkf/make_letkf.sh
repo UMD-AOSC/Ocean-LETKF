@@ -1,11 +1,4 @@
-#!/bin/sh
-#        /usr/bin/modulecmd tcsh !*
-#        
-#        . /etc/profile
-#        if your are a sh/bash/ksh user, and
-#
-#        source /etc/csh.cshrc
-#        in case your script is csh derived.
+#!/bin/bash
 set -ex
 
 source ../../config/machine.sh
