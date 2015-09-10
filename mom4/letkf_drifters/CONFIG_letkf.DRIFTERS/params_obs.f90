@@ -8,8 +8,8 @@ PUBLIC
 
 INTEGER,SAVE :: nobs
 !STEVE: making these namelist accessible:
-INTEGER,SAVE :: nslots=1                  ! number of time slots for 4D-LETKF
-INTEGER,SAVE :: nbslot=1 !1               !STEVE: nbslot=1 for testing for GMAO example case. Normal case is nbslot=5 ! basetime slot
+INTEGER,SAVE :: nslots=5                  ! number of time slots for 4D-LETKF
+INTEGER,SAVE :: nbslot=5 !1               !STEVE: nbslot=1 for testing for GMAO example case. Normal case is nbslot=5 ! basetime slot
 REAL(r_size),SAVE :: sigma_obs=720.0d3    !3x Rossby Radius of Deformation at Equ. according to Chelton
 REAL(r_size),SAVE :: sigma_obs0=200.0d3   !20x Rossby Radius of Deformation at Pole, according to Chelton
 REAL(r_size),SAVE :: sigma_obsv=1000.0d0  !STEVE: doesn't matter if using option "DO_NO_VERT_LOC"

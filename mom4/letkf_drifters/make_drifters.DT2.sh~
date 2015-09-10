@@ -8,7 +8,7 @@
 #        in case your script is csh derived.
 set -ex
 
-MEM=028
+MEM=005
 name=DRIFTERS
 PGM=letkf.$name.$MEM
 
@@ -71,7 +71,7 @@ $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.o letkf_tools.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG $INC_NETCDF letkf_drifters_local.o letkf_drifters_tools.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf.f90
-#$F90 $OMP $F90OPT $DEBUG_OPT -o ${PGM} *.o $LIB_NETCDF $LBLAS $LIB_MPI
+$F90 $OMP $F90OPT $DEBUG_OPT -o ${PGM} *.o $LIB_NETCDF $LBLAS $LIB_MPI
 #$F90 $OMP $F90OPT $DEBUG_OPT $INLINE -o ${PGM} *.o $LIB_MPI $LIB_NETCDF $LBLAS
 
 #STEVE: keep a record of the build:

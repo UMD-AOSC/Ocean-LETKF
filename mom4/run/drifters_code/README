@@ -1,0 +1,15 @@
+rd.x reads drifter ouput from MOM4p1 and converts it to a clean format to be read into LETKF
+cd.x writes an existing array of drifter positions into the input format used by MOM4p1
+
+
+module load netcdf
+module load intel
+module load mpt
+
+ifort -I$NETCDF/include read_drifters.f90 -o rd.x -L$NETCDF/lib -lnetcdf
+
+./rd.x -np 23 -o drifters_out.txt > rd.out
+
+
+ifort -I$NETCDF/include create_drifters.f90 -o cd.x -L$NETCDF/lib -lnetcdf
+./cd.x

@@ -48,17 +48,18 @@ PROGRAM letkf
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
-  REAL(r_size),ALLOCATABLE :: gues4d(:,:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: anal4d(:,:,:,:,:)
+  REAL(r_size),ALLOCATABLE :: gues4d(:,:,:,:)
+  REAL(r_size),ALLOCATABLE :: anal4d(:,:,:,:)
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(9) :: stdoutf='NOUT-0000'
-  CHARACTER(4) :: guesf='gs00'
+  CHARACTER(4) :: guesf='gs00' 
+  
   
   INTEGER :: ij, m !STEVE: for debugging
   LOGICAL :: ex
   INTEGER :: fid=21
-  LOGICAL :: dortout=.true.    ! Force 'realtime' output (helps with parallel debugging)
+  LOGICAL :: dortout=.false.    ! Force 'realtime' output (helps with parallel debugging)
   LOGICAL :: dodebug0=.false.  ! Debug flag for various routines
 
   NAMELIST /params_model_nml/ gridfile, SSHclm_file
@@ -132,16 +133,19 @@ PROGRAM letkf
   CALL set_common_mom4
   CALL set_common_mpi_mom4
   if (DO_DRIFTERS) then
-    CALL set_common_drifters
+   CALL set_common_drifters
   endif
 
   !-----------------------------------------------------------------------------
   ! Allocate dynamic arrays
   !-----------------------------------------------------------------------------
+  ALLOCATE(gues4d(nid1,num_times,nbv,nv4d))
   ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
   ALLOCATE(gues2d(nij1,nbv,nv2d))
+  ALLOCATE(anal4d(nid1,num_times,nbv,nv4d))
   ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
   ALLOCATE(anal2d(nij1,nbv,nv2d))
+
 
   !-----------------------------------------------------------------------------
   ! Check timer for initialization
@@ -153,7 +157,7 @@ PROGRAM letkf
     OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
   endif
   rtimer00=rtimer
-
+  
   !-----------------------------------------------------------------------------
   ! Observations
   !-----------------------------------------------------------------------------
@@ -177,9 +181,14 @@ PROGRAM letkf
   !-----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   WRITE(guesf(3:4),'(I2.2)') nbslot
-  WRITE(6,*) "From letkf.f90, calling read_ens_mpi..."
+  WRITE(6,*) "From letkf.f90, calling read_ens_mpi...","nbv=",nbv,"nij1=",nij1,"nv3d=",nv3d,"nv2d=",nv2d
   CALL read_ens_mpi(guesf,nbv,gues3d,gues2d)
   WRITE(6,*) "From letkf.f90, finished calling read_ens_mpi..."
+  if (DO_DRIFTERS) then
+    WRITE(6,*) "From letkf.f90, calling read_ens_drifters..."
+    CALL read_ens_drifters('gues',gues4d)
+    WRITE(6,*) "From letkf.f90, finished calling read_ens_drifters..."
+  endif
 
   if (dodebug0) then ! Test processing of forecast ensemble, write, and quit
     CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -205,9 +214,14 @@ PROGRAM letkf
   ! Write ensemble mean and spread
   !-----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  WRITE(6,*) "From letkf.f90, calling write_ensmspr_mpi..."
   CALL write_ensmspr_mpi('gues',nbv,gues3d,gues2d)
+  WRITE(6,*) "From letkf.f90, finished calling write_ensmspr_mpi..."
+   
   if (DO_DRIFTERS) then
-   CALL write_ensmspr_drifters('gues',gues4d) !Original: CALL write_ensmspr_drifters('gues',nbv,gues4d)
+    WRITE(6,*) "From letkf.f90, calling write_ensmspr_drifters..."
+    CALL write_ensmspr_drifters('gsdr',gues4d) !Original: CALL write_ensmspr_drifters('gues',nbv,gues4d) ! Shouldn't be 'gues', otherwise it will conflict with the ocean .grd file.
+    WRITE(6,*) "From letkf.f90, finished calling write_ensmspr_drifters..."
   endif
 
   !STEVE: debug
@@ -261,13 +275,13 @@ PROGRAM letkf
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ens_mpi('anal',nbv,anal3d,anal2d)
   if (DO_DRIFTERS) then
-   CALL write_ens_drifters('anal',anal4d)
+    CALL write_ens_drifters('andr',anal4d)
   endif
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ensmspr_mpi('anal',nbv,anal3d,anal2d)
   if (DO_DRIFTERS) then
-   CALL write_ensmspr_drifters('anal',anal4d)
+    CALL write_ensmspr_drifters('andr',anal4d)
   endif
 
   !-----------------------------------------------------------------------------
@@ -284,14 +298,18 @@ PROGRAM letkf
   !----------------------------------------------------------------------------
   ! Finalize the MPI
   !----------------------------------------------------------------------------
+  WRITE(6,*) "Start calling MPI BARRIER...."
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  WRITE(6,*) "Finalize the mpi...."
   CALL finalize_mpi
+  WRITE(6,*) "Finish finalize_mpi..."
 
   !-----------------------------------------------------------------------------
   ! Check timer for total runtime
   !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(FINAL):',rtimer,rtimer-rtimer00
+  WRITE(6,*) "***************"
   if (dortout) then !STEVE: force output to file
     CLOSE(6)
     OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')

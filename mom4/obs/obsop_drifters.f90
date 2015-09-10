@@ -56,7 +56,7 @@ PROGRAM obsop_drifters
   !-----------------------------------------------------------------------------
   CALL read_dimension(trim(guesfile),num_drifters,num_times)
   ALLOCATE(v4d_all(num_drifters,num_times,nv4d))
-  CALL read_drifters(trim(guesfile),v4d_all) ! read_drifters is in letkf_drifters.f90, read data from model space.
+  CALL read_drifters(trim(guesfile),v4d_all) ! read_drifters is in letkf_drifters_tools.f90, read data from model space.
   ! From this step, we obtain from models, num_drifters, num_times, drifter_ids, drifter_times. 
   print *, 'Finish read_drifters'
   !-----------------------------------------------------------------------------

@@ -8,14 +8,19 @@
 #        in case your script is csh derived.
 set -ex
 
-MEM=028
+# sh make_drifters.DT2.sh <ENS_NUM>
+
 name=DRIFTERS
-PGM=letkf.$name.$MEM
+MEM3=$1
+if [ "$MEM3" -lt 100 ]; then
+  MEM3=0$MEM3
+fi
+if [ "$MEM3" -lt 10 ]; then
+  MEM3=0$MEM3
+fi
+PGM=letkf.$name.$MEM3
 
 #STEVE: put the directory for netcdf here:
-source ../../config/machine.sh
-source ../../config/$MACHINE.netcdf.sh
-
 NETCDF_ROOT=/cell_root/software/netcdf/4.3.2/intel/2013.1.039/openmpi/1.8.1/hdf5/1.8.13/hdf4/4.2.10/sys
 NETCDFF_ROOT=/cell_root/software/netcdf-fortran/4.4.1/netcdf/4.3.2/intel/2013.1.039/openmpi/1.8.1/sys
 LIB_NETCDF="-L$NETCDFF_ROOT/lib -lnetcdff -Wl,-rpath,$NETCDFF_ROOT/lib"
@@ -70,8 +75,8 @@ $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_drifters_local.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf_local.o letkf_tools.f90
 $F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG $INC_NETCDF letkf_drifters_local.o letkf_drifters_tools.f90
-#$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG letkf.f90
-#$F90 $OMP $F90OPT $DEBUG_OPT -o ${PGM} *.o $LIB_NETCDF $LBLAS $LIB_MPI
+$F90 $OMP $F90OPT $DEBUG_OPT $OBJECT_FLAG $INC_NETCDF letkf_drifters_tools.o letkf.f90
+$F90 $OMP $F90OPT $DEBUG_OPT -o ${PGM} *.o $LIB_NETCDF $LBLAS $LIB_MPI
 #$F90 $OMP $F90OPT $DEBUG_OPT $INLINE -o ${PGM} *.o $LIB_MPI $LIB_NETCDF $LBLAS
 
 #STEVE: keep a record of the build:
