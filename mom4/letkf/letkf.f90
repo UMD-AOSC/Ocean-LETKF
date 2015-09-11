@@ -61,9 +61,24 @@ PROGRAM letkf
   LOGICAL :: dortout=.true.    ! Force 'realtime' output (helps with parallel debugging)
   LOGICAL :: dodebug0=.false.  ! Debug flag for various routines
 
-  NAMELIST /params_model_nml/ gridfile, SSHclm_file
-  NAMELIST /params_obs_nml/   nslots,nbslot,sigma_obs,sigma_obs0,sigma_obsv,sigma_obst,gross_error
-  NAMELIST /params_letkf_nml/ DO_DRIFTERS, DO_ALTIMETRY, DO_NO_VERT_LOC, localization_method, cov_infl_mul,sp_infl_add,DO_INFL_RESET
+  NAMELIST /params_model_nml/ gridfile, &  ! MOM4 grid_spec.nc file 
+                              SSHclm_file  ! model ssh climatology for altimetry assimilation
+  NAMELIST /params_obs_nml/   obs1nrec, &  ! number of records in obs.dat type file
+                              obs2nrec     ! number of records in obs2.dat type file
+  NAMELIST /params_letkf_nml/ nslots, &              ! Number of time slots for 4D assimilation
+                              nbslot, &              ! Index of base timeslot (time at which to form analysis)
+                              sigma_obs, &           ! Sigma-radius (half-width) for horizontal localization at the equator (m)
+                              sigma_obs0, &          ! Sigma-radius for horizontal localization at the poles (m)
+                              sigma_obsv, &          ! Sigma-radius for vertical localization (m)
+                              sigma_obst, &          ! Sigma-radius for temporal localization (not activated)
+                              gross_error, &         ! number of standard deviations for quality control (all outside removed)
+                              DO_DRIFTERS, &         ! logical flag to do lagrangian drifters assimilation
+                              DO_ALTIMETRY, &        ! logical flag to do altimetry data assimilation
+                              DO_NO_VERT_LOC, &      ! logical flag to skip all vertical localization and project weights (default)
+                              localization_method, & ! localization method to be used in letkf_local.f90
+                              cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
+                              sp_infl_add, &         ! additive inflation factor (default none)
+                              DO_INFL_RESET          ! logical flag to reset adaptive inflation at each timestep (disabled)
 
 !------------------------------------------------------------------------------
 ! Initial settings

@@ -32,8 +32,8 @@ INTEGER,PARAMETER :: id_atm_q_obs=5281      !(OCEAN) (ATMOS)
 INTEGER,PARAMETER :: id_atm_ps_obs=5280     !(OCEAN) (ATMOS)
 
 !ISSUE: make these namelist controllable:
-INTEGER, PARAMETER :: obs1nrec = 6                     ! The number of records in the obs1-formatted file (previous 6, 7 adds a time record).
-INTEGER, PARAMETER :: obs2nrec = 9                     ! The number of records in the obs2-formatted file (previous 8, 9 adds a time record).
+INTEGER :: obs1nrec = 6                     ! The number of records in the obs1-formatted file (previous 6, 7 adds a time record).
+INTEGER :: obs2nrec = 9                     ! The number of records in the obs2-formatted file (previous 8, 9 adds a time record).
 
 LOGICAL, PARAMETER :: DO_POTTEMP_to_INSITU = .false. ! Conversion to observation space. This is needed if the
                                                      ! observations aren't converted to potential temperature

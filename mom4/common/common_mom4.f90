@@ -784,13 +784,13 @@ SUBROUTINE read_grd4(infile,v3d,v2d)
   altimetry : if(DO_ALTIMETRY) then
     !STEVE: use the sea level perturbation from ocean_barotropic.res.nc
     call check( NF90_OPEN(bfile,NF90_NOWRITE,ncid) )
-    WRITE(6,*) "read_grd:: just opened file ", bfile
+    WRITE(6,*) "read_grd4:: just opened file ", bfile
 
     !!! SSH
     call check( NF90_INQ_VARID(ncid,'eta_t',varid) )
     call check( NF90_GET_VAR(ncid,varid,v2d(:,:,iv2d_eta)) )
-    if (dodebug) WRITE(6,*) "read_grd:: just got data for variable eta_t"
-    if (dodebug) WRITE(6,*) "read_grd:: finished processing data for variable SSH"
+    if (dodebug) WRITE(6,*) "read_grd4:: just got data for variable eta_t"
+    if (dodebug) WRITE(6,*) "read_grd4:: finished processing data for variable SSH"
 
     ! Convert SSH stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
     v2d(:,:,iv2d_eta) = v2d(:,:,iv2d_eta) - SSHclm_m(:,:)
@@ -798,7 +798,7 @@ SUBROUTINE read_grd4(infile,v3d,v2d)
     ! !STEVE: debug
     if (dodebug) then
       WRITE(6,*) "POST-eta"
-      WRITE(6,*) "read_grd:: bfile = ", bfile
+      WRITE(6,*) "read_grd4:: bfile = ", bfile
       WRITE(6,*) "max val for level v2d(:,:,iv2d_eta) = ", MAXVAL(v2d(:,:,iv2d_eta))
     endif
     ! !STEVE: end

@@ -4,14 +4,16 @@
 /
 
 &params_obs_nml
+ obs1nrec = 6,
+ obs2nrec = 9,
+/
+
+&params_letkf_nml
  nslots = 5,
  nbslot = 5,
  sigma_obs = 720.0d3,
  sigma_obs0 = 200.0d3,
  gross_error = 3.0d0
-/
-
-&params_letkf_nml
  DO_DRIFTERS = F,
  DO_ALTIMETRY = T,
  DO_NO_VERT_LOC = T,
