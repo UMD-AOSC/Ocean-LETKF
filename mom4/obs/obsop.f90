@@ -144,7 +144,7 @@ PROGRAM obsop
   !-----------------------------------------------------------------------------
   ALLOCATE( v3d(nlon,nlat,nlev,nv3d) )
   ALLOCATE( v2d(nlon,nlat,nv2d) )
-  CALL read_grd(guesfile,v3d,v2d)
+  CALL read_diag(guesfile,v3d,v2d)
   print *, '****************'
 
   !!STEVE: for adaptive observation error:

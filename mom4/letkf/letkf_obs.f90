@@ -65,6 +65,7 @@ MODULE letkf_obs
 
 CONTAINS
 
+
 SUBROUTINE set_letkf_obs
 !===============================================================================
 ! Initialize the module
@@ -649,6 +650,7 @@ endif
   RETURN
 END SUBROUTINE set_letkf_obs
 
+
 SUBROUTINE get_hdxa(anal3dg,anal2dg,hdxa) !,depa)
 !===============================================================================
 ! Compute the obs operator applied to the analysis analagous to hdxf
@@ -673,7 +675,7 @@ hdxa = 0.0d0
 
 !   WRITE(analfile(5:7),'(I3.3)') im
 !   WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',analfile
-!   CALL read_grd(analfile,v3d,v2d)
+!   CALL read_diag(analfile,v3d,v2d)
 
 !   WRITE(6,*) "letkf_tools.f90::adapt_obserr: calling get_hdxa..."
 !   CALL get_hdxa(v3d,v2d,hdxa(:,im),obsdep_a)
