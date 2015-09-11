@@ -1,0 +1,3 @@
+These are support routines, written in C by David Behringer,
+for the processing of obs and background error covariance
+for NCEP's 3DVar-based GODAS.

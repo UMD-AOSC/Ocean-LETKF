@@ -1,0 +1,33 @@
+######################################################################
+LBO=/lustre/f1/unswept/ncep/David.Behringer/lib/hydro.a /lustre/f1/unswept/ncep/David.Behringer/lib/TUtl.a
+LBN=/opt/cray/netcdf/4.2.0/intel/120/lib/libnetcdf.a
+INC=-I/lustre/f1/unswept/ncep/David.Behringer/include -I/opt/cray/netcdf/4.2.0/intel/120/include
+CFLAG=-O3
+FFLAG=-O3 -FR
+LDFLAG=
+CC=cc
+FC=ftn
+EXEC = cmbWksAlt4 rdWkA4 spltWkAlt4 runSWA4
+
+.c.o:
+	$(CC) $(CFLAG) $(INC) -c $<
+
+.f.o:
+	$(FC) $(FFLAG) -c $<
+
+all : $(EXEC)
+
+cmbWksAlt4 : cmbWksAlt4.o $(LBO)
+	$(CC) $(LDFLAG) -o cmbWksAlt4 cmbWksAlt4.o $(LBO) $(LBN) -lm
+
+rdWkA4 : rdWkA4.o $(LBO)
+	$(CC) $(LDFLAG) -o rdWkA4 rdWkA4.o $(LBO) $(LBN) -lm
+
+spltWkAlt4 : spltWkAlt4.o $(LBO)
+	$(CC) $(LDFLAG) -o spltWkAlt4 spltWkAlt4.o $(LBO) $(LBN) -lm
+
+runSWA4 : runSWA4.o $(LBO)
+	$(CC) $(LDFLAG) -o runSWA4 runSWA4.o $(LBO) $(LBN) -lm
+
+clean :
+	rm *.o $(EXEC)

@@ -1,0 +1,5 @@
+The debug_mom.f90 routine is for viewing the variance and obs data generated
+for NCEP's 3DVar-based GODAS.
+
+
+ifort -I$NETCDF_DIR/include debug_mom.f90 -o dm.x -L$NETCDF_DIR/lib -lnetcdf -lnetcdff
