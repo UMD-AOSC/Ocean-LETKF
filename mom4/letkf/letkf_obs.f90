@@ -39,6 +39,7 @@ MODULE letkf_obs
   USE common_obs_mom4
   USE common_mpi_mom4
   USE common_letkf
+  USE params_letkf, ONLY: sigma_obs, sigma_obsv, sigma_obs0, gross_error, nslots
   USE params_obs
   USE vars_obs
   !(DRIFTERS)
