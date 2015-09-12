@@ -21,7 +21,7 @@ MODULE common_mpi_mom4
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: mpibufsize=2048 !1000 !600 !(this worked as 'safe' with 480 procs on Gaea) !200 !1000  !STEVE: this fixes the problem of bad output when using over 6 nodes default=1000,mom2(mpich2)=200
+  INTEGER,PARAMETER :: mpibufsize=1000 !600 !(this worked as 'safe' with 480 procs on Gaea) !200 !1000  !STEVE: this fixes the problem of bad output when using over 6 nodes default=1000,mom2(mpich2)=200
   INTEGER,SAVE :: nij1                  !STEVE: this is the number of gridpoints to run on this (myrank) processor
   INTEGER,SAVE :: nij1max               !STEVE: the largest number of gridpoints on any 1 processor
   INTEGER,ALLOCATABLE,SAVE :: nij1node(:)
@@ -468,13 +468,13 @@ SUBROUTINE read_ens_mpi(file,member,v3d,v2d)
 
     mstart = 1 + (l-1)*nprocs
     mend = MIN(l*nprocs, member)
+    if (dodebug) WRITE(6,*) "In common_mpi_mom4.f90::read_ens_mpi, calling scatter_grd_mpi_alltoall..."
     CALL scatter_grd_mpi_alltoall(mstart,mend,member,v3dg,v2dg,v3d,v2d)
 
   END DO
 
   DEALLOCATE(v3dg,v2dg)
 
-  RETURN
 END SUBROUTINE read_ens_mpi
 
 !-----------------------------------------------------------------------

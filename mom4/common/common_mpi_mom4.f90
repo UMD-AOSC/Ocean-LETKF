@@ -1,1 +1,1 @@
-common_mpi_mom4.f90.orig
+common_mpi_mom6.f90
