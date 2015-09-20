@@ -10,7 +10,8 @@ MODULE letkf_tools
 !  use common_letkf
 !  use letkf_obs !contains debug_hdxf_0
 !  use letkf_local
-!  use params_letkf, ONLY: nbv, cov_infl_mul, sp_infl_add, DO_INFL_RESET
+!  use params_letkf, ONLY: nbv, cov_infl_mul, sp_infl_add
+!  use vars_letkf
 !
 ! PUBLIC TYPES:
 !                 das_letkf, adapt_obserr, create_oer_init
@@ -47,7 +48,8 @@ MODULE letkf_tools
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0
   USE letkf_local !STEVE: separating localization functions
-  USE params_letkf, ONLY: nbv, cov_infl_mul, sp_infl_add, DO_INFL_RESET 
+  USE params_letkf, ONLY: nbv, cov_infl_mul, sp_infl_add, DO_NO_VERT_LOC
+  USE vars_letkf,   ONLY: var_local, var_local_n2n
 
   IMPLICIT NONE
 
@@ -90,6 +92,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !STEVE: for debugging
   LOGICAL :: debug_sfckmt = .false.
   LOGICAL :: dodebug = .false.
+  LOGICAL :: debug_zeroinc = .false.
   INTEGER :: nn
   REAL(r_size) :: maxdep_val
   INTEGER :: maxdep_nn
@@ -180,22 +183,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   endif
 
   !-----------------------------------------------------------------------------
-  ! Reset inflation, if desired
-  !-----------------------------------------------------------------------------
-  if ( DO_INFL_RESET ) then
-    work3d = 1.0d0
-    !work2d = 1.0d0 !STEVE: don't reset the 2D field
-    !STEVE: will this mess up SST, SSH and SSS? maybe should reset them also.
-    !       not sure if it matters since they are not prognostic in the model.
-
-    ! Eventually, I'd like to back up the adaptive inflation from the depths to
-    ! the corresponding surface level, following the water mass generation, but
-    ! this would be a lot more complicated.
-
-    ! If using the Hybrid-LETKF, multiplicative inflation is not necessary
-  endif
-
-  !-----------------------------------------------------------------------------
   ! MAIN ASSIMILATION LOOP
   !-----------------------------------------------------------------------------
   WRITE(6,*) "Allocating hdxf, rdiag, rloc, and dep..."
@@ -275,7 +262,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
           parm = work3d(ij,ilev,n)
 
-          debug_local_obs : if ( .false. ) then !NINT(i1(ij)) .eq. 456 .and. NINT(j1(ij)) .eq. 319 .and. ilev .eq. 5) then
+          debug_local_obs : if ( debug_zeroinc .and. nobsl > 0 ) then !NINT(i1(ij)) .eq. 456 .and. NINT(j1(ij)) .eq. 319 .and. ilev .eq. 5) then
             WRITE(6,*) "------------------------------------------------------------"
             WRITE(6,*) "------------------------------------------------------------"
             WRITE(6,*) "------------------------------------------------------------"
@@ -366,9 +353,16 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           !-------------------------------------------------------------------------
           ! Call LETKF MAIN subroutine
           !-------------------------------------------------------------------------
-          CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))   !STEVE: need to change for RIP
+          CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))
 
-          ! (if doing adaptive inflation)
+          if ( debug_zeroinc .and. nobsl > 0 ) then 
+            WRITE(6,*) "letkf_tools.f90::das_letkf:: post-letkf_core"
+            WRITE(6,*) "n = ", n
+            WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
+            STOP(318)
+          endif
+
+          ! (if doing adaptive inflation) 
           work3d(ij,ilev,n) = parm
 
         endif
@@ -442,7 +436,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
               WRITE(6,*) "rdiag(1:nobsl) = ", rdiag(1:nobsl)
             endif
 
-            CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n)) !STEVE: change for RIP
+            CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n))
 
             !Debugging:
 !           print *, "Debugging SFC 2D adaptive inflation:"
@@ -476,22 +470,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     if (myrank == 0) then
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing.. ',infloutfile
       CALL write_bingrd4(infloutfile,work3dg,work2dg)
-      !STEVE: check
-!     do n=1,nv3d
-!       do k=1,nlev
-!         do j=1,nlat
-!           do i=1,nlon
-!             if (isnan4(work3dg(i,j,k,n))) then
-!               WRITE(6,*) "writing work3dg(i,j,k,n) = ", work3dg(i,j,k,n)
-!               WRITE(6,*) "i,j,k,n = ", i,j,k,n
-!               stop 2
-!             endif
-!           enddo
-!         enddo
-!       enddo
-!     enddo
-      !STEVE: end
- 
     endif
     DEALLOCATE(work3dg,work2dg,work3d,work2d)
   endif adaptive_inflation
@@ -525,12 +503,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     WRITE(6,'(A)') '===== Additive covariance inflation ====='
     WRITE(6,'(A,F10.4)') '  parameter:',sp_infl_add
     WRITE(6,'(A)') '========================================='
-!    parm = 0.7d0
-!    DO ilev=1,nlev
-!      parm_infl_damp(ilev) = 1.0d0 + parm &
-!        & + parm * REAL(1-ilev,r_size)/REAL(nlev_dampinfl,r_size)
-!      parm_infl_damp(ilev) = MAX(parm_infl_damp(ilev),1.0d0)
-!    END DO
     do n=1,nv3d
       do m=1,nbv
         do ilev=1,nlev

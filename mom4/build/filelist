@@ -1,0 +1,19 @@
+ftn  -O3 -parallel -what   -c ../../common/SFMT.f90
+ftn  -O3 -parallel -what   -c ../../common/common.f90
+ftn  -O3 -parallel -what  -c ../../common/common_mpi.f90
+ftn  -O3 -parallel -what   -c ../../common/common_mtx.f90
+ftn  -O3 -parallel -what   -c netlib2.f
+ftn  -O3 -parallel -what   -c ../letkf/params_letkf.f90
+ftn  -O3 -parallel -what  -c ../../common/common_letkf.f90
+ftn  -O3 -parallel -what  -c ../letkf/params_model.f90
+ftn  -O3 -parallel -what  -c ../letkf/vars_model.f90
+ftn  -O3 -parallel -what   -I/opt/cray/netcdf/4.2.0/intel/120/include -c ../common/common_mom4.f90
+ftn  -O3 -parallel -what  -c ../obs/params_obs.f90
+ftn  -O3 -parallel -what  -c ../obs/vars_obs.f90
+ftn  -O3 -parallel -what  -c ../common/common_obs_mom4.f90
+ftn  -O3 -parallel -what  -c -I/opt/cray/netcdf/4.2.0/intel/120/include ../common/common_mpi_mom4.f90
+ftn  -O3 -parallel -what  -c ../letkf/letkf_obs.f90
+ftn  -O3 -parallel -what  -c ../letkf/vars_letkf.f90
+ftn  -O3 -parallel -what  -c ../letkf/letkf_local.f90
+ftn  -O3 -parallel -what  -c ../letkf/letkf_tools.f90
+ftn  -O3 -parallel -what  -c ../letkf/letkf.f90

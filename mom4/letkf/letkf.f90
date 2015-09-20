@@ -77,8 +77,7 @@ PROGRAM letkf
                               DO_NO_VERT_LOC, &      ! logical flag to skip all vertical localization and project weights (default)
                               localization_method, & ! localization method to be used in letkf_local.f90
                               cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
-                              sp_infl_add, &         ! additive inflation factor (default none)
-                              DO_INFL_RESET          ! logical flag to reset adaptive inflation at each timestep (disabled)
+                              sp_infl_add            ! additive inflation factor (default none)
 
 !------------------------------------------------------------------------------
 ! Initial settings

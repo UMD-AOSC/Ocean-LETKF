@@ -7,7 +7,7 @@ IMPLICIT NONE
 PUBLIC
 
 INTEGER,SAVE :: nobs
-INTEGER,PARAMETER :: nid_obs=7
+INTEGER,PARAMETER :: nid_obs=8
 INTEGER,PARAMETER :: id_u_obs=2819
 INTEGER,PARAMETER :: id_v_obs=2820
 INTEGER,PARAMETER :: id_t_obs=3073
@@ -34,6 +34,10 @@ INTEGER,PARAMETER :: id_atm_ps_obs=5280     !(OCEAN) (ATMOS)
 !ISSUE: make these namelist controllable:
 INTEGER :: obs1nrec = 6                     ! The number of records in the obs1-formatted file (previous 6, 7 adds a time record).
 INTEGER :: obs2nrec = 9                     ! The number of records in the obs2-formatted file (previous 8, 9 adds a time record).
+
+! Remove all observations above 65ºN due to tripolar grid
+!LOGICAL :: DO_REMOVE_65N = .true.
+!STEVE: I made this a command line adjustable argument in obsop.f90 :: -rm65N .true.
 
 LOGICAL, PARAMETER :: DO_POTTEMP_to_INSITU = .false. ! Conversion to observation space. This is needed if the
                                                      ! observations aren't converted to potential temperature

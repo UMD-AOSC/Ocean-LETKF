@@ -1,5 +1,7 @@
 MODULE params_model
 
+USE common, ONLY: r_size
+
 IMPLICIT NONE
 
 PUBLIC
@@ -36,7 +38,7 @@ PUBLIC
   INTEGER,PARAMETER :: nv4d=3 ! x,y,z                !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
 ! INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
 ! INTEGER,PARAMETER :: nv2d=7 ! ssh/t/s, + sfc fluxes: taux,tauy,heat,freshwater
-  INTEGER,PARAMETER :: nv2d=3!4 ! ssh,sst,sss,eta      !(OCEAN) !(ALTIMETRY)
+  INTEGER,PARAMETER :: nv2d=4 ! ssh,sst,sss,eta      !(OCEAN) !(ALTIMETRY)
   INTEGER,PARAMETER :: nvsfc=0 !14
 
   INTEGER,PARAMETER :: nij0=nlon*nlat
@@ -46,34 +48,26 @@ PUBLIC
   INTEGER,PARAMETER :: iv3d_u=1
   INTEGER,PARAMETER :: iv3d_v=2
   INTEGER,PARAMETER :: iv3d_t=3
-  INTEGER,PARAMETER :: iv3d_s=4                      !(OCEAN)
-                                                     !          From ocean_sbc.res.nc:
-  INTEGER,PARAMETER :: iv2d_ssh=1                    !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
-  INTEGER,PARAMETER :: iv2d_sst=2                    !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
-  INTEGER,PARAMETER :: iv2d_sss=3                    !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models
-  INTEGER,PARAMETER :: iv2d_eta=4                    !(OCEAN) ! eta sea surface perturbation from mom4's ocean_barotropic.res.nc restart file
-  INTEGER,PARAMETER :: iv4d_x=1                      !(OCEAN) (DRIFTERS)
-  INTEGER,PARAMETER :: iv4d_y=2                      !(OCEAN) (DRIFTERS)
-  INTEGER,PARAMETER :: iv4d_z=3                      !(OCEAN) (DRIFTERS)
-  INTEGER,PARAMETER :: iv2d_taux=5                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_tauy=6                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_tflx=7                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_qflx=8                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_u10=9                    !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_v10=10                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_t2m=11                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_q2m=12                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_pres=13                  !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_prate=14                 !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_dlw=15                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_dsw=16                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_nlw=17                   !(OCEAN) (SFCFLUX)
-  INTEGER,PARAMETER :: iv2d_nsw=18                   !(OCEAN) (SFCFLUX)
-
+  INTEGER,PARAMETER :: iv3d_s=4                !(OCEAN)
+                                               !          From ocean_sbc.res.nc:
+  INTEGER,PARAMETER :: iv2d_ssh=1              !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
+  INTEGER,PARAMETER :: iv2d_sst=2              !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
+  INTEGER,PARAMETER :: iv2d_sss=3              !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models
+  INTEGER,PARAMETER :: iv2d_eta=4              !(OCEAN) ! eta sea surface perturbation from mom4's ocean_barotropic.res.nc restart file
+  INTEGER,PARAMETER :: iv4d_x=1                !(OCEAN) (DRIFTERS)
+  INTEGER,PARAMETER :: iv4d_y=2                !(OCEAN) (DRIFTERS)
+  INTEGER,PARAMETER :: iv4d_z=3                !(OCEAN) (DRIFTERS)
 
   CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
 
   ! For grid_spec.nc data file:
   CHARACTER(12) :: gridfile = 'grid_spec.nc'
+
+  ! Bounds checking (for output by common_mom4.f90::write_restart)
+  LOGICAL :: do_physlimit=.true.
+  REAL(r_size) :: max_t = 40.0d0 ! ÂC
+  REAL(r_size) :: min_t = -4.0d0 ! ÂC
+  REAL(r_size) :: max_s = 50.0d0 ! psu
+  REAL(r_size) :: min_s =  0.0d0 ! psu
 
 END MODULE params_model
