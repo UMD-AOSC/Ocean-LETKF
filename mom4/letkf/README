@@ -1,6 +1,13 @@
-# STEVE:
+To build:  
+(the first time:)  
+update the config files for your machine. E.g. config files currently exist for GAEA and DT2.  
+(every time:)  
+update the config/machine.sh file to specifiy "machine=<YOUR MACHINE NAME>"  
+At the command line, run "sh make_letkf.sh"  
 
-The code has been reogranized to put static PARAMETERS and namelist controllable parameters
-in params_XYZ.f90 files, while SAVE variables and other reused variables are in vars_XYZ.f90 files.
 
-Notably, the ensemble size 'nbv' has been placed in the params_letkf.f90 file.
+# STEVE:  
+The code has been reogranized to put static PARAMETERS and namelist controllable parameters  
+in params_XYZ.f90 files, while SAVE variables and other reused variables are in vars_XYZ.f90 files.  
+
+Notably, the ensemble size 'nbv' has been placed in the params_letkf.f90 file.  
