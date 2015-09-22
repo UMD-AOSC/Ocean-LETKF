@@ -15,7 +15,7 @@ echo "MEM=$MEM"
 MEM3=`printf %.3d ${MEM}`
 
 # Experiment name
-name=TEST2
+name=TEST5
 # Executable for letkf
 PGM=letkf.$name.$MEM3
 
@@ -52,6 +52,7 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_obs_mom4.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG $NETCDF_INC common_mpi_mom4.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_obs.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.o letkf_tools.f90
 #$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_drifters_tools.f90

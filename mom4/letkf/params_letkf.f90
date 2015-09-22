@@ -53,17 +53,17 @@ INTEGER :: localization_method=1 !1 !(OCEAN) =0 for uniform radius (default), =1
 ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
 REAL(r_size) :: cov_infl_mul = 1.0d0 !(NO INFLATION) !-1.0d0 => adaptive multiplicative inflation
 REAL(r_size) :: sp_infl_add = 0.d0 !additive inflation
-LOGICAL :: DO_INFL_RESET = .true. !(DO_SFCFLUXES) STEVE: for inflating only the surface forcing fields. Reset the 3D ocean interior to 0% inflation (rho = 1.0)
-
 
 !-------------------------------------------------------------------------------
 ! From common_mom4.f90
 !-------------------------------------------------------------------------------
 ! For (DRIFTERS)
 LOGICAL :: DO_DRIFTERS=.false.
-! For (SFCFLUX)
-LOGICAL :: DO_SFCFLUX=.false.
 ! For (ALTIMETRY)
 LOGICAL :: DO_ALTIMETRY=.false.
+! For (TRIPLOAR)
+LOGICAL :: DO_TRIPOLAR=.true.
+! For (IRREG_GRID) for non-orthogonal/non-rectilinear grids (not fully supported)
+LOGICAL :: DO_IRREG_GRID=.false.
 
 END MODULE params_letkf

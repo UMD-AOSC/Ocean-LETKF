@@ -19,7 +19,8 @@ MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1
 echo "MEM=$MEM"
 MEM3=`printf %.3d ${MEM}`
 
-PGM=obsop.$MEM3
+name=TEST5
+PGM=obsop.$name.$MEM3
 #F90OPT='-ftz -ip -ipo -O2 -parallel -i_dynamic -what -fpp -fno-alias -stack_temps -safe_cray_ptr -fast'
 
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90

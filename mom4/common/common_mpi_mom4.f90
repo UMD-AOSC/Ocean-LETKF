@@ -1,1 +1,1 @@
-common_mpi_mom6.f90
+common_mpi_mom4.f90.new
