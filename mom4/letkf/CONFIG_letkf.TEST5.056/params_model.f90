@@ -35,7 +35,7 @@ PUBLIC
   INTEGER,PARAMETER :: ilev_sfc=1
 !
   INTEGER,PARAMETER :: nv3d=4 ! u,v,t,s              !(OCEAN)
-  INTEGER,PARAMETER :: nv4d=3 ! x,y,z                !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
+  INTEGER,PARAMETER :: nv4d=0 ! x,y,z                !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
 ! INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
 ! INTEGER,PARAMETER :: nv2d=7 ! ssh/t/s, + sfc fluxes: taux,tauy,heat,freshwater
   INTEGER,PARAMETER :: nv2d=4 ! ssh,sst,sss,eta      !(OCEAN) !(ALTIMETRY)
@@ -65,8 +65,8 @@ PUBLIC
 
   ! Bounds checking (for output by common_mom4.f90::write_restart)
   LOGICAL :: do_physlimit=.true.
-  REAL(r_size) :: max_t = 40.0d0 ! ÂC
-  REAL(r_size) :: min_t = -4.0d0 ! ÂC
+  REAL(r_size) :: max_t = 40.0d0 ! Ã‚C
+  REAL(r_size) :: min_t = -4.0d0 ! Ã‚C
   REAL(r_size) :: max_s = 50.0d0 ! psu
   REAL(r_size) :: min_s =  0.0d0 ! psu
 
