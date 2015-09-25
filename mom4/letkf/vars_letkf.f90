@@ -1,7 +1,7 @@
 MODULE vars_letkf
   USE common,       ONLY: r_size
   USE params_obs,   ONLY: nid_obs
-  USE params_model, ONLY: nv3d, nv2d
+  USE params_model, ONLY: nv3d, nv2d, nv4d
 
   INTEGER,SAVE :: var_local_n2n(nv3d+nv2d+nv4d)
   REAL(r_size),PARAMETER :: var_local(nv3d+nv2d+nv4d,nid_obs) = 1.0d0
