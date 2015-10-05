@@ -74,7 +74,7 @@ SUBROUTINE letkf_core(nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans)
   parm_in = parm_infl
 
 !-----------------------------------------------------------------------
-!  hdxb Rinv
+!  Rinv hdxb
 !-----------------------------------------------------------------------
   !STEVE: debug
   if ( MINVAL(rdiag(1:nobsl)) .le. 0.0 ) then
