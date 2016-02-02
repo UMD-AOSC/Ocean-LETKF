@@ -1,0 +1,5 @@
+'open gues_me2.ctl'
+'open anal_me2.ctl'
+'open gues_sp2.ctl'
+'open anal_sp2.ctl'
+*'open nature_grd2.ctl'

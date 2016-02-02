@@ -14,7 +14,7 @@ MODULE letkf_tools
 !  use vars_letkf
 !
 ! PUBLIC TYPES:
-!                 das_letkf, adapt_obserr, create_oer_init
+!                 das_letkf
 !
 ! SAVE:
 !                 nobstotal (private)
@@ -54,7 +54,7 @@ MODULE letkf_tools
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC ::  das_letkf, adapt_obserr, create_oer_init
+  PUBLIC ::  das_letkf
 
   INTEGER,SAVE :: nobstotal
 
@@ -438,11 +438,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
             CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n))
 
-            !Debugging:
-!           print *, "Debugging SFC 2D adaptive inflation:"
-!           print *, "pre letkf_core 2D, ilev=1: ij, n, work2d(ij,n) (parm out) = ", ij, n, work2d(ij,n)
             work2d(ij,n) = parm
-!           print *, "post letkf_core 2D, ilev=1: ij, n, work2d(ij,n) (parm out) = ", ij, n, work2d(ij,n)
           endif
 
           !STEVE: process 2D SFC variables here:
@@ -528,265 +524,5 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   DEALLOCATE(mean3d,mean2d)
 
 END SUBROUTINE das_letkf
-
-
-SUBROUTINE adapt_obserr(hdxa,oer3d,oer2d)
-!================================================================================
-!STEVE: Use the following subroutines for doing adaptive observation error:
-!================================================================================
-  REAL(r_size), INTENT(IN) :: hdxa(nobs,nbv)
-  REAL(r_size), INTENT(INOUT) :: oer3d(nij1,nlev,nv3d)
-  REAL(r_size), INTENT(INOUT) :: oer2d(nij1,nv2d)
-  REAL(r_size),ALLOCATABLE :: hdxb(:,:)
-  REAL(r_size),ALLOCATABLE :: rdiag(:), dep_ij(:)
-  REAL(r_size),ALLOCATABLE :: rdiag_b(:), rdiag_a(:)
-  REAL(r_size),ALLOCATABLE :: rloc_b(:), rloc_a(:)
-  REAL(r_size),ALLOCATABLE :: dep_b(:), dep_a(:)
-  INTEGER :: nobsl, nobsl_b, nobsl_a
-  REAL(r_size), DIMENSION(nij1) :: oer, old_oer, new_oer
-  INTEGER :: ij, ilev, n, j, nn, i, l
-  INTEGER :: prntmod = HUGE(1)
-  CHARACTER(7) :: analfile='analNNN'
-  REAL(r_size) :: var_local_oer(nv3d+nv2d,nid_obs+nid_sfcflxobs) = 0.0d0 !(DO_SFCFLUXES)
-!STEVE: need to use this version below to make this work. Commented out to
-!support testing the assimilation of surface fluxes
-! REAL(r_size),PARAMETER :: var_local_oer(nv3d+nv2d,nid_obs) = RESHAPE( &
-!!           U      V      T      S    SSH    SST    SSS
-!   & (/ 1.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0,  & ! U
-!   &    0.0d0, 1.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0,  & ! V
-!   &    0.0d0, 0.0d0, 1.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0,  & ! T
-!   &    0.0d0, 0.0d0, 0.0d0, 1.0d0, 0.0d0, 0.0d0, 0.0d0,  & ! S
-!   &    0.0d0, 0.0d0, 0.0d0, 0.0d0, 1.0d0, 0.0d0, 0.0d0,  & ! SSH
-!   &    0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 1.0d0, 0.0d0,  & ! SST
-!   &    0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 1.0d0 /)& ! SSS
-!   & ,(/nv3d+nv2d,nid_obs/))
-  LOGICAL :: dodebug = .true.
-
-  do i=1,nv3d+nv2d
-    var_local_oer(i,i) = 1.0d0
-  enddo
-  if (dodebug) prntmod = NINT(nij1/3.0) !100000 !NINT(nij1/3.0)
-
-  ! Compute per grid point (in parallel)
-  WRITE(6,*) "letkf_tools::adapt_obserr: Allocating arrays..."
-  WRITE(6,*) "hdxb..."
-  ALLOCATE(hdxb(1:nobs,1:nbv))
-  WRITE(6,*) "rdiag_b..."
-  ALLOCATE(rdiag_b(1:nobs))
-  WRITE(6,*) "rloc_b..."
-  ALLOCATE(rloc_b(1:nobs))
-  WRITE(6,*) "dep_b..."
-  ALLOCATE(dep_b(1:nobs))
-  WRITE(6,*) "dep_a..."
-  ALLOCATE(dep_a(1:nobs)) !,rdiag_a(1:nobs),rloc_a(1:nobs),dep_a(1:nobs))
-  WRITE(6,*) "obs_useidx..."
-  ALLOCATE(obs_useidx(1:nobs))
-  WRITE(6,*) "adapt_obserr:: ... done."
-
-  WRITE(6,*) "------------------------------------------------------------------"
-  WRITE(6,*) "letkf_tools.f90::adapt_obserr: calling obs_local and desroziers..."
-
-  !STEVE: Just in case we didn't call das_letkf to get this initialized:
-  var_local_n2n(1) = 1
-  do n=2,nv3d+nv2d
-    do i=1,n
-      var_local_n2n(n) = i
-      IF(MAXVAL(ABS(var_local_oer(i,:)-var_local_oer(n,:))) < TINY(var_local_oer)) EXIT
-    enddo
-  enddo
-  WRITE(6,*) "var_local_n2n = ", var_local_n2n
-
-  do ilev=1,nlev ! Cycle through vertical levels:
-    WRITE(6,*) "ilev = ", ilev
-    do ij=1,nij1 ! Cycle through grid points divided up for this processor
-      !(OCEAN) STEVE: it's on land, so just assign undef values and CYCLE
-      !STEVE: NEED to define kmt1 as ocean depth
-      if (kmt1(ij) < ilev) then
-        oer3d(ij,ilev,:) = 0.0
-        if (ilev == 1) oer2d(ij,:) = 0.0
-        CYCLE
-      endif
-
-      if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "ij = ", ij
-
-      do n=1,nv3d ! Cycle through model variables: ssh, sst, sss
-        if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "var_local_n2n(n), n  = ", var_local_n2n(n), n
-        !STEVE: this is inefficient, and thus temporary... (don't want to call
-        !this twice, and I would rather do this processing in letkf_tools)
-        
-        if (cnt_obs(n) < 1) CYCLE 
-        CALL obs_local(ij,ilev,var_local_oer(n,:),hdxb,rdiag_b,rloc_b,dep_b,nobsl_b,nobs)
-        if (nobsl_b < 1) CYCLE
-          
-        do nn = 1 ,nobsl_b
-          dep_a(nn) = obsdat(obs_useidx(nn)) - hdxa(obs_useidx(nn),1)
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "----------"
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "nn = ", nn
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "obs_useidx(nn) = ", obs_useidx(nn)
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "ilev,ij,n,var_local_n2n(n),nn = ", ilev,ij,n,var_local_n2n(n),nn
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "obselm(obs_useidx(nn)) = ", obselm(obs_useidx(nn))
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "obsdat(obs_useidx(nn)) = ", obsdat(obs_useidx(nn))
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "hdxa(obs_useidx(nn),1) = ", hdxa(obs_useidx(nn),1)
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "dep_a(nn) = ", dep_a(nn)
-          !STEVE: or,
-          !dep_a(nn) = obsdep_a(obs_useidx(nn))
-        enddo
-
-        CALL desroziers(nobsl_b, dep_a(1:nobsl_b), dep_b(1:nobsl_b), rloc_b(1:nobsl_b), &
-                                                   rdiag_b(1:nobsl_b), oer3d(ij,ilev,n))
-        !STEVE: debug hijack:
-        !oer3d(ij,ilev,n) = nobsl_b
-        if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "letkf_tools.f90:: post-desroziers, oer3d(ij,ilev,n) = ", oer3d(ij,ilev,n)
-      enddo
-
-      if (ilev == 1) then !update 2d variable at ilev=1
-        do n=1,nv2d
-          if (cnt_obs(nv3d+n) < 1) CYCLE 
-          CALL obs_local(ij,ilev,var_local_oer(nv3d+n,:),hdxb,rdiag_b,rloc_b,dep_b,nobsl_b,nobs)
-          if (nobsl_b < 1) CYCLE
-
-          do nn = 1 ,nobsl_b
-            dep_a(nn) = obsdat(obs_useidx(nn)) - hdxa(obs_useidx(nn),1)
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "----------"
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "ILEV=1 SFC, nv3d+n=",nv3d+n
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "nn = ", nn
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "obs_useidx(nn) = ", obs_useidx(nn)
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "ilev,ij,n,var_local_n2n(n),nn = ", ilev,ij,n,var_local_n2n(n),nn
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "obselm(obs_useidx(nn)) = ", obselm(obs_useidx(nn))
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "obsdat(obs_useidx(nn)) = ", obsdat(obs_useidx(nn))
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "hdxa(obs_useidx(nn),1) = ", hdxa(obs_useidx(nn),1)
-            if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "dep_a(nn) = ", dep_a(nn)
-          enddo
-
-          CALL desroziers(nobsl_b, dep_a(1:nobsl_b), dep_b(1:nobsl_b), rloc_b(1:nobsl_b), &
-                                                     rdiag_b(1:nobsl_b), oer2d(ij,n))
-          if (MOD(ij,prntmod) .eq. 0) WRITE(6,*) "letkf_tools.f90:: post-desroziers, oer2d(ij,n) = ", oer2d(ij,n)
-
-        enddo
-      endif
-
-    enddo
-  enddo
-
-  WRITE(6,*) "letkf_tools::adapt_obserr: Deallocating..."
-  WRITE(6,*) "hdxb..."
-  DEALLOCATE(hdxb)
-  WRITE(6,*) "rdiag_b..."
-  DEALLOCATE(rdiag_b)
-  WRITE(6,*) "rloc_b..."
-  DEALLOCATE(rloc_b)
-  WRITE(6,*) "dep_b..."
-  DEALLOCATE(dep_b)
-  WRITE(6,*) "dep_a..."
-  DEALLOCATE(dep_a)
-  WRITE(6,*) "obs_useidx..."
-  DEALLOCATE(obs_useidx)
-  WRITE(6,*) "... done."
-
-END SUBROUTINE adapt_obserr
-
-
-SUBROUTINE desroziers(nobsl,dep_a,dep_b,rloc,rdiag,oer)
-!================================================================================
-! The Desroziers-type (Desroziers, 2005) statistics for the O-F, O-A, and A-B
-!================================================================================
-INTEGER, INTENT(IN) :: nobsl
-REAL(r_size), DIMENSION(nobsl), INTENT(IN) :: dep_a, dep_b, rloc, rdiag
-REAL(r_size), INTENT(INOUT) :: oer
-REAL(r_size), DIMENSION(nobsl) :: dep
-REAL(r_size) :: old_oer, new_oer, rlsum
-INTEGER :: j
-REAL(r_size) :: gain = 0.01 ! (default)
-LOGICAL, SAVE :: dodebug = .true.
-
-  if ( nobsl < 1 ) then
-    RETURN 
-  endif
-  ! Watch out for under-sampled regions
-! if (nobsl < 100) RETURN
-
-  do j = 1,nobsl
-    dep(j) = dep_a(j) * dep_b(j)
-  enddo
-
-  ! Average old error around this grid point:
-  !STEVE: at some point, it would be interesting to
-  !       use some technique to compare to this value
-  !       as well. Maybe (but it's not changing with time)
-! old_oer = oer 
-! old_oer = SUM(rdiag(1:nobsl)) / nobsl
-  rlsum = SUM(rloc(1:nobsl))
-  old_oer = SUM(rdiag(1:nobsl)*(rloc(1:nobsl))) / rlsum
-
-  ! New error at this grid point:
-! new_oer = SUM(dep(1:nobsl)) / nobsl
-  new_oer = SUM(  dep(1:nobsl)*(rloc(1:nobsl))) / rlsum
-
-  ! Scale the gain proportional to the number of samples
-  ! (i.e. # of local obs / # of global obs)
-  gain = 0.01
-
-  if (dodebug) then
-    WRITE(6,*) "nobsl = ", nobsl
-    WRITE(6,*) "nobs  = ", nobs
-    WRITE(6,*) "dep_a = ", dep_a
-    WRITE(6,*) "dep_b = ", dep_b
-    WRITE(6,*) "rloc  = ", rloc
-    WRITE(6,*) "rdiag = ", rdiag
-    WRITE(6,*) "oer   = ", oer
-    WRITE(6,*) "old_oer = ", old_oer
-    WRITE(6,*) "new_oer = ", new_oer
-    WRITE(6,*) "gain  = ", gain
-  endif
-
-  ! Smoothed error adjustment: (STEVE: change to kalman filter update by
-  ! using the ensemble information in hdxb & hdxa.)
-  oer = SQRT(new_oer * gain + (1 - gain) * old_oer)
-
-  if (dodebug) WRITE(6,*) "oer (final) = ", oer
-  dodebug = .false.
-
-END SUBROUTINE desroziers
-
-
-SUBROUTINE create_oer_init(infile,oer3dg,oer2dg)
-!===============================================================================
-! Initialize the observation error adaptive estimation
-!===============================================================================
-CHARACTER(*), INTENT(IN) :: infile
-REAL(r_sngl), INTENT(OUT) :: oer3dg(nlon,nlat,nlev,nv3d)
-REAL(r_sngl), INTENT(OUT) :: oer2dg(nlon,nlat,nv2d)
-INTEGER :: k
-
-! ERROR PROFILES: Taken from a high-resolution SODA analysis
-REAL, DIMENSION(nlev), PARAMETER :: t_eprof = (/0.56, 0.61, 0.66, 0.70, 0.74, 0.78, 0.80, &
-0.82, 0.82, 0.84, 0.83, 0.82, 0.81, 0.80, 0.78, 0.76, 0.74, 0.72, 0.70, 0.68, &
-0.67, 0.66, 0.65, 0.63, 0.60, 0.57, 0.54, 0.49, 0.43, 0.36, 0.31, 0.27, 0.27, &
-0.27, 0.27, 0.27, 0.27, 0.27, 0.27, 0.27/)
-
-REAL, DIMENSION(nlev), PARAMETER :: s_eprof = (/1.05, 0.98, 0.90, 0.84, 0.79, 0.76, 0.74, &
-0.73, 0.72, 0.70, 0.69, 0.67, 0.65, 0.64, 0.61, 0.57, 0.54, 0.52, 0.50, 0.48, &
-0.47, 0.46, 0.44, 0.42, 0.39, 0.36, 0.34, 0.31, 0.27, 0.22, 0.19, 0.16, 0.16, &
-0.16, 0.16, 0.16, 0.16, 0.16, 0.16, 0.16/)
-
-! Create initial observation error profile for each ob type
-oer3dg = 0.0
-do k=1,nlev
-  where(kmt0 .ge. k)
-    oer3dg(:,:,k,iv3d_u) = 1.0 !m/s
-    oer3dg(:,:,k,iv3d_v) = 1.0 !m/s
-    oer3dg(:,:,k,iv3d_t) = t_eprof(k) 
-    oer3dg(:,:,k,iv3d_s) = s_eprof(k)
-  end where
-enddo
-
-oer2dg = 0.0
-where(kmt0 .gt. 0)
-  oer2dg(:,:,iv2d_sst) = 2.0 !deg C
-  oer2dg(:,:,iv2d_sss) = 1.0 !psu
-  oer2dg(:,:,iv2d_ssh) = 0.1 !meters
-end where
-
-END SUBROUTINE create_oer_init
 
 END MODULE letkf_tools

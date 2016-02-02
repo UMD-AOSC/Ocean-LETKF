@@ -15,7 +15,7 @@ echo "MEM=$MEM"
 MEM3=`printf %.3d ${MEM}`
 
 # Experiment name
-name=TEST5
+name=CHECK
 # Executable for letkf
 PGM=letkf.$name.$MEM3
 

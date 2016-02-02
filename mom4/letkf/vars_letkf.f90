@@ -35,4 +35,39 @@ MODULE vars_letkf
 !   & ,(/nv3d+nv2d+nv4d,nid_obs/))
    !NOTE: the obs are the rows and the model variables the columns
 
+
+  CONTAINS
+
+  SUBROUTINE get_iobs(oelm,iobs)
+    USE params_obs, ONLY: id_u_obs, id_v_obs, id_t_obs, id_s_obs, &
+                          id_ssh_obs, id_ssh_obs, id_sst_obs, id_sss_obs, id_eta_obs
+    REAL(r_size), INTENT(IN) :: oelm
+    INTEGER, INTENT(OUT) :: iobs
+    !---------------------------------------------------------------------------
+    ! Used for variable localization
+    !---------------------------------------------------------------------------
+    SELECT CASE(NINT(oelm))
+    CASE(id_u_obs)
+        iobs=1
+    CASE(id_v_obs)
+        iobs=2
+    CASE(id_t_obs)
+        iobs=3
+    CASE(id_s_obs)   !(OCEAN)
+        iobs=4
+    CASE(id_ssh_obs) !(OCEAN)
+        iobs=5
+    CASE(id_sst_obs) !(OCEAN)
+        iobs=6
+    CASE(id_sss_obs) !(OCEAN)
+        iobs=7
+    CASE(id_eta_obs) !(OCEAN)
+        iobs=8
+    CASE DEFAULT
+        WRITE(6,*) "vars_letkf.f90 :: there is no variable localization for obs-type :: ", oelm
+        WRITE(6,*) "vars_letkf.f90 :: FATAL ERROR, exiting..."
+        STOP(95)
+    END SELECT
+  END SUBROUTINE get_iobs
+
 END MODULE vars_letkf
