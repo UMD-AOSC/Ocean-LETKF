@@ -55,7 +55,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
     STOP 1
   END SELECT
 
-  RETURN
 END SUBROUTINE Trans_XtoY
 
 
@@ -237,7 +236,6 @@ PURE SUBROUTINE itpl_2d(var,ri,rj,var5)
        & + var(1  ,j  ) *    ai  *    aj
   END IF
 
-  RETURN
 END SUBROUTINE itpl_2d
 
 PURE SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
@@ -280,7 +278,6 @@ PURE SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
        & + var(1  ,j  ,k  ) *    ai  *    aj  *    ak
   END IF
 
-  RETURN
 END SUBROUTINE itpl_3d
 
 
@@ -424,7 +421,6 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
   WRITE(6,'(7I12)') iu,iv,it,is,issh,ieta,isst,isss                                              !(OCEAN)
   WRITE(6,'(A)') '========================================================================'
 
-  RETURN
 END SUBROUTINE monit_dep
 
 SUBROUTINE get_nobs(cfile,nrec,nn)
@@ -514,7 +510,6 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   END IF
   DEALLOCATE(wk)
 
-  RETURN
 END SUBROUTINE get_nobs
 
 
@@ -630,7 +625,6 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
     STOP(2)
   endif
 
-  RETURN
 END SUBROUTINE read_obs
 
 

@@ -55,7 +55,7 @@ MODULE letkf_local
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0, and nobsgrd
   USE params_letkf, ONLY: nbv, DO_NO_VERT_LOC, localization_method, DO_IRREG_GRID
-  USE vars_letkf,   ONLY: var_local, var_local_n2n
+  USE vars_letkf,   ONLY: var_local, var_local_n2n, get_iobs
 
   PUBLIC :: obs_local
 
@@ -200,30 +200,7 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     !---------------------------------------------------------------------------
     ! variable localization
     !---------------------------------------------------------------------------
-    !STEVE: ISSUE: this should be handled in a more generic way so new
-    !              observations don't requrie editing here.
-    SELECT CASE(NINT(oelm))
-    CASE(id_u_obs)
-        iobs=1
-    CASE(id_v_obs)
-        iobs=2
-    CASE(id_t_obs)
-        iobs=3
-    CASE(id_s_obs)   !(OCEAN)
-        iobs=4
-    CASE(id_ssh_obs) !(OCEAN)
-        iobs=5
-    CASE(id_sst_obs) !(OCEAN)
-        iobs=6
-    CASE(id_sss_obs) !(OCEAN)
-        iobs=7
-    CASE(id_eta_obs) !(OCEAN)
-        iobs=8
-    CASE DEFAULT
-        WRITE(6,*) "letkf_local.f90 :: there is no variable localization for obs-type :: ", oelm
-        WRITE(6,*) "letkf_local.f90 :: exitING..."
-        STOP(95)
-    END SELECT
+    CALL get_iobs(oelm,iobs) !STEVE: get the the index in the var_local for this ob type (in vars_letkf.f90)
     if(var_local(iobs) < TINY(var_local)) CYCLE  ! Skip obs that are set to "0" impact on this model variable.
 
     !---------------------------------------------------------------------------

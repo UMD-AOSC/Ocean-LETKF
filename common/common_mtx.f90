@@ -104,7 +104,6 @@ SUBROUTINE mtx_eigen(imode,n,a,eival,eivec,nrank_eff)
     eivec(:,i) = eivec8(:,n+1-i)
   END DO
 
-  RETURN
 END SUBROUTINE mtx_eigen
 !=======================================================================
 !  Real symmetric matrix inversion using subroutine dspdi
@@ -174,7 +173,6 @@ SUBROUTINE mtx_inv(n,a,ainv)
 
   END IF
 
-  RETURN
 END SUBROUTINE mtx_inv
 !=======================================================================
 !  Compute square root of real symmetric matrix
@@ -212,7 +210,6 @@ SUBROUTINE mtx_sqrt(n,a,a_sqrt)
     END DO
   END DO
 
-  RETURN
 END SUBROUTINE mtx_sqrt
 !=======================================================================
 !  Compute inverse of a real matrix (not necessarily symmetric)
