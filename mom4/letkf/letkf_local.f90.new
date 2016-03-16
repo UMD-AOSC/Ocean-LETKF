@@ -756,7 +756,8 @@ xlon = modulo(xlon_in,360.0)
 ! -- Atlantic? Pacific?
 !
   if(xlat.gt.-2.0.and.xlat.le.8.5) then
-    if(xlon.lt.285.) then
+!   if(xlon.lt.285.) then
+    if(xlon.lt.285. .AND. xlon .gt. 30.0) then !STEVE: this bug was identified by Guillaume V., causing a discontinuity at 0ºlongitude.fixed 3/16/16
       lxap=2
     else
       lxap=1
