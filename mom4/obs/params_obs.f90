@@ -16,6 +16,7 @@ INTEGER,PARAMETER :: id_ssh_obs=5526    !(OCEAN)
 INTEGER,PARAMETER :: id_sst_obs=5525    !(OCEAN)
 INTEGER,PARAMETER :: id_sss_obs=5522    !(OCEAN)
 INTEGER,PARAMETER :: id_eta_obs=5351    !(OCEAN)
+INTEGER,PARAMETER :: id_sic_obs=5283    !(SEAICE) sea ice concentration (fraction)
 INTEGER,PARAMETER :: nid_dobs=3
 INTEGER,PARAMETER :: id_x_obs=1111   !(OCEAN) (DRIFTERS) !STEVE: may want to change this depending on type of drifters
 INTEGER,PARAMETER :: id_y_obs=2222   !(OCEAN) (DRIFTERS) !STEVE: may want to change this depending on type of drifters
@@ -36,7 +37,7 @@ INTEGER :: obs1nrec = 6                     ! The number of records in the obs1-
 INTEGER :: obs2nrec = 9                     ! The number of records in the obs2-formatted file (previous 8, 9 adds a time record).
 
 ! Remove all observations above 65ºN due to tripolar grid
-!LOGICAL :: DO_REMOVE_65N = .true.
+LOGICAL :: DO_REMOVE_65N = .true.
 !STEVE: I made this a command line adjustable argument in obsop.f90 :: -rm65N .true.
 
 LOGICAL, PARAMETER :: DO_POTTEMP_to_INSITU = .false. ! Conversion to observation space. This is needed if the
