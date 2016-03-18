@@ -9,3 +9,8 @@
   possibily even allowing the satellite data providers to compute their own
   observation operators for rapid inclusion into the operational ocean data
   assimilation system.
+
+
+# Add to obsop_sst, obsop_adt:
+  Subroutines to read in raw data, e.g. read_aviso_adt.f90, read_avhrr_sst.f90
+  Looking for L2 AVHRR and Microwave

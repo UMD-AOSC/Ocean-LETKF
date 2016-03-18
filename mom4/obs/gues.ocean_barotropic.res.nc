@@ -1,0 +1,1 @@
+/ncrc/home1/Steve.Penny/HYBRID/tmp_sst/2006122800/model/01/INPUT/ocean_barotropic.res.nc

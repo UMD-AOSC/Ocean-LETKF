@@ -10,7 +10,7 @@ PROGRAM obsop
 !  use params_obs
 !  use vars_obs
 !  use common_obs_mom4
-!  use params_letkf,     ONLY: DO_ALTIMETRY, DO_DRIFTERS
+!  use params_letkf,     ONLY: DO_ALTIMETRY, DO_SLA, DO_ADT, DO_DRIFTERS
 !
 !
 ! DESCRIPTION: 
@@ -40,7 +40,7 @@ PROGRAM obsop
   USE params_obs,                ONLY: DO_INSITU_to_POTTEMP, DO_POTTEMP_to_INSITU
   USE vars_obs
   USE common_obs_mom4
-  USE params_letkf,              ONLY: DO_ALTIMETRY, DO_DRIFTERS
+  USE params_letkf,              ONLY: DO_ALTIMETRY, DO_SLA, DO_ADT, DO_DRIFTERS
   USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z
 
   IMPLICIT NONE
@@ -111,6 +111,13 @@ PROGRAM obsop
   ! For potential temperature conversion to in situ:
   REAL(r_size) :: p,pt,sp
 
+  ! For ADT assimilation:
+  REAL(r_size) :: offset  = 0.0d0 !GUILLAUME:ADT
+  REAL(r_size) :: cnt_adt = 0.0d0 !GUILLAUME:ADT
+                                  !NOTE: while the 'cnt_' naming convention used above
+                                  !      is applied for counting removed observations,
+                                  !      the cnt_adt variable counts kept observations.
+
   ! Remove obs in tripolar region (edit via command line)
   LOGICAL :: DO_REMOVE_65N = .true. ! (default) Remove all observations poleward of 65ºN (due to tripolar grid)
 
@@ -162,6 +169,13 @@ PROGRAM obsop
   ! Cycle through all observations
   !-----------------------------------------------------------------------------
   WRITE(6,*) "Cycling through observations..."
+
+  !GUILLAUME:ADT: initialize adt counter
+  if (DO_ADT) then 
+    offset=0.0d0  
+    cnt_adt=0.0d0
+  endif
+
   ohx=0.0d0
   oqc=0
   DO n=1,nobs
@@ -403,6 +417,12 @@ PROGRAM obsop
     ! observation operator (computes H(x)) for specified member
     !---------------------------------------------------------------------------
     CALL Trans_XtoY(elem(n),ri,rj,rk,v3d,v2d,ohx(n))
+
+    !GUILLAUME:ADT
+    if (DO_ADT .AND. elem(n).eq.id_eta_obs) then
+      offset=offset+odat(n)-ohx(n)
+      cnt_adt=cnt_adt+1
+    end if
     
     if (DO_POTTEMP_to_INSITU .and. elem(n) .eq. id_t_obs) then
       !STEVE: eventually use pressure from model output,
@@ -430,6 +450,17 @@ PROGRAM obsop
     endif
     oqc(n) = 1
   enddo !1:nobs
+
+  !GUILLAUME:ADT
+  if (DO_ADT) then
+    offset=offset/cnt_adt
+    WRITE(6,*) 'ADT OFFSET = ',offset
+    !GUILLAUME:ADT: Remove offset from adt innovations
+    where (elem == id_eta_obs)
+       odat=odat-offset
+       !ohx=ohx-offset
+    end where
+  endif
 
   !-----------------------------------------------------------------------------
   ! Print out the counts of observations removed for various reasons
