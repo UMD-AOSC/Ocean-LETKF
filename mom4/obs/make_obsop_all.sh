@@ -32,6 +32,7 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_mo
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_obs.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG vars_obs.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG common_obs_mom4.f90
+$F90 $OMP $F90_OPT $F90_OBJECT_FLAG compute_profile_error.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG read_argo.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG read_avhrr_pathfinder.f90
 #--
