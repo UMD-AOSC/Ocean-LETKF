@@ -80,6 +80,7 @@ INTEGER :: time
 REAL(r_size), ALLOCATABLE, DIMENSION(:) :: alon, alat
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: sea_surface_temperature
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: sea_ice_fraction
+REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: dt_analysis
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: stde
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: quality_level
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: sst_dtime
@@ -214,6 +215,23 @@ else
 endif
 
 !-------------------------------------------------------------------------------
+! Read the change from yesterday, as a proxy for error estimate
+!-------------------------------------------------------------------------------
+ALLOCATE(dt_analysis(nlons,nlats))
+istat = NF90_INQ_VARID(ncid,'dt_analysis',varid)   
+if (istat /= NF90_NOERR) then
+  print *, "NF90_INQ_VARID dt_analysis failed"
+  STOP
+endif
+istat = NF90_GET_VAR(ncid,varid,dt_analysis)
+if (istat /= NF90_NOERR) then
+  print *, "NF90_GET_VAR dt_analysis failed"
+  STOP
+else
+  print *, "dt_analysis(1,1) = ", dt_analysis(1,1)
+endif
+
+!-------------------------------------------------------------------------------
 ! Read the observed SST data
 !-------------------------------------------------------------------------------
 if (typ .eq. id_sst_obs) then
@@ -269,7 +287,7 @@ do j=1,nlats
   do i=1,nlons
     if (typ .eq. id_sst_obs) then
       val = sea_surface_temperature(i,j)
-      err = stde(i,j)
+      err = dt_analysis(i,j) !stde(i,j)
     elseif (typ .eq. id_sic_obs) then
       val = sea_ice_fraction(i,j)
       err = stde(i,j)

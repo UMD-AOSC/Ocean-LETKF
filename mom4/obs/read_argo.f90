@@ -15,9 +15,10 @@ MODULE read_argo
 !
 !===============================================================================
 
-USE common,       ONLY: r_sngl, r_size, slen
-USE params_model, ONLY: nlev
-USE params_obs,   ONLY: id_t_obs, id_s_obs
+USE common,                     ONLY: r_sngl, r_size, slen
+USE params_model,               ONLY: nlev
+USE params_obs,                 ONLY: id_t_obs, id_s_obs
+USE compute_profile_error,      ONLY: cmpTz
 
 IMPLICIT NONE
 
@@ -25,6 +26,7 @@ PUBLIC :: read_argo_nc, argo_data
 
 INTEGER :: nobs, nobs0
 INTEGER :: i,j,k,n
+REAL(r_size) :: se0, seF
 
 TYPE argo_data
   REAL(r_size) :: x_grd(3)  ! longitude, latitude, and z depth (m)
@@ -96,8 +98,7 @@ REAL(r_size), ALLOCATABLE, DIMENSION(:) :: xlon, ylat, hour
 CHARACTER(3), ALLOCATABLE, DIMENSION(:) :: ptyp, sid
 CHARACTER(9), ALLOCATABLE, DIMENSION(:) :: plat
 CHARACTER(1), ALLOCATABLE, DIMENSION(:) :: qkey
-REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: temp, salt, stde
-!REAL(r_size), DIMENSION(nlev,maxcnt) :: temp, salt, stde
+REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: vals, stde
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: depth ! profile depths
 REAL(r_size) :: val
 INTEGER :: cnt, nlv
@@ -310,24 +311,23 @@ endif
 !-------------------------------------------------------------------------------
 ! Read the observed profile data (temperature or salinity)
 !-------------------------------------------------------------------------------
+ALLOCATE(vals(nlv,cnt))
 if (typ .eq. id_t_obs) then
-  ALLOCATE(temp(nlv,cnt))
   istat = NF90_INQ_VARID(ncid,'temp',varid)   
   if (istat /= NF90_NOERR) then
     print *, "NF90_INQ_VARID temp failed"
     STOP
   endif
-  istat = NF90_GET_VAR(ncid,varid,temp)
-  if (dodebug) print *, "temp(:,1) = ", temp(:,1)
+  istat = NF90_GET_VAR(ncid,varid,vals)
+  if (dodebug) print *, "temp(:,1) = ", vals(:,1)
 elseif (typ .eq. id_s_obs) then
-  ALLOCATE(salt(nlv,cnt))
   istat = NF90_INQ_VARID(ncid,'salt',varid)   
   if (istat /= NF90_NOERR) then
     print *, "NF90_INQ_VARID salt failed"
     STOP
   endif
-  istat = NF90_GET_VAR(ncid,varid,salt)
-  if (dodebug) print *, "salt(:,1) = ", salt(:,1)
+  istat = NF90_GET_VAR(ncid,varid,vals)
+  if (dodebug) print *, "salt(:,1) = ", vals(:,1)
 endif
 if (istat /= NF90_NOERR) STOP
 
@@ -343,6 +343,13 @@ if (istat /= NF90_NOERR) STOP
 !-------------------------------------------------------------------------------
 ALLOCATE(stde(nlv,cnt))
 stde=0.0 !STEVE: placeholder for now. Perhaps better to do this in the calling function (e.g. obsop_tprof.f90)
+if (typ .eq. id_t_obs) then
+  se0 = 1.0
+  seF = 1.5
+elseif (typ .eq. id_s_obs) then
+  se0 = 0.05
+  seF = 0.15
+endif
 
 ! CONVERT netcdf data to argo_data format:
 print *, "Finished reading netCDF file, formatting data..."
@@ -353,14 +360,14 @@ ALLOCATE(obs_data(nobs))
 n = 0
 do i=1,cnt
   if (dodebug) print *, "i = ", i
+  CALL cmpTz(stde(:,i),se0,seF,vals(:,i),depth(:,i),nlv,missing_value)  !STEVE: I would prefer to call this in the calling function, but it's
+                                                                        !       easier here where the data is still organized in profiles
+  if (dodebug) print *, "read_argo.f90:: stde(:,i) = ", stde(:,i)
+  if (dodebug) STOP(1)
+
   do k=1,nlev
-    if (typ .eq. id_t_obs) then
-      val = temp(k,i)
-      err = stde(k,i) !t_eprof(k)
-    elseif (typ .eq. id_s_obs) then
-      val = salt(k,i)
-      err = stde(k,i) !s_eprof(k)
-    endif
+    val = vals(k,i)
+    err = stde(k,i)
     if (val < mvc .and. depth(k,i) < mvc .and. val > missing_value) then
       n = n+1
       print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k,i),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
