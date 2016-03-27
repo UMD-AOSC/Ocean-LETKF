@@ -54,7 +54,7 @@ MODULE letkf_local
   USE common_mpi_mom4
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0, and nobsgrd
-  USE params_letkf, ONLY: nbv, DO_NO_VERT_LOC, localization_method, DO_IRREG_GRID
+  USE params_letkf, ONLY: nbv, DO_NO_VERT_LOC, DO_MLD, localization_method, DO_IRREG_GRID
   USE vars_letkf,   ONLY: var_local, var_local_n2n, get_iobs
 
   PUBLIC :: obs_local
@@ -80,13 +80,13 @@ MODULE letkf_local
 CONTAINS
 
 
-SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
+SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
 !===============================================================================
 ! Project global observations to local
 !     (hdxf_global,dep_global,rdiag_global) -> (hdxf,dep,rdiag)
 !===============================================================================
   IMPLICIT NONE
-  INTEGER,INTENT(IN) :: ij,ilev,nobstotal
+  INTEGER,INTENT(IN) :: ij,ilev,mlev,nobstotal
   REAL(r_size),INTENT(IN) :: var_local(nid_obs)
   REAL(r_size),INTENT(OUT) :: hdxf(nobstotal,nbv)
   REAL(r_size),INTENT(OUT) :: rdiag(nobstotal)
@@ -111,17 +111,8 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   REAL(r_size) :: sigma_a,sigma_b
   REAL(r_size) :: minr,maxr,xdis,fcc0,fcc1,maxdN,maxdS,xrad
   REAL(r_size), PARAMETER :: cmpersec2kmperday=0.864d0 !, days = 5.0d0
-  !STEVE: for initializing splits of model grid:
-! LOGICAL :: splitlon = .false. ! initialize
-! LOGICAL :: splitlonL = .false., splitlonR = .false. ! initialize
-! LOGICAL :: splitlat = .false. ! initialize
-! LOGICAL :: fulllon = .false.  ! initialize
-! LOGICAL :: splitarc = .true.  ! initialize for splitting the arctic with (TRIPOLAR) grid
   !STEVE:
   LOGICAL :: dodebug = .false.
-  !debug TEST:
-! INTEGER :: nn_old,imin_old,imax_old,jmin_old,jmax_old
-! REAL(r_size) :: minlon_old,maxlon_old,minlat_old,maxlat_old
 
   TYPE (local_panel), DIMENSION(npmax) :: panel
   INTEGER :: npanels = 0         ! Split the Minimum Bounding Box into as many panels as necessary
@@ -133,7 +124,7 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   if( nobs > 0 ) then
     ALLOCATE(nobs_use(nobs))
   else
-    WRITE(6,*) "letkf_loca.f90::obs_local NO OBSERVATIONS!"
+    WRITE(6,*) "letkf_local.f90::obs_local NO OBSERVATIONS!"
     STOP(695)
   endif
   wbdy=lon0
@@ -144,7 +135,9 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   !-----------------------------------------------------------------------------
   xlat = lat1(ij)
   xlon = lon1(ij)
-  if (dodebug) WRITE(6,*) "---------------------------------- ij = ", ij
+  if (dodebug) WRITE(6,*) "obs_local::---------------------------------- ij = ", ij
+  if (dodebug) WRITE(6,*) "obs_local::-------------------------------- xlat = ", xlat
+  if (dodebug) WRITE(6,*) "obs_local::-------------------------------- xlon = ", xlon
   
   !
   ! data search
@@ -164,6 +157,7 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   ! Loop through panels and find local observations in each panel
   nn=0
   do ip=1,npanels
+    if (dodebug) WRITE(6,*) "ip/npanels = ", ip, "/", npanels
 
     ! Get indices of each panel for identifying local observations
     CALL find_mbb_idx(panel(ip)%e,panel(ip)%w,panel(ip)%s,panel(ip)%n,imin,imax,jmin,jmax)
@@ -171,11 +165,22 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     ! Find local observations
     if( nobs > 0 ) CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 
+    if (dodebug) then
+      WRITE(6,*) "imin = ", imin
+      WRITE(6,*) "imax = ", imax
+      WRITE(6,*) "jmin = ", jmin
+      WRITE(6,*) "jmax = ", jmax
+      WRITE(6,*) "nn   = ", nn
+    endif
   enddo
   ! (nn now holds the number of local obs)
 
   ! If no observations remain, then we're done.
   if(nn < 1) then
+    if (dodebug) then
+      WRITE(6,*) "ip/npanels = ", ip, "/", npanels
+      WRITE(6,*) "WARNING! no observations remaining after call to obs_local_sub (using panels). RETURNING..."
+    endif
     nobsl = 0
     RETURN
   endif
@@ -213,6 +218,13 @@ SUBROUTINE obs_local(ij,ilev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
       dlev = 0.0d0 ! allow all levels to be influenced by ssh
     else if(NINT(oelm) == id_sst_obs) then
       dlev = ABS( olev - lev(ilev) )
+      if (DO_MLD) then
+        if (ilev <= mlev) then
+          if (DO_NO_VERT_LOC) dlev = 0.0d0 !STEVE: this will apply SST obs with equal weight throughout mixed layer
+        else
+          dlev = HUGE(1.0d0) !STEVE: this will skip all SST obs below the mlixed layer depth
+        endif
+      endif
       !WRITE(6,*) "obs_local:: SST ob, dlev = ",dlev
     else if(NINT(oelm) == id_sss_obs) then
       dlev = ABS( olev - lev(ilev) )
@@ -380,8 +392,8 @@ SUBROUTINE split_panels(panel,np,gtype)
   TYPE(local_panel), DIMENSION(npmax), INTENT(INOUT) :: panel
   INTEGER, INTENT(INOUT) :: np                  ! number of panels
   CHARACTER(*), INTENT(IN) :: gtype          ! Grid type (e.g. 'tripolar')
-  INTEGER :: npnew
-  LOGICAL :: dodebug = .true.
+  INTEGER :: npnew,npin
+  LOGICAL :: dodebug = .false.
 
   ! if gtype == 'tripolar':
   
@@ -392,8 +404,13 @@ SUBROUTINE split_panels(panel,np,gtype)
 ! endif
  
   ! If the box intersects with BOTH the north and south boundaries, then 
-  ! this isn't really local anymore, but still, we'll cover it
+  ! this isn't really local anymore, but still, we'll cover it as a case
+  npin=np
+  npnew=np
   if (panel(1)%n > npole .and. panel(1)%s < spole) then
+    ! Keep same number of panels as input
+    npnew=np
+
     do ip=1,np
       panel(ip)%n = npole
       panel(ip)%s = spole
@@ -478,10 +495,13 @@ SUBROUTINE split_panels(panel,np,gtype)
     endif
  
   endif 
-  np=npnew
+  np=npnew !np is updated with the new number of panels
 
   ! If the box interesects with BOTH the east and west boundaries, then just update the existing panels
   if (panel(1)%w < wbdy .and. panel(1)%e > ebdy) then 
+    ! Keep the same number of panels
+    npnew = np
+
     do ip=1,np
       panel(ip)%w = wbdy
       panel(ip)%e = ebdy
@@ -559,7 +579,13 @@ SUBROUTINE split_panels(panel,np,gtype)
     endif
  
   endif 
-  np=npnew
+  np=npnew ! set np equal to the new number of panels
+
+  ! Do a check to make sure the panel wasn't eliminated
+  if (npin > np) then
+    WRITE(6,*) "ERROR:: problem in letkf_local::split_panels. npin > np, but we must have np >= npin. EXITING..."
+    STOP(60)
+  endif
 
 END SUBROUTINE split_panels
 
@@ -629,63 +655,6 @@ PURE SUBROUTINE find_mbb_idx(minlon,maxlon,minlat,maxlat,imin,imax,jmin,jmax)
   enddo
 
 END SUBROUTINE find_mbb_idx
-
-!SUBROUTINE wrap_orig
-!
-!  !-----------------------------------------------------------------------------
-!  ! Handle the case when the bounding box is split on the edge of the grid.
-!  !-----------------------------------------------------------------------------
-!  !STEVE: ISSUE
-!  !STEVE: we need handling of the fold in the arctic due to the Murray tripolar grid.
-!  fulllon = .false.
-!  splitlonL = .false.
-!  splitlonR = .false.
-!  splitlat = .false.
-!
-!  if (maxlon - minlon > lonf - lon0) then  ! The 'local' region overlaps the whole globe
-!    fulllon = .true.
-!    if (dodebug) then 
-!      WRITE(6,*) "FullLon."
-!      WRITE(6,*) "xlon = ", xlon
-!      WRITE(6,*) "xlat = ", xlat
-!    endif
-!    minlon = lon0
-!    maxlon = lonf
-!
-!  else ! The local region either partially overlaps global boundaries, or is entirely contained
-!
-!    if (minlon < lon0) then ! Local region overlaps on left
-!      if (dodebug) WRITE(6,*) "split minlon = ", minlon
-!      splitlonL = .true.
-!      minlon = REAL(lonf - abs(lon0 - minlon) + wrapgap,r_size)
-!    endif
-!
-!    if (maxlon > lonf) then ! Local region overlaps on right
-!      if (dodebug) WRITE(6,*) "split maxlon = ", maxlon
-!      if (splitlonL) WRITE(6,*) "WARNING: lon already split. ij = ", ij
-!      splitlonR = .true.
-!      maxlon = REAL(lon0 + abs(maxlon - lonf) - wrapgap,r_size)
-!    endif 
-!
-!    if (minlat < lat0) then ! Local region overlaps on bottom
-!      splitlat= .true.
-!      minlat = lat0
-!    endif
-!
-!
-!  endif
-!
-!  if (splitlat) then
-!    if (DO_TRIPLOAR) then
-!    else
-!      ! Too close to pole, need to work out the details of this
-!      ! For now, cut off the local region at the pole 
-!      WRITE(6,*) "letkf_local.f90::obs_local: Grid point is close to pole (cutting localization region at northern boundary)."
-!    endif
-!  endif
-!
-!
-!END SUBROUTINE
 
 
 PURE SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)

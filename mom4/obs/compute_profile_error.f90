@@ -29,7 +29,7 @@ REAL, PARAMETER :: kav = 5
 REAL, PARAMETER :: teps = 0.00005 !epsilon(1.0)
 !LOGICAL :: DO_SCALEDZ=.false.
 LOGICAL :: DO_SQRT=.false.
-LOGICAL :: dodebug=.true.
+LOGICAL :: dodebug=.false.
 
 PUBLIC :: cmpTz
 
@@ -60,6 +60,12 @@ SUBROUTINE cmpTz(se,se0,seF,t,z,kd,spv)
     print *, "kd  = ", kd
     print *, "spv = ", spv
     print *, "============================================"
+  endif
+
+  ! Check input quality:
+  if (MAXVAL(z) < TINY(1.0d0)) then
+    print *, "cmpTz :: input depths are zero, check input arguments. EXITING..."
+    STOP(13)
   endif
 
   ! Estimate profile gradients

@@ -37,16 +37,16 @@ INTEGER :: obs1nrec = 6                     ! The number of records in the obs1-
 INTEGER :: obs2nrec = 9                     ! The number of records in the obs2-formatted file (previous 8, 9 adds a time record).
 
 ! Remove all observations above 65ºN due to tripolar grid
-LOGICAL :: DO_REMOVE_65N = .true.
+LOGICAL :: DO_REMOVE_65N = .false.
 !STEVE: I made this a command line adjustable argument in obsop.f90 :: -rm65N .true.
 
-LOGICAL, PARAMETER :: DO_POTTEMP_to_INSITU = .false. ! Conversion to observation space. This is needed if the
+LOGICAL, PARAMETER :: DO_POTTEMP_to_INSITU = .true.  ! Conversion to observation space. This is needed if the
                                                      ! observations aren't converted to potential temperature
                                                      ! (as is done by most - NCEP, SODA, NASA/GMAO, etc.). But
                                                      ! unlike that approach, this does not require synthetic salinity
                                                      ! observations to be constructed from climatologies.
                                                      ! This approach is theoretically better, but investigation must
-                                                     ! be done to ensure model biases to not cause significant errors.
+                                                     ! be done to ensure model biases do not cause significant errors.
                                                      ! (a warning from J. Carton of potential difficulty)
                                                      !
                                                      ! Only one can be true, this one takes prioirty

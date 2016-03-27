@@ -99,10 +99,10 @@ CHARACTER(3), ALLOCATABLE, DIMENSION(:) :: ptyp, sid
 CHARACTER(9), ALLOCATABLE, DIMENSION(:) :: plat
 CHARACTER(1), ALLOCATABLE, DIMENSION(:) :: qkey
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: vals, stde
-REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: depth ! profile depths
+REAL(r_size), ALLOCATABLE, DIMENSION(:) :: depth ! profile depths
 REAL(r_size) :: val
 INTEGER :: cnt, nlv
-LOGICAL :: dodebug=.true.
+LOGICAL :: dodebug=.false.
 REAL(r_size) :: missing_value=-99.0
 REAL(r_sngl) :: mvc=999
 
@@ -180,7 +180,7 @@ endif
 !-------------------------------------------------------------------------------
 ! Read the depths
 !-------------------------------------------------------------------------------
-ALLOCATE(depth(nlv,cnt))
+ALLOCATE(depth(nlv))
 istat = NF90_INQ_VARID(ncid,'grid_z',varid)   
 if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID grid_z failed"
@@ -191,7 +191,7 @@ if (istat /= NF90_NOERR) then
   print *, "NF90_GET_VAR depth failed"
   STOP
 ELSE
-  print *, "depth(:,1) = ", depth(:,1)
+  print *, "depth(:) = ", depth(:)
 !  STOP 0
 endif
 
@@ -360,21 +360,21 @@ ALLOCATE(obs_data(nobs))
 n = 0
 do i=1,cnt
   if (dodebug) print *, "i = ", i
-  CALL cmpTz(stde(:,i),se0,seF,vals(:,i),depth(:,i),nlv,missing_value)  !STEVE: I would prefer to call this in the calling function, but it's
+  CALL cmpTz(stde(:,i),se0,seF,vals(:,i),depth(:),nlv,missing_value)  !STEVE: I would prefer to call this in the calling function, but it's
                                                                         !       easier here where the data is still organized in profiles
   if (dodebug) print *, "read_argo.f90:: stde(:,i) = ", stde(:,i)
-  if (dodebug) STOP(1)
+! if (dodebug) STOP(1)
 
   do k=1,nlev
     val = vals(k,i)
     err = stde(k,i)
-    if (val < mvc .and. depth(k,i) < mvc .and. val > missing_value) then
+    if (val < mvc .and. depth(k) < mvc .and. val > missing_value) then
       n = n+1
-      print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k,i),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
+      if (dodebug) print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
       obs_data(n)%typ = typ
       obs_data(n)%x_grd(1) = xlon(i)
       obs_data(n)%x_grd(2) = ylat(i)
-      obs_data(n)%x_grd(3) = depth(k,i)
+      obs_data(n)%x_grd(3) = depth(k)
       obs_data(n)%hour = hour(i)
       obs_data(n)%value = val
       obs_data(n)%oerr = err

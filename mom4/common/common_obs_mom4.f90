@@ -47,10 +47,14 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
     CALL itpl_2d(v2d(:,:,iv2d_sst),ri,rj,yobs)    !(OCEAN)
   CASE(id_sss_obs) ! SSS                          !(OCEAN)
     CALL itpl_2d(v2d(:,:,iv2d_sss),ri,rj,yobs)    !(OCEAN)
+! CASE(id_sic_obs) ! SIC                          !(SEAICE)
+!   CALL itpl_2d(v2d(:,:,iv2d_sic),ri,rj,yobs)    !(SEAICE)
   CASE DEFAULT
     print *, "ERROR::Trans_XtoY:: observation type not recognized."
     print *, "element id = ", intelm
-    print *, "available id's = ", id_u_obs, id_v_obs, id_t_obs, id_s_obs, id_ssh_obs, id_eta_obs, id_sst_obs, id_sss_obs, id_x_obs, id_y_obs, id_z_obs
+    print *, "available id's = ", id_u_obs, id_v_obs, id_t_obs, id_s_obs, &
+                                  id_ssh_obs, id_eta_obs, id_sst_obs, id_sss_obs, &
+                                  id_sic_obs, id_x_obs, id_y_obs, id_z_obs
     print *, "STEVE: STOPPING ON PURPOSE..."
     STOP 1
   END SELECT
@@ -90,11 +94,11 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   ! If the observations and map are on a different coordinate grid, e.g. NCEP
   ! mom4p1 on -285 to 75, and obs on 0 to 360, then adjust obs to map
   ! coordinates (attempting to do it in a general way)
-! IF(rlon >= lonf) THEN
+! if (rlon >= lonf) then
 !   rrlon = REAL(lon0 + abs(rlon - lonf) - wrapgap,r_size)
-! ELSE IF(rlon < lon0) THEN
+! else if (rlon < lon0) then
 !   rrlon = REAL(lonf - abs(lon0 - rlon) - wrapgap,r_size)
-! ENDIF
+! endif
 
 
   !STEVE: initialize to something that will throw errors if it's not changed within
@@ -103,20 +107,20 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   rk = -1
 
   ! Find the correct longitude:
-  DO i=1,nlon
-    IF(rrlon < lon(i)) EXIT
-  END DO
+  do i=1,nlon
+    if (rrlon < lon(i)) EXIT
+  enddo
 
   ! Set flags to mark rlon outside of map range:
-  IF(i == 1) THEN
+  if (i == 1) then
     ri = 0
-  ELSE IF(i == nlon+1) THEN
+  else if (i == nlon+1) then
     ri = nlon+1
-  ELSE
+  else
     ! Otherwise, Interpolate
     ai = (rrlon - lon(i-1)) / (lon(i) - lon(i-1))
     ri = REAL(i-1,r_size) + ai
-  END IF
+  endif
 
   if (dodebug .and. (ri > nlon .or. ri < 1)) then
     WRITE(6,*) "In common_obs_mom4.f90::phys2ijk," 
@@ -129,50 +133,50 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
     WRITE(6,*) "i = ", i
   endif
 
-  IF(CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) RETURN
+  if (CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) RETURN
 
 !
 ! rlat -> rj
 !
-  DO j=1,nlat
-    IF(rlat < lat(j)) EXIT
-  END DO
+  do j=1,nlat
+    if (rlat < lat(j)) EXIT
+  enddo
 
-  IF(j == 1) THEN
+  if (j == 1) then
     rj = (rlat + 90.0d0) / (lat(1) + 90.0d0)
-  ELSE IF(j == nlat+1) THEN
+  elseif (j == nlat+1) then
     aj = (rlat - lat(nlat)) / (90.0d0 - lat(nlat))
     rj = REAL(nlat,r_size) + aj
-  ELSE
+  else
     !STEVE: Interpolate
     aj = (rlat - lat(j-1)) / (lat(j) - lat(j-1))
     rj = REAL(j-1,r_size) + aj
-  END IF
-  IF(CEILING(rj) < 2 .OR. nlat < CEILING(rj)) RETURN
+  endif
+  if (CEILING(rj) < 2 .OR. nlat < CEILING(rj)) RETURN
 
 !
 ! rlev -> rk
 !
-  IF(NINT(elem) == id_ssh_obs) THEN     ! surface observation !(OCEAN)
+  if (NINT(elem) == id_ssh_obs) then     ! surface observation !(OCEAN)
     rk = 0.0d0
-  ELSEIF(NINT(elem) == id_eta_obs) THEN ! surface observation !(OCEAN)
+  elseif (NINT(elem) == id_eta_obs) then ! surface observation !(OCEAN)
     rk = 0.0d0
-  ELSEIF(NINT(elem) == id_sst_obs) THEN ! surface observation !(OCEAN)
+  elseif (NINT(elem) == id_sst_obs) then ! surface observation !(OCEAN)
     rk = 0.0d0
-  ELSEIF(NINT(elem) == id_sss_obs) THEN ! surface observation !(OCEAN)
+  elseif (NINT(elem) == id_sss_obs) then ! surface observation !(OCEAN)
     rk = 0.0d0
-  ELSE
+  else
     !
     ! vertical interpolation
     !
     !
     ! find rk
     !
-    DO k=1,nlev
-      IF(rlev < lev(k)) EXIT
-      IF(k .eq. nlev .and. rlev .eq. lev(nlev)) EXIT !STEVE: added this case for simulated obs that reach the lowest model levels.
+    do k=1,nlev
+      if (rlev < lev(k)) EXIT
+      if (k .eq. nlev .and. rlev .eq. lev(nlev)) EXIT !STEVE: added this case for simulated obs that reach the lowest model levels.
                                                      !       Otherwise, k iterates to nlev+1 before exiting loop.
-    END DO
+    enddo
 
     if (k .eq. 1) then
 !     print *, "k = 1, rlev = ", rlev
@@ -189,7 +193,7 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
       rk = REAL(k-1,r_size) + ak
     endif
 
-  END IF
+  endif
 
 END SUBROUTINE phys2ijk
 
@@ -210,7 +214,7 @@ PURE SUBROUTINE itpl_2d(var,ri,rj,var5)
   j = CEILING(rj)
   aj = rj - REAL(j-1,r_size)
 
-  IF(i <= nlon) THEN
+  if (i <= nlon) then
     var5 = var(i-1,j-1) * (1-ai) * (1-aj) &
        & + var(i  ,j-1) *    ai  * (1-aj) &
        & + var(i-1,j  ) * (1-ai) *    aj  &
@@ -229,12 +233,12 @@ PURE SUBROUTINE itpl_2d(var,ri,rj,var5)
 !     print *, "var5 = ", var5
 !   endif
 
-  ELSE
+  else
     var5 = var(i-1,j-1) * (1-ai) * (1-aj) &
        & + var(1  ,j-1) *    ai  * (1-aj) &
        & + var(i-1,j  ) * (1-ai) *    aj  &
        & + var(1  ,j  ) *    ai  *    aj
-  END IF
+  endif
 
 END SUBROUTINE itpl_2d
 
@@ -258,7 +262,7 @@ PURE SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
   k = CEILING(rk)
   ak = rk - REAL(k-1,r_size)
 
-  IF(i <= nlon) THEN
+  if (i <= nlon) then
     var5 = var(i-1,j-1,k-1) * (1-ai) * (1-aj) * (1-ak) &
        & + var(i  ,j-1,k-1) *    ai  * (1-aj) * (1-ak) &
        & + var(i-1,j  ,k-1) * (1-ai) *    aj  * (1-ak) &
@@ -267,7 +271,7 @@ PURE SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
        & + var(i  ,j-1,k  ) *    ai  * (1-aj) *    ak  &
        & + var(i-1,j  ,k  ) * (1-ai) *    aj  *    ak  &
        & + var(i  ,j  ,k  ) *    ai  *    aj  *    ak
-  ELSE
+  else
     var5 = var(i-1,j-1,k-1) * (1-ai) * (1-aj) * (1-ak) &
        & + var(1  ,j-1,k-1) *    ai  * (1-aj) * (1-ak) &
        & + var(i-1,j  ,k-1) * (1-ai) *    aj  * (1-ak) &
@@ -276,7 +280,7 @@ PURE SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
        & + var(1  ,j-1,k  ) *    ai  * (1-aj) *    ak  &
        & + var(i-1,j  ,k  ) * (1-ai) *    aj  *    ak  &
        & + var(1  ,j  ,k  ) *    ai  *    aj  *    ak
-  END IF
+  endif
 
 END SUBROUTINE itpl_3d
 
@@ -318,8 +322,8 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
   ieta = 0          !(OCEAN)
   isst = 0          !(OCEAN)
   isss = 0          !(OCEAN)
-  DO n=1,nn
-    IF(qc(n) /= 1) CYCLE
+  do n=1,nn
+    if (qc(n) /= 1) CYCLE
     SELECT CASE(NINT(elm(n)))
     CASE(id_u_obs)
       rmse_u = rmse_u + dep(n)**2
@@ -354,63 +358,63 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
       bias_sss = bias_sss + dep(n)    !(OCEAN)
       isss = isss + 1                 !(OCEAN)
     END SELECT
-  END DO
-  IF(iu == 0) THEN
+  enddo
+  if (iu == 0) then
     rmse_u = undef
     bias_u = undef
-  ELSE
+  else
     rmse_u = SQRT(rmse_u / REAL(iu,r_size))
     bias_u = bias_u / REAL(iu,r_size)
-  END IF
-  IF(iv == 0) THEN
+  endif
+  if (iv == 0) then
     rmse_v = undef
     bias_v = undef
-  ELSE
+  else
     rmse_v = SQRT(rmse_v / REAL(iv,r_size))
     bias_v = bias_v / REAL(iv,r_size)
-  END IF
-  IF(it == 0) THEN
+  endif
+  if (it == 0) then
     rmse_t = undef
     bias_t = undef
-  ELSE
+  else
     rmse_t = SQRT(rmse_t / REAL(it,r_size))
     bias_t = bias_t / REAL(it,r_size)
-  END IF
-  IF(is == 0) THEN                                   !(OCEAN)
+  endif
+  if (is == 0) then                                   !(OCEAN)
     rmse_s = undef                                   !(OCEAN)
     bias_s = undef                                   !(OCEAN)
-  ELSE
+  else
     rmse_s = SQRT(rmse_s / REAL(is,r_size))          !(OCEAN)
     bias_s = bias_s / REAL(is,r_size)                !(OCEAN)
-  END IF
-  IF(issh == 0) THEN                                 !(OCEAN)
+  endif
+  if (issh == 0) then                                 !(OCEAN)
     rmse_ssh = undef                                 !(OCEAN)
     bias_ssh = undef                                 !(OCEAN)
-  ELSE
+  else
     rmse_ssh = SQRT(rmse_ssh / REAL(issh,r_size))    !(OCEAN)
     bias_ssh = bias_ssh / REAL(issh,r_size)          !(OCEAN)
-  END IF
-  IF(ieta == 0) THEN                                 !(OCEAN)
+  endif
+  if (ieta == 0) then                                 !(OCEAN)
     rmse_eta = undef                                 !(OCEAN)
     bias_eta = undef                                 !(OCEAN)
-  ELSE
+  else
     rmse_eta = SQRT(rmse_eta / REAL(ieta,r_size))    !(OCEAN)
     bias_eta = bias_eta / REAL(ieta,r_size)          !(OCEAN)
-  END IF
-  IF(isst == 0) THEN                                 !(OCEAN)
+  endif
+  if (isst == 0) then                                 !(OCEAN)
     rmse_sst = undef                                 !(OCEAN)
     bias_sst = undef                                 !(OCEAN)
-  ELSE
+  else
     rmse_sst = SQRT(rmse_sst / REAL(isst,r_size))    !(OCEAN)
     bias_sst = bias_sst / REAL(isst,r_size)          !(OCEAN)
-  END IF
-  IF(isss == 0) THEN                                 !(OCEAN)
+  endif
+  if (isss == 0) then                                 !(OCEAN)
     rmse_sss = undef                                 !(OCEAN)
     bias_sss = undef                                 !(OCEAN)
-  ELSE
+  else
     rmse_sss = SQRT(rmse_sss / REAL(isss,r_size))    !(OCEAN)
     bias_sss = bias_sss / REAL(isss,r_size)          !(OCEAN)
-  END IF
+  endif
 
   WRITE(6,'(A)') '== OBSERVATIONAL DEPARTURE ============================================='
   WRITE(6,'(7A12)') 'U','V','T','S','SSH','eta','SST','SSS'                                       !(OCEAN)
@@ -454,7 +458,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   iunit=91
   if (dodebug) print *, "get_nobs::"
   INQUIRE(FILE=cfile,EXIST=ex)
-  IF(ex) THEN
+  if (ex) then
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
     DO
       READ(iunit,IOSTAT=ios) wk
@@ -465,7 +469,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
       elseif (dodebug .and. nrec .eq. 9) then
         PRINT '(I6,2F7.2,F10.2,5F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
       endif
-      IF(ios /= 0) EXIT
+      if (ios /= 0) EXIT
       SELECT CASE(NINT(wk(1)))
       CASE(id_u_obs)
         iu = iu + 1
@@ -491,7 +495,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
         iz = iz + 1      !(OCEAN)
       END SELECT
       nn = nn + 1
-    END DO
+    enddo
     WRITE(6,'(I10,A)') nn,' OBSERVATIONS INPUT (in get_nobs)'
     WRITE(6,'(A12,I10)') '          U:',iu
     WRITE(6,'(A12,I10)') '          V:',iv
@@ -505,9 +509,9 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
     WRITE(6,'(A12,I10)') '          Y:',iy   !(OCEAN)
     WRITE(6,'(A12,I10)') '          Z:',iz   !(OCEAN)
     CLOSE(iunit)
-  ELSE
+  else
     WRITE(6,'(2A)') cfile,' does not exist -- skipped'
-  END IF
+  endif
   DEALLOCATE(wk)
 
 END SUBROUTINE get_nobs
@@ -537,7 +541,7 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
   ALLOCATE(wk(obs1nrec))
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  DO n=1,nn
+  do n=1,nn
     READ(iunit) wk
     elem(n) = REAL(wk(1),r_size)
     rlon(n) = REAL(wk(2),r_size)
@@ -561,7 +565,7 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
     !STEVE: this handles the fact that the observations are typically on a 0 to 360º grid, while
     !       the NCEP mom4p1 grid configuration is on a ~ -285 to 75º grid
     if (process_obs) then
-      IF(rlon(n) >= lonf) THEN
+      if (rlon(n) >= lonf) then
         if (dodebug) then
           WRITE(6,*) "letkf_obs.f90:: Wrapping large lon obs to model grid: n = ", n
           WRITE(6,*) "pre  - rlon(n) = ", rlon(n)
@@ -584,7 +588,7 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
           rlon(n) = REAL(lon0 + abs(rlon(n) - lonf) - wrapgap,r_size)
         endif
         if (dodebug) WRITE(6,*) "post - rlon(n) = ", rlon(n)
-        ELSE IF(rlon(n) < lon0) THEN
+        elseif (rlon(n) < lon0) then
         if (dodebug) then
           WRITE(6,*) "letkf_obs.f90:: Wrapping small lon obs to model grid: n = ", n
           WRITE(6,*) "pre  - rlon(n) = ", rlon(n)
@@ -605,9 +609,9 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
           rlon(n) = REAL(lonf - abs(lon0 - rlon(n)) + wrapgap,r_size)
         endif
         if (dodebug) WRITE(6,*) "post - rlon(n) = ", rlon(n)
-      ENDIF
+      endif
     endif 
-  END DO
+  enddo
   CLOSE(iunit)
 
   if (MAXVAL(rlon) > lonf) then

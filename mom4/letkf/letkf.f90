@@ -41,7 +41,6 @@ PROGRAM letkf
   USE params_letkf
   USE params_model
   USE params_obs
-! USE letkf_drifters_tools !LUYU: add the drifters tool
 
   IMPLICIT NONE
   REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
@@ -74,7 +73,11 @@ PROGRAM letkf
                               gross_error, &         ! number of standard deviations for quality control (all outside removed)
                               DO_DRIFTERS, &         ! logical flag to do lagrangian drifters assimilation
                               DO_ALTIMETRY, &        ! logical flag to do altimetry data assimilation
+                              DO_SLA, &              ! logical flag to use SLA for altimetry
+                              DO_ADT, &              ! logical flag to use Absolute Dynamic Topography (ADT) for altimetry
                               DO_NO_VERT_LOC, &      ! logical flag to skip all vertical localization and project weights (default)
+                              DO_MLD, &              ! logical flag to use 2-layer vertical localization: (1) SFC and mixed layer, (2) below mixed layer
+                              DO_REMOVE_65N, &       ! option to remove points above 65ÂN in letkf instead of in observation operators
                               localization_method, & ! localization method to be used in letkf_local.f90
                               cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
                               sp_infl_add            ! additive inflation factor (default none)

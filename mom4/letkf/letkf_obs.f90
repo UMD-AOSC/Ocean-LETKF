@@ -39,11 +39,9 @@ MODULE letkf_obs
   USE common_obs_mom4
   USE common_mpi_mom4
   USE common_letkf
-  USE params_letkf, ONLY: sigma_obs, sigma_obsv, sigma_obs0, gross_error, nslots
+  USE params_letkf, ONLY: sigma_obs, sigma_obsv, sigma_obs0, gross_error, nslots, nbv
   USE params_obs
   USE vars_obs
-  !(DRIFTERS)
-! USE letkf_drifters
 
   IMPLICIT NONE
   PUBLIC
@@ -58,13 +56,12 @@ MODULE letkf_obs
   LOGICAL :: debug_hdxf_0 = .true.   !This error occured because there was not a model representation of the observed value (i.e. SST obs with no SST model field)
                                      ! Solution was to populate a SST model field (v2d) with surface temp data from the model (v3d(:,:,1))
   INTEGER :: cnt_obs_u, cnt_obs_v, cnt_obs_t, cnt_obs_s, cnt_obs_x, cnt_obs_y, cnt_obs_z, cnt_obs_ssh, cnt_obs_eta, cnt_obs_sst, cnt_obs_sss
-  INTEGER, DIMENSION(nv3d+nv2d), SAVE :: cnt_obs = 0
+! INTEGER, DIMENSION(nv3d+nv2d), SAVE :: cnt_obs = 0
   !STEVE: for debugging observation culling:
   INTEGER :: cnt_yout=0, cnt_xout=0, cnt_zout=0, cnt_triout=0
   INTEGER :: cnt_rigtnlon=0, cnt_nearland=0
 
 CONTAINS
-
 
 SUBROUTINE set_letkf_obs
 !===============================================================================
@@ -406,6 +403,15 @@ else
 
 endif
 
+!STEVE: this removed everything above 65S for some reason...?  
+! N65cut : if (DO_REMOVE_65N) then
+!   do n=1,nobs
+!     if (tmplat(n) > 65.0) then
+!       tmpqc(n) = 0  
+!     endif
+!   enddo 
+! endif N65cut
+
   WRITE(6,'(I10,A)') SUM(tmpqc),' OBSERVATIONS TO BE ASSIMILATED'
   !STEVE:
   WRITE(6,*) "cnt_obs_u = ", cnt_obs_u
@@ -422,14 +428,14 @@ endif
   WRITE(6,*) "gross_cnt = ", gross_cnt
   WRITE(6,*) "gross_2x_cnt = ", gross_2x_cnt
 
-  cnt_obs(iv3d_u) = cnt_obs_u
-  cnt_obs(iv3d_v) = cnt_obs_v
-  cnt_obs(iv3d_t) = cnt_obs_t
-  cnt_obs(iv3d_s) = cnt_obs_s
-  cnt_obs(nv3d+iv2d_ssh) = cnt_obs_ssh
-  cnt_obs(nv3d+iv2d_eta) = cnt_obs_eta
-  cnt_obs(nv3d+iv2d_sst) = cnt_obs_sst
-  cnt_obs(nv3d+iv2d_sss) = cnt_obs_sss
+! cnt_obs(iv3d_u) = cnt_obs_u
+! cnt_obs(iv3d_v) = cnt_obs_v
+! cnt_obs(iv3d_t) = cnt_obs_t
+! cnt_obs(iv3d_s) = cnt_obs_s
+! cnt_obs(nv3d+iv2d_ssh) = cnt_obs_ssh
+! cnt_obs(nv3d+iv2d_eta) = cnt_obs_eta
+! cnt_obs(nv3d+iv2d_sst) = cnt_obs_sst
+! cnt_obs(nv3d+iv2d_sss) = cnt_obs_sss
 
   CALL monit_dep(nobs,tmpelm,tmpdep,tmpqc)
 
@@ -647,7 +653,6 @@ endif
   DEALLOCATE( tmpid )     !(DRIFTERS)
   DEALLOCATE( tmptime )   !(DRIFTERS)
 
-  RETURN
 END SUBROUTINE set_letkf_obs
 
 END MODULE letkf_obs
