@@ -43,11 +43,18 @@ PROGRAM obsop_sst
 
   IMPLICIT NONE
 
-  CHARACTER(slen) :: obsinfile='obsin.dat'    !IN (default)
+  !-----------------------------------------------------------------------------
+  ! Command line inputs:
+  !-----------------------------------------------------------------------------
+  CHARACTER(slen) :: obsinfile='obsin.nc'     !IN (default)
   CHARACTER(slen) :: guesfile='gues'          !IN (default) i.e. prefix to '.ocean_temp_salt.res.nc'
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
-  
-  
+  REAL(r_size) :: obserr_scaling=1.0d0 !STEVE: use this to scale the input observations
+  REAL(r_size) :: obs_randselect=1.0d0 !STEVE: use this to select random input observations
+
+  !-----------------------------------------------------------------------------
+  ! Obs data arrays
+  !-----------------------------------------------------------------------------
   REAL(r_size), ALLOCATABLE :: elem(:)
   REAL(r_size), ALLOCATABLE :: rlon(:)
   REAL(r_size), ALLOCATABLE :: rlat(:)
@@ -57,26 +64,32 @@ PROGRAM obsop_sst
   REAL(r_size), ALLOCATABLE :: ohx(:)
   REAL(r_size), ALLOCATABLE :: obhr(:)
   INTEGER     , ALLOCATABLE :: oqc(:)
+
+  !-----------------------------------------------------------------------------
+  ! Model background data arrays
+  !-----------------------------------------------------------------------------
   REAL(r_size), ALLOCATABLE :: v3d(:,:,:,:)
   REAL(r_size), ALLOCATABLE :: v2d(:,:,:)
+
+  !-----------------------------------------------------------------------------
+  ! Miscellaneous
+  !-----------------------------------------------------------------------------
   REAL(r_size) :: dk,tg,qg
   REAL(r_size) :: ri,rj,rk
   INTEGER :: n, i,j,k
-
-  REAL(r_size) :: obserr_scaling=1.0d0 !STEVE: use this to scale the input observations
-  REAL(r_size) :: obs_randselect=1.0d0 !STEVE: use this to select random input observations
   REAL(r_size), DIMENSION(1) :: rand
+  INTEGER :: bdyobs=2                 !STEVE: use of boundary obs.
+                                      !       1 := less restrictive, remove obs inside boundary
+                                      !       2 := remove all observations touching a boundary
 
   !-----------------------------------------------------------------------------
   ! Debugging parameters
   !-----------------------------------------------------------------------------
-  INTEGER :: bdyobs=2                 !STEVE: use of boundary obs.
-                                      !       1 := less restrictive, remove obs inside boundary
-                                      !       2 := remove all observations touching a boundary
   LOGICAL :: debug_obsfilter = .false.
   !STEVE: to adjust writing to output file
   LOGICAL :: verbose = .false.
-! LOGICAL :: dodebug = .false.
+  LOGICAL :: dodebug1 = .false.
+  LOGICAL :: print1st = .true.
 
   INTEGER :: cnt_obs_u=0, cnt_obs_v=0, cnt_obs_t=0, cnt_obs_s=0
   INTEGER :: cnt_obs_ssh=0, cnt_obs_sst=0, cnt_obs_sss=0, cnt_obs_eta=0
@@ -86,15 +99,17 @@ PROGRAM obsop_sst
   !STEVE: for debugging observation culling:
   INTEGER :: cnt_yout=0, cnt_xout=0, cnt_zout=0, cnt_triout=0
   INTEGER :: cnt_rigtnlon=0, cnt_nearland=0, cnt_oerlt0=0, cnt_altlatrng=0
-  !STEVE: for adaptive obs:
-  LOGICAL :: oerfile_exists
-  REAL(r_size) :: oberr
 
   !-----------------------------------------------------------------------------
   ! Instantiations specific to this observation type:
   !-----------------------------------------------------------------------------
   INTEGER :: min_quality_level=4  !STEVE: (default) for AVHRR
   INTEGER :: typ = id_sst_obs
+  LOGICAL :: DO_SUPEROBS = .false.
+  REAL(r_size), DIMENSION(nlon,nlat) :: superobs, delta, M2 ! for online computation of the mean and variance
+  INTEGER, DIMENSION(nlon,nlat) :: supercnt
+  INTEGER :: idx
+  INTEGER :: cnt_obs_thinning = 0
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_mom4 module, and process command line options
@@ -116,6 +131,7 @@ PROGRAM obsop_sst
   ALLOCATE( oqc(nobs) )
   ALLOCATE( obhr(nobs) )
 
+  print *, "obsop_sst.f90:: starting nobs = ", nobs
   do i=1,nobs
     elem(i) = obs_data(i)%typ
     rlon(i) = obs_data(i)%x_grd(1)
@@ -127,8 +143,87 @@ PROGRAM obsop_sst
     oqc(i)  = 0
     obhr(i) = obs_data(i)%hour
   enddo
-
   DEALLOCATE(obs_data)
+
+  if (print1st) then  
+    print *, "elem(1),rlon(1),rlat(1),obhr(1) = ", elem(1),rlon(1),rlat(1),obhr(1)
+    print *, "odat(1:40) = ", odat(1:40)
+    print *, "oerr(1:40) = ", oerr(1:40)
+  endif
+
+
+  !-----------------------------------------------------------------------------
+  ! Update the coordinate to match the model grid
+  !-----------------------------------------------------------------------------
+  do i=1,nobs
+    if (abs(rlon(i) - lonf) < wrapgap ) then
+      ! First, handle observations that are just outside of the model grid
+      !STEVE: shift it if it's just outside grid
+      if (abs(rlon(i) - lonf) < wrapgap/2) then
+        rlon(i) = lonf
+      else
+        rlon(i) = lon0
+      endif
+      ! Increase error to compensate
+      oerr(i) = oerr(i)*2
+    else
+      ! Otherwise, wrap the observation coordinate to be inside of the defined model grid coordinates
+      !Wrap the coordinate
+      rlon(i) = REAL(lon0 + abs(rlon(i) - lonf) - wrapgap,r_size)
+    endif
+  enddo
+
+  !-----------------------------------------------------------------------------
+  ! Bin the obs and estimate the obs error based on bin standard deviations
+  !-----------------------------------------------------------------------------
+  if (DO_SUPEROBS) then
+    print *, "Computing superobs..."
+    supercnt = 0
+    superobs = 0.0d0
+    do n=1,nobs ! for each ob,
+!     if (dodebug1) print *, "n = ", n
+      ! Scan the longitudes
+      do i=1,nlon-1
+        if (lon(i+1) > rlon(n)) exit
+      enddo
+      ! Scan the latitudes
+      do j=1,nlat-1
+        if (lat(j+1) > rlat(n)) exit 
+      enddo
+
+      supercnt(i,j) = supercnt(i,j) + 1
+      delta(i,j) = odat(n) - superobs(i,j)
+      superobs(i,j) = superobs(i,j) + delta(i,j)/supercnt(i,j)
+      M2(i,j) = M2(i,j) + delta(i,j)*(odat(n) - superobs(i,j))
+!     if (dodebug1) print *, "supercnt(",i,",",j,") = ", supercnt(i,j)
+    enddo
+    !"superobs" contains the mean
+    !M2 contains the variance:
+    WHERE(supercnt > 1) M2 = M2 / (supercnt - 1)
+
+    idx=0
+    do j=1,nlat-1
+      do i=1,nlon-1
+        if (supercnt(i,j) > 1) then
+          idx = idx+1
+          if (dodebug1) print *, "idx = ", idx
+          odat(idx) = superobs(i,j)
+          oerr(idx) = 1.0d0 + SQRT(M2(i,j))
+          rlon(idx) = (lon(i+1)-lon(i))/2.0d0
+          rlat(idx) = (lat(j+1)-lat(j))/2.0d0
+          rlev(idx) = 0
+          elem(idx) = id_sst_obs
+          if (dodebug1) print *, "odat(idx) = ", odat(idx)
+          if (dodebug1) print *, "oerr(idx) = ", oerr(idx)
+          if (dodebug1) print *, "ocnt(idx) = ", supercnt(i,j)
+        endif
+      enddo
+    enddo
+    print *, "DO_SUPEROBS:: superobs reducing from ",nobs," to ",idx, " observations." 
+    print *, "with min obs error = ", MINVAL(oerr(1:idx))
+    print *, "with max obs error = ", MAXVAL(oerr(1:idx))
+    nobs = idx
+  endif
 
   !-----------------------------------------------------------------------------
   ! Read model forecast for this member
@@ -146,7 +241,19 @@ PROGRAM obsop_sst
 
   ohx=0.0d0
   oqc=0
+  idx=0
   DO n=1,nobs
+    ! Thin observations
+    ! Select random subset of observations to speed up processing
+    !STEVE: I know this would be more efficient up above when obs are first introduced.
+    thin : if (obs_randselect < 1.0d0) then
+      CALL com_rand(1,rand)
+      if (rand(1) > obs_randselect) then
+        cnt_obs_thinning = cnt_obs_thinning + 1
+        CYCLE
+      endif
+    endif thin
+
     !---------------------------------------------------------------------------
     ! Count bad obs errors associated with observations, and skip the ob
     !---------------------------------------------------------------------------
@@ -277,14 +384,17 @@ PROGRAM obsop_sst
     ! observation operator (computes H(x)) for specified member
     !---------------------------------------------------------------------------
     CALL Trans_XtoY(elem(n),ri,rj,rk,v3d,v2d,ohx(n))
-
+    idx=idx+1
     oqc(n) = 1
   enddo !1:nobs
 
   !-----------------------------------------------------------------------------
   ! Print out the counts of observations removed for various reasons
   !-----------------------------------------------------------------------------
-  WRITE(6,*) "In letkf_obs.f90:: observations removed for:"
+  WRITE(6,*) "In obsop_sst.f90::"
+  WRITE(6,*) "observations at start = ", nobs
+  WRITE(6,*) "== observations removed for: =="
+  WRITE(6,*) "cnt_obs_thinning = ", cnt_obs_thinning
   WRITE(6,*) "cnt_oerlt0 = ", cnt_oerlt0
   WRITE(6,*) "cnt_xout = ", cnt_xout
   WRITE(6,*) "cnt_yout = ", cnt_yout
@@ -293,6 +403,9 @@ PROGRAM obsop_sst
   WRITE(6,*) "cnt_rigtnlon = ", cnt_rigtnlon
   WRITE(6,*) "cnt_nearland = ", cnt_nearland
   WRITE(6,*) "cnt_altlatrng = ", cnt_altlatrng
+  WRITE(6,*) "==============================="
+  WRITE(6,*) "observations kept = ", idx
+  WRITE(6,*) "==============================="
 
   !-----------------------------------------------------------------------------
   ! Write the observations and their associated innovations to file
@@ -317,7 +430,7 @@ INTEGER, DIMENSION(3) :: values
 ! inputs are in the format "-x xxx"
 do i=1,COMMAND_ARGUMENT_COUNT(),2
   CALL GET_COMMAND_ARGUMENT(i,arg1)
-  PRINT *, "In grd2cor.f90::"
+  PRINT *, "In obsop_sst.f90::"
   PRINT *, "Argument ", i, " = ",TRIM(arg1)
 
   select case (arg1)
@@ -341,6 +454,26 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) DO_REMOVE_65N
+    case('-superob')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) DO_SUPEROBS
+    case('-thin')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) obs_randselect
+    case('-scale')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) obserr_scaling
+    case('-minqc')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) min_quality_level
+    case('-debug')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) dodebug1
     case default
       PRINT *, "ERROR: option is not supported: ", arg1
       PRINT *, "(with value : ", trim(arg2), " )"

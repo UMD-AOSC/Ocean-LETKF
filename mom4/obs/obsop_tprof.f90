@@ -47,7 +47,7 @@ PROGRAM obsop_tprof
 
   IMPLICIT NONE
 
-  CHARACTER(slen) :: obsinfile='obsin.dat'    !IN (default)
+  CHARACTER(slen) :: obsinfile='obsin.nc'     !IN (default)
   CHARACTER(slen) :: guesfile='gues'          !IN (default) i.e. prefix to '.ocean_temp_salt.res.nc'
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
   
@@ -83,7 +83,8 @@ PROGRAM obsop_tprof
                                       ! surface temp data from the model (v3d(:,:,1)).
   !STEVE: to adjust writing to output file
   LOGICAL :: verbose = .false.
-! LOGICAL :: dodebug = .false.
+  LOGICAL :: print1st = .true.
+  LOGICAL :: dodebug1 = .false.
 
   INTEGER :: cnt_obs_u=0, cnt_obs_v=0, cnt_obs_t=0, cnt_obs_s=0
   INTEGER :: cnt_obs_ssh=0, cnt_obs_sst=0, cnt_obs_sss=0, cnt_obs_eta=0
@@ -120,6 +121,7 @@ PROGRAM obsop_tprof
   ALLOCATE( oqc(nobs) )
   ALLOCATE( obhr(nobs) )
 
+  print *, "obsop_tprof.f90:: starting nobs = ", nobs
   do i=1,nobs
     elem(i) = obs_data(i)%typ
     rlon(i) = obs_data(i)%x_grd(1)
@@ -131,8 +133,34 @@ PROGRAM obsop_tprof
     oqc(i)  = 0
     obhr(i) = obs_data(i)%hour
   enddo
+  if (print1st) then 
+    print *, "elem(1),rlon(1),rlat(1),obhr(1) = ", elem(1),rlon(1),rlat(1),obhr(1)
+    print *, "odat(1:40) = ", odat(1:40)
+    print *, "oerr(1:40) = ", oerr(1:40)
+  endif
 
   DEALLOCATE(obs_data)
+
+  !-----------------------------------------------------------------------------
+  ! Update the coordinate to match the model grid
+  !-----------------------------------------------------------------------------
+  do i=1,nobs
+    if (abs(rlon(i) - lonf) < wrapgap ) then
+      ! First, handle observations that are just outside of the model grid
+      !STEVE: shift it if it's just outside grid
+      if (abs(rlon(i) - lonf) < wrapgap/2) then
+        rlon(i) = lonf
+      else
+        rlon(i) = lon0
+      endif
+      ! Increase error to compensate
+      oerr(i) = oerr(i)*2
+    else
+      ! Otherwise, wrap the observation coordinate to be inside of the defined model grid coordinates
+      !Wrap the coordinate
+      rlon(i) = REAL(lon0 + abs(rlon(i) - lonf) - wrapgap,r_size)
+    endif
+  enddo
 
   !-----------------------------------------------------------------------------
   ! Read model forecast for this member
@@ -314,6 +342,14 @@ PROGRAM obsop_tprof
       !       http://www.argo.ucsd.edu/Argo_date_guide.html#gtsusers
       ohx(n) = t_from_pt(pt,sp,p,rlon(n),rlat(n))
 
+      if (dodebug1 .AND. n<=40) then
+        print *, "======================================"
+        print *, "n = ", n
+        print *, "pt,sp,p,rlon(n),rlat(n) = ", pt,sp,p,rlon(n),rlat(n)
+        print *, "ohx(n) = ", ohx(n)
+        print *, "======================================"
+      endif
+
     elseif (DO_INSITU_to_POTTEMP) then  
       STOP "obsop_tprof.f90::post-Trans_XtoY::  DO_INSITU_to_POTTEMP case must be coded."
     endif
@@ -377,6 +413,10 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) DO_REMOVE_65N
+    case('-debug')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) dodebug1
     case default
       PRINT *, "ERROR: option is not supported: ", arg1
       PRINT *, "(with value : ", trim(arg2), " )"

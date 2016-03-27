@@ -1,3 +1,10 @@
 These are support routines, written in C by David Behringer,
 for the processing of obs and background error covariance
 for NCEP's 3DVar-based GODAS.
+
+
+I am gradually phasing out the need for these preprocessing files for use with LETKF.
+The PTMP_SAL routines to read in netcdf obs and add obs error estimates are now in
+the independent obs oeprators in the obs/ directory, written fully in fortran.
+
+The PREP_ALT and PREP_SBC are being replaced by independent obs operators as well.

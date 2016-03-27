@@ -13,6 +13,7 @@ MODULE gsw_pot_to_insitu
 !
 !-------------------------------------------------------------------------------
 ! Author:  Steve Penny
+! Institution: University of Maryland, College Park; NWS/NOAA/NCEP
 ! Contact: Steve.Penny@noaa.gov
 !===============================================================================
 

@@ -17,7 +17,7 @@ MODULE common_mpi_mom4
   USE common
   USE common_mpi
   USE common_mom4
-  use params_letkf, only : nbv
+! USE params_letkf, only : nbv
   IMPLICIT NONE
   PUBLIC
 

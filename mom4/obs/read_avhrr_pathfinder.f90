@@ -69,6 +69,7 @@ INTEGER, INTENT(IN) :: typ
 INTEGER, INTENT(IN) :: min_quality_level
 TYPE(avhrr_pathfinder_data), INTENT(OUT), ALLOCATABLE, DIMENSION(:) :: obs_data
 INTEGER, INTENT(OUT) :: nobs
+REAL(r_size) :: scale_error = 2.0 !STEVE: scale the sst_dtime as an estimate of obs error. Make this an (optional) input.
 
 ! Other variables:
 REAL(r_sngl) :: err
@@ -87,7 +88,7 @@ INTEGER, ALLOCATABLE, DIMENSION(:,:) :: sst_dtime
 REAL(r_size) :: val
 INTEGER :: nlons,nlats
 REAL(r_size) :: hour
-LOGICAL :: dodebug=.true.
+LOGICAL :: dodebug=.false.
 
 !-------------------------------------------------------------------------------
 ! Open netcdf file
@@ -231,6 +232,10 @@ else
   print *, "dt_analysis(1,1) = ", dt_analysis(1,1)
 endif
 
+!STEVE: read these attributes from file:
+! dt_analysis:scale_factor = 0.1 ;
+dt_analysis = dt_analysis * 0.1
+
 !-------------------------------------------------------------------------------
 ! Read the observed SST data
 !-------------------------------------------------------------------------------
@@ -287,7 +292,7 @@ do j=1,nlats
   do i=1,nlons
     if (typ .eq. id_sst_obs) then
       val = sea_surface_temperature(i,j)
-      err = dt_analysis(i,j) !stde(i,j)
+      err = 1.0 + scale_error*ABS(dt_analysis(i,j)) !stde(i,j)
     elseif (typ .eq. id_sic_obs) then
       val = sea_ice_fraction(i,j)
       err = stde(i,j)
@@ -295,7 +300,7 @@ do j=1,nlats
     if (quality_level(i,j) >= min_quality_level) then
       n = n+1
       hour = ( sst_dtime(i,j) ) / 3600.0d0
-      print *, "n,lon,lat,hour,val,err,qkey = ", n,alon(i),alat(j),hour,val,err,quality_level(i,j)
+      if (dodebug) print *, "n,lon,lat,hour,val,err,qkey = ", n,alon(i),alat(j),hour,val,err,quality_level(i,j)
       obs_data(n)%typ = typ
       obs_data(n)%x_grd(1) = alon(i)
       obs_data(n)%x_grd(2) = alat(j)

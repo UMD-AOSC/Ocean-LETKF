@@ -38,7 +38,7 @@ PUBLIC
   INTEGER,PARAMETER :: nv4d=0 ! x,y,z                !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
 ! INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
 ! INTEGER,PARAMETER :: nv2d=7 ! ssh/t/s, + sfc fluxes: taux,tauy,heat,freshwater
-  INTEGER,PARAMETER :: nv2d=4 ! ssh,sst,sss,eta      !(OCEAN) !(ALTIMETRY)
+  INTEGER,PARAMETER :: nv2d=5 ! ssh,sst,sss,eta,mld  !(OCEAN) !(ALTIMETRY)
   INTEGER,PARAMETER :: nvsfc=0 !14
 
   INTEGER,PARAMETER :: nij0=nlon*nlat
@@ -54,11 +54,40 @@ PUBLIC
   INTEGER,PARAMETER :: iv2d_sst=2              !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
   INTEGER,PARAMETER :: iv2d_sss=3              !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models
   INTEGER,PARAMETER :: iv2d_eta=4              !(OCEAN) ! eta sea surface perturbation from mom4's ocean_barotropic.res.nc restart file
+  INTEGER,PARAMETER :: iv2d_mld=5              !(OCEAN) ! mixed layer depth
   INTEGER,PARAMETER :: iv4d_x=1                !(OCEAN) (DRIFTERS)
   INTEGER,PARAMETER :: iv4d_y=2                !(OCEAN) (DRIFTERS)
   INTEGER,PARAMETER :: iv4d_z=3                !(OCEAN) (DRIFTERS)
 
+  !
+  ! Elements
+  !
+  CHARACTER(4) :: element(nv3d+nv2d+nv4d)
+! element(iv3d_u) = 'U   '
+! element(iv3d_v) = 'V   '
+! element(iv3d_t) = 'T   '
+! element(iv3d_s) = 'S   '               !(OCEAN)
+! element(nv3d+iv2d_ssh) = 'SSH '        !(OCEAN)
+! element(nv3d+iv2d_sst) = 'SST '        !(OCEAN)
+! element(nv3d+iv2d_sss) = 'SSS '        !(OCEAN)
+! if (DO_ALTIMETRY) then
+!   element(nv3d+iv2d_eta) = 'eta '      !(OCEAN)
+! endif
+! if (DO_MLD) then
+!   element(nv3d+iv2d_mld) = 'mld'       !(OCEAN)
+! endif
+! if (DO_DRIFTERS) then
+!   element(nv3d+nv2d+iv4d_x) = 'X   '             !(OCEAN) (DRIFTERS)
+!   element(nv3d+nv2d+iv4d_y) = 'Y   '             !(OCEAN) (DRIFTERS)
+!   element(nv3d+nv2d+iv4d_z) = 'Z   '             !(OCEAN) (DRIFTERS)
+! endif
+
   CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
+  CHARACTER(32) :: ts_basefile = 'ocean_temp_salt.res.nc'
+  CHARACTER(32) :: uv_basefile = 'ocean_velocity.res.nc'
+  CHARACTER(32) :: sf_basefile = 'ocean_sbc.res.nc'
+  CHARACTER(32) :: sh_basefile = 'ocean_barotropic.res.nc'
+  CHARACTER(32) :: hs_basefile = 'ocean_TS.nc'
 
   ! For grid_spec.nc data file:
   CHARACTER(12) :: gridfile = 'grid_spec.nc'

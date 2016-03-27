@@ -6,14 +6,13 @@ USE params_model, ONLY: nv3d, nv2d
 
 IMPLICIT NONE
 
-
 PUBLIC
 
 REAL(r_size),SAVE :: lon(nlon)
 REAL(r_size),SAVE :: lat(nlat)
 REAL(r_size),SAVE :: lev(nlev)                     !(OCEAN)
-REAL(r_size),SAVE :: lon2d(nlon,nlat)              !(TRIPOLAR)
-REAL(r_size),SAVE :: lat2d(nlon,nlat)              !(TRIPOLAR)
+REAL(r_size),SAVE :: lon2d(nlon,nlat)              !(2DGRID)(TRIPOLAR)
+REAL(r_size),SAVE :: lat2d(nlon,nlat)              !(2DGRID)(TRIPOLAR)
 
 REAL(r_size),SAVE :: dx(nlon,nlat)
 REAL(r_size),SAVE :: dy(nlon,nlat)

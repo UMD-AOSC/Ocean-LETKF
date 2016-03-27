@@ -57,10 +57,16 @@ REAL(r_size) :: sp_infl_add = 0.d0 !additive inflation
 !-------------------------------------------------------------------------------
 ! From common_mom4.f90
 !-------------------------------------------------------------------------------
+! For (MLD, assimilate the mixed layer depth)
+LOGICAL :: DO_MLD = .false.
 ! For (DRIFTERS)
 LOGICAL :: DO_DRIFTERS=.false.
 ! For (ALTIMETRY)
 LOGICAL :: DO_ALTIMETRY=.false.
+! For (ALTIMETRY, Sea Level Anomalies)
+LOGICAL :: DO_SLA=.false.
+! For (ALTIMETRY, Absolute Dynamic Topography)
+LOGICAL :: DO_ADT=.false.
 ! For (TRIPLOAR)
 LOGICAL :: DO_TRIPOLAR=.true.
 ! For (IRREG_GRID) for non-orthogonal/non-rectilinear grids (not fully supported)
