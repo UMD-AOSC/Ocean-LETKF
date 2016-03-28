@@ -276,10 +276,14 @@ SUBROUTINE set_letkf_obs
   WRITE(6,*) "Processing tmphdxf for n=1 to n=nobs=",nobs 
   WRITE(6,*) "and filtering bad observations..."
 
-if (.true.) then
+quality_control : if (.true.) then
   !STEVE: this is the original version
 
   do n=1,nobs
+
+    !Skip sst obs, since they are more prevalent
+    if (tmpelm(n) .eq. id_sst_obs) CYCLE
+
     tmpqc(n) = MINVAL(tmpqc0(n,:))
     if (tmpqc(n) /= 1) CYCLE
     tmpdep(n) = tmphdxf(n,1) !note: tmpdep is just used as a dummy variable to compute the mean over the next few lines
@@ -321,6 +325,9 @@ else
 
   do n=1,nobs
     !WRITE(6,*) "n = ", n
+
+    !Skip sst obs, since they are more prevalent
+    if (tmpelm(n) .eq. id_sst_obs) CYCLE
 
     tmpqc(n) = MINVAL(tmpqc0(n,:))
     if (tmpqc(n) /= 1) CYCLE
@@ -401,7 +408,7 @@ else
   enddo
   DEALLOCATE(tmpqc0)
 
-endif
+endif quality_control
 
 !STEVE: this removed everything above 65S for some reason...?  
 ! N65cut : if (DO_REMOVE_65N) then
