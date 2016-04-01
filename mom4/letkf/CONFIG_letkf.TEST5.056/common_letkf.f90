@@ -81,11 +81,12 @@ SUBROUTINE letkf_core(nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans)
     !---------------------------------------------------------------------------
     !STEVE: debug
     if ( MINVAL(rdiag(1:nobsl)) .le. 0.0 ) then
-      WRITE(6,*) "common_letkf.f90:: ERROR: rdiag ≤ 0 (i.e. there is an obserr ≤ 0)"
+      WRITE(6,*) "common_letkf.f90:: ERROR: rdiag <=0 (i.e. there is an obserr <= 0)"
       WRITE(6,*) "nbv = ", nbv
       WRITE(6,*) "rdiag = ",rdiag
       stop 1
     endif
+
     do j=1,nbv
       do i=1,nobsl
         hdxb_rinv(i,j) = hdxb(i,j) / rdiag(i) * rloc(i)
@@ -152,7 +153,7 @@ SUBROUTINE letkf_core(nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans)
       WRITE(6,*) "rdiag(1:nobsl) = ", rdiag(1:nobsl) 
       WRITE(6,*) "rloc(1:nobsl) = ", rloc(1:nobsl)
       !STEVE: (1) This should not happen. (2) If it does, consider replacing non positive evals with mean of all positive evals...
-      stop 1
+      STOP(1)
     endif
     !STEVE: end
 

@@ -17,11 +17,11 @@ MODULE common_mpi_mom4
   USE common
   USE common_mpi
   USE common_mom4
-! USE params_letkf, only : nbv
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: mpibufsize=1000 !600 !(this worked as 'safe' with 480 procs on Gaea) !200 !1000  !STEVE: this fixes the problem of bad output when using over 6 nodes default=1000,mom2(mpich2)=200
+  INTEGER,PARAMETER :: mpibufsize=1000 !600 !(this worked as 'safe' with 480 procs on Gaea) !200 !1000  
+                                        !STEVE: this fixes the problem of bad output when using many nodes, due to default MPI buffer size
   INTEGER,SAVE :: nij1                  !STEVE: this is the number of gridpoints to run on this (myrank) processor
   INTEGER,SAVE :: nij1max               !STEVE: the largest number of gridpoints on any 1 processor
   INTEGER,ALLOCATABLE,SAVE :: nij1node(:)
@@ -34,6 +34,9 @@ MODULE common_mpi_mom4
 CONTAINS
 
 
+!-----------------------------------------------------------------------
+! Initialize the mpi processing
+!-----------------------------------------------------------------------
 SUBROUTINE set_common_mpi_mom4
   REAL(r_sngl), ALLOCATABLE :: v3dg(:,:,:,:) !(nlon,nlat,nlev,nv3d) != 0 !STEVE: initializing
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d) != 0      !STEVE: initializing
@@ -102,36 +105,27 @@ SUBROUTINE set_common_mpi_mom4
     v2dg(:,j,6) = SNGL(phi0(:,j))  !STEVE: WARNING - this needs to be generalized to the specified dimensions
     !STEVE: For custom localization: (need to know how the grid points are distributed per node)
     DO i=1,nlon                             !(OCEAN)
-      v2dg(i,j,7) = REAL(i,r_sngl)        !(OCEAN)
+      v2dg(i,j,7) = REAL(i,r_sngl)          !(OCEAN)
     ENDDO                                   !(OCEAN)
-    v2dg(:,j,8) = REAL(j,r_sngl)          !(OCEAN)
+    v2dg(:,j,8) = REAL(j,r_sngl)            !(OCEAN)
   END DO
   if (dodebug) WRITE(6,*) "Calling scatter_grd_mpi_small..."
   CALL scatter_grd_mpi_small(0,v2dg,v2d,nlon,nlat,nv0)
-! if (dodebug) WRITE(6,*) "Calling scatter_grd_mpi_smalltoall..."
-! ll = CEILING(REAL(nbv)/REAL(nprocs))
-! DO l=1,ll
-!   mstart = 1 + (l-1)*nprocs
-!   mend = MIN(l*nprocs, nbv)
-!   if (dodebug) WRITE(6,*) "l,ll,mstart,mend,nprocs,nbv = ", l,ll,mstart,mend,nprocs,nbv
-!   CALL scatter_grd_mpi_smalltoall(mstart,mend,nbv,v2dg,v2d,nlon,nlat,nv0)
-! END DO
-! if (dodebug) WRITE(6,*) "Finished scatter_grd_mpi_smalltoall."
+
   dx1(:)  = v2d(:,1)
   dy1(:)  = v2d(:,2)
   lon1(:) = v2d(:,3)
   lat1(:) = v2d(:,4)
-  kmt1(:) = v2d(:,5)               !(OCEAN)
-  phi1(:) = v2d(:,6)               !(OCEAN)
+  kmt1(:) = v2d(:,5)                 !(OCEAN)
+  phi1(:) = v2d(:,6)                 !(OCEAN)
   i1(:)   = v2d(:,7)                 !(OCEAN)
   j1(:)   = v2d(:,8)                 !(OCEAN)
 
-! DEALLOCATE(v3d,v2d,v3dg,v2dg)
   DEALLOCATE(v2d,v2dg)
   if (dodebug) WRITE(6,*) "Finished set_common_mpi_mom4..."
 
-  RETURN
 END SUBROUTINE set_common_mpi_mom4
+
 
 !-----------------------------------------------------------------------
 ! Scatter gridded data to processes (nrank -> all)
@@ -157,9 +151,12 @@ SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
   END IF
   if (dodebug) WRITE(6,*) "Finished scatter_grd_mpi..."
 
-  RETURN
 END SUBROUTINE scatter_grd_mpi
 
+
+!-----------------------------------------------------------------------
+! 'Safe' version of routine to scatter grid points to all processors
+!-----------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi_safe(nrank,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: nrank
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
@@ -230,9 +227,12 @@ SUBROUTINE scatter_grd_mpi_safe(nrank,v3dg,v2dg,v3d,v2d)
 
   DEALLOCATE(tmp,bufs,bufr)
 
-  RETURN
 END SUBROUTINE scatter_grd_mpi_safe
 
+
+!-----------------------------------------------------------------------
+! 'Fast' version of routine to scatter grid points to all processors
+!-----------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi_fast(nrank,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: nrank
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
@@ -283,8 +283,9 @@ SUBROUTINE scatter_grd_mpi_fast(nrank,v3dg,v2dg,v3d,v2d)
 
   DEALLOCATE(bufs,bufr)
 
-  RETURN
 END SUBROUTINE scatter_grd_mpi_fast
+
+
 !-----------------------------------------------------------------------
 ! Gather gridded data (all -> nrank)
 !-----------------------------------------------------------------------
@@ -308,9 +309,12 @@ SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
     CALL gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
   END IF
 
-  RETURN
 END SUBROUTINE gather_grd_mpi
 
+
+!-----------------------------------------------------------------------
+! 'Safe' version of routine to gather grid points from all processors
+!-----------------------------------------------------------------------
 SUBROUTINE gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
@@ -381,9 +385,12 @@ SUBROUTINE gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
 
   DEALLOCATE(tmp,bufs,bufr)
 
-  RETURN
 END SUBROUTINE gather_grd_mpi_safe
 
+
+!-----------------------------------------------------------------------
+! 'Fast' version of routine to gather grid points from all processors
+!-----------------------------------------------------------------------
 SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
@@ -434,7 +441,6 @@ SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
 
   DEALLOCATE(bufs,bufr)
 
-  RETURN
 END SUBROUTINE gather_grd_mpi_fast
 
 !-----------------------------------------------------------------------
@@ -519,7 +525,6 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
 
   DEALLOCATE(v3dg,v2dg)
 
-  RETURN
 END SUBROUTINE write_ens_mpi
 
 !!!!!!!!!
@@ -564,7 +569,6 @@ SUBROUTINE write_ens_mpi_grd(file,member,v3d,v2d)
 
   DEALLOCATE(v3dg,v2dg)
 
-  RETURN
 END SUBROUTINE write_ens_mpi_grd
 
 !-----------------------------------------------------------------------
@@ -584,8 +588,9 @@ SUBROUTINE grd_to_buf(grd,buf)
     END DO
   END DO
 
-  RETURN
 END SUBROUTINE grd_to_buf
+
+
 !-----------------------------------------------------------------------
 ! buffer -> gridded data
 !-----------------------------------------------------------------------
@@ -603,8 +608,9 @@ SUBROUTINE buf_to_grd(buf,grd)
     END DO
   END DO
 
-  RETURN
 END SUBROUTINE buf_to_grd
+
+
 !-----------------------------------------------------------------------
 ! STORING DATA (ensemble mean and spread)
 !-----------------------------------------------------------------------
@@ -679,13 +685,12 @@ SUBROUTINE write_ensmspr_mpi(file,member,v3d,v2d)
 
   DEALLOCATE(v3dm,v2dm,v3ds,v2ds,v3dg,v2dg)
 
-  RETURN
 END SUBROUTINE write_ensmspr_mpi
+
 
 !-----------------------------------------------------------------------
 ! Scatter gridded data using MPI_ALLTOALL(V) (mstart~mend -> all)
 !-----------------------------------------------------------------------
-
 SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,member,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: mstart,mend,member
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
@@ -771,13 +776,13 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,member,v3dg,v2dg,v3d,v2d)
   if (dodebug) WRITE(6,*) "==MPI_BARRIER=="
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   DEALLOCATE(bufr3,bufs3,bufr2,bufs2)
-  RETURN
+
 END SUBROUTINE scatter_grd_mpi_alltoall
+
 
 !-----------------------------------------------------------------------
 ! Gather gridded data using MPI_ALLTOALL(V) (all -> mstart~mend)
 !-----------------------------------------------------------------------
-
 SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: mstart,mend,member
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
@@ -843,8 +848,9 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   DEALLOCATE(bufr3,bufs3,bufr2,bufs2)
-  RETURN
+
 END SUBROUTINE gather_grd_mpi_alltoall
+
 
 !-----------------------------------------------------------------------
 ! Set the send/recieve counts of MPI_ALLTOALLV
@@ -869,14 +875,13 @@ SUBROUTINE set_alltoallv_counts(mcount,ngpblock,n_ens,nt_ens,n_mem,nt_mem)
     nt_mem(p) = nt_mem(p-1) + n_mem(p-1)
   END DO
 
-  RETURN
 END SUBROUTINE set_alltoallv_counts
 
 
 !-----------------------------------------------------------------------
 ! Scatter a smaller sized gridded data using MPI_ALLTOALL(V) (mstart~mend -> all)
+!STEVE: not using at the moment, didn't lead to better performance.
 !-----------------------------------------------------------------------
-
 SUBROUTINE scatter_grd_mpi_smalltoall(mstart,mend,member,v2dg,v2d,nx,ny,nv)
   INTEGER,INTENT(IN) :: mstart,mend,member
   INTEGER,INTENT(IN) :: nx,ny,nv
@@ -925,9 +930,14 @@ SUBROUTINE scatter_grd_mpi_smalltoall(mstart,mend,member,v2dg,v2d,nx,ny,nv)
   if (dodebug) WRITE(6,*) "==MPI_BARRIER=="
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   DEALLOCATE(bufr2,bufs2)
-  RETURN
+  
 END SUBROUTINE scatter_grd_mpi_smalltoall
 
+
+!-----------------------------------------------------------------------
+! Scatter grid but use only the 2D arrays for improved performance
+! (since in the initialization, that is all we need)
+!-----------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
   INTEGER,INTENT(IN) :: nrank
   INTEGER,INTENT(IN) :: nx,ny,nv
@@ -962,7 +972,6 @@ SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
 
   DEALLOCATE(bufs,bufr)
 
-  RETURN
 END SUBROUTINE scatter_grd_mpi_small
 
 END MODULE common_mpi_mom4

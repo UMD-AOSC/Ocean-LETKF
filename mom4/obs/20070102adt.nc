@@ -1,0 +1,1 @@
+/ncrc/home1/Steve.Penny/lf1u/OBS/historical/AVISO_ADT/ftp.aviso.altimetry.fr/global/delayed-time/along-track/filtered/adt/j1/test_20070102.nc

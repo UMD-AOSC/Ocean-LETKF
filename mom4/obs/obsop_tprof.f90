@@ -10,7 +10,6 @@ PROGRAM obsop_tprof
 !  use params_obs
 !  use vars_obs
 !  use common_obs_mom4
-!  use params_letkf,     ONLY: DO_ALTIMETRY, DO_SLA, DO_ADT, DO_DRIFTERS
 !
 !
 ! DESCRIPTION: 
@@ -69,6 +68,8 @@ PROGRAM obsop_tprof
   REAL(r_size) :: obserr_scaling=1.0d0 !STEVE: use this to scale the input observations
   REAL(r_size) :: obs_randselect=1.0d0 !STEVE: use this to select random input observations
   REAL(r_size), DIMENSION(1) :: rand
+
+  LOGICAL :: remap_obs_coords = .true.
 
   !-----------------------------------------------------------------------------
   ! Debugging parameters
@@ -143,24 +144,11 @@ PROGRAM obsop_tprof
 
   !-----------------------------------------------------------------------------
   ! Update the coordinate to match the model grid
+  ! (Stolen from common_obs_mom4.f90::read_obs
   !-----------------------------------------------------------------------------
-  do i=1,nobs
-    if (abs(rlon(i) - lonf) < wrapgap ) then
-      ! First, handle observations that are just outside of the model grid
-      !STEVE: shift it if it's just outside grid
-      if (abs(rlon(i) - lonf) < wrapgap/2) then
-        rlon(i) = lonf
-      else
-        rlon(i) = lon0
-      endif
-      ! Increase error to compensate
-      oerr(i) = oerr(i)*2
-    else
-      ! Otherwise, wrap the observation coordinate to be inside of the defined model grid coordinates
-      !Wrap the coordinate
-      rlon(i) = REAL(lon0 + abs(rlon(i) - lonf) - wrapgap,r_size)
-    endif
-  enddo
+  if (remap_obs_coords) then
+    CALL center_obs_coords(rlon,oerr,nobs)
+  endif
 
   !-----------------------------------------------------------------------------
   ! Read model forecast for this member

@@ -18,3 +18,6 @@
 # Add to obsop_sst, obsop_adt:
   Subroutines to read in raw data, e.g. read_aviso_adt.f90, read_avhrr_sst.f90
   Looking for L2 AVHRR and Microwave
+
+# sample run lines:
+./obsop.TEST5.adt.x -obsin 20070102adt.nc -gues gues -obsout obsout.dat -day 20820 -debug .true. -superob .true.

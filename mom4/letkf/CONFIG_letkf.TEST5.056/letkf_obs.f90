@@ -73,31 +73,6 @@ SUBROUTINE set_letkf_obs
   REAL(r_size) :: dlon1,dlon2,dlon,dlat
   REAL(r_size),ALLOCATABLE :: wk2d(:,:)
   INTEGER,ALLOCATABLE :: iwk2d(:,:)
-  REAL(r_size),ALLOCATABLE :: tmpelm(:)
-  REAL(r_size),ALLOCATABLE :: tmplon(:)
-  REAL(r_size),ALLOCATABLE :: tmplat(:)
-  REAL(r_size),ALLOCATABLE :: tmplev(:)
-  REAL(r_size),ALLOCATABLE :: tmpdat(:)
-  REAL(r_size),ALLOCATABLE :: tmperr(:)
-  REAL(r_size),ALLOCATABLE :: tmpi(:)
-  REAL(r_size),ALLOCATABLE :: tmpj(:)
-  REAL(r_size),ALLOCATABLE :: tmpk(:)
-  REAL(r_size),ALLOCATABLE :: tmpdep(:)
-  REAL(r_size),ALLOCATABLE :: tmphdxf(:,:)
-  REAL(r_size),ALLOCATABLE :: tmpid(:)   !(DRIFTERS)
-  REAL(r_size),ALLOCATABLE :: tmptime(:) !(DRIFTERS)
-  INTEGER,ALLOCATABLE :: tmpqc0(:,:)
-  INTEGER,ALLOCATABLE :: tmpqc(:)
-  REAL(r_size),ALLOCATABLE :: tmp2elm(:)
-  REAL(r_size),ALLOCATABLE :: tmp2lon(:)
-  REAL(r_size),ALLOCATABLE :: tmp2lat(:)
-  REAL(r_size),ALLOCATABLE :: tmp2lev(:)
-  REAL(r_size),ALLOCATABLE :: tmp2dat(:)
-  REAL(r_size),ALLOCATABLE :: tmp2err(:)
-  REAL(r_size),ALLOCATABLE :: tmp2dep(:)
-  REAL(r_size),ALLOCATABLE :: tmp2hdxf(:,:)
-  REAL(r_size),ALLOCATABLE :: tmp2id(:)   !(DRIFTERS)
-  REAL(r_size),ALLOCATABLE :: tmp2time(:) !(DRIFTERS)
   INTEGER :: nobslots(nslots)
   INTEGER :: n,i,j,ierr,islot,nn,l,im
   INTEGER :: nj(0:nlat-1)
@@ -117,14 +92,6 @@ SUBROUTINE set_letkf_obs
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
-  dist_zero = sigma_obs * SQRT(10.0d0/3.0d0) * 2.0d0
-  dist_zerov = sigma_obsv * SQRT(10.0d0/3.0d0) * 2.0d0
-  dlat_zero = dist_zero / pi / re * 180.0d0
-
-  ALLOCATE(dlon_zero(nij1))
-  do i=1,nij1
-    dlon_zero(i) = dlat_zero / COS(pi*lat1(i)/180.0d0)
-  enddo
 
   if (myrank == 0) then !Assuming all members have the identical obs records
     do islot=1,nslots
@@ -150,22 +117,20 @@ SUBROUTINE set_letkf_obs
   !-----------------------------------------------------------------------------
   ! INITIALIZE GLOBAL VARIABLES
   !-----------------------------------------------------------------------------
-  ALLOCATE( tmpelm(nobs) )
-  ALLOCATE( tmplon(nobs) )
-  ALLOCATE( tmplat(nobs) )
-  ALLOCATE( tmplev(nobs) )
-  ALLOCATE( tmpdat(nobs) )
-  ALLOCATE( tmperr(nobs) )
-  ALLOCATE( tmpk(nobs) )
-  ALLOCATE( tmpdep(nobs) )
-  ALLOCATE( tmphdxf(nobs,nbv) )
-  ALLOCATE( tmpqc0(nobs,nbv) )
-  ALLOCATE( tmpqc(nobs) )
-  ALLOCATE( tmpid(nobs) )   !(DRIFTERS)
-  ALLOCATE( tmptime(nobs) ) !(DRIFTERS)
-  tmpqc0 = 0
-  tmphdxf = 0.0d0
-  tmperr = 0.0d0
+  ALLOCATE( obselm(nobs) )
+  ALLOCATE( obslon(nobs) )
+  ALLOCATE( obslat(nobs) )
+  ALLOCATE( obslev(nobs) )
+  ALLOCATE( obsdat(nobs) )
+  ALLOCATE( obserr(nobs) )
+  ALLOCATE( obsdep(nobs) )
+  ALLOCATE( obshdxf(nobs,nbv) )
+  ALLOCATE( obsqc0(nobs,nbv) )
+  ALLOCATE( obsqc(nobs) )
+  ALLOCATE( obsid(nobs) )   !(DRIFTERS)
+  ALLOCATE( obstime(nobs) ) !(DRIFTERS)
+  obshdxf = 0.0d0
+  obserr = 0.0d0
 
   !-----------------------------------------------------------------------------
   ! LOOP of timeslots
@@ -180,11 +145,11 @@ SUBROUTINE set_letkf_obs
       WRITE(obsfile(4:8),'(I2.2,I3.3)') islot,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',obsfile
       CALL read_obs2(obsfile,nobslots(islot),&
-       & tmpelm(nn+1:nn+nobslots(islot)),tmplon(nn+1:nn+nobslots(islot)),&
-       & tmplat(nn+1:nn+nobslots(islot)),tmplev(nn+1:nn+nobslots(islot)),&
-       & tmpdat(nn+1:nn+nobslots(islot)),tmperr(nn+1:nn+nobslots(islot)),&
-       & tmphdxf(nn+1:nn+nobslots(islot),im),tmpqc0(nn+1:nn+nobslots(islot),im),&
-       & tmptime(nn+1:nn+nobslots(islot)) )
+       & obselm(nn+1:nn+nobslots(islot)),obslon(nn+1:nn+nobslots(islot)),&
+       & obslat(nn+1:nn+nobslots(islot)),obslev(nn+1:nn+nobslots(islot)),&
+       & obsdat(nn+1:nn+nobslots(islot)),obserr(nn+1:nn+nobslots(islot)),&
+       & obshdxf(nn+1:nn+nobslots(islot),im),obsqc0(nn+1:nn+nobslots(islot),im),&
+       & obstime(nn+1:nn+nobslots(islot)) )
       l = l+1
     enddo
     nn = nn + nobslots(islot)
@@ -194,66 +159,66 @@ SUBROUTINE set_letkf_obs
   !STEVE: broadcast the 1d arrays from root onto all procs
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   WRITE(6,*) "Calling MPI_BCAST's..."
-  CALL MPI_BCAST( tmpelm, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obselm, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
   !STEVE: just to be safe, calling MPI_BARRIER after each MPI_BCAST
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST( tmplon, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obslon, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST( tmplat, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obslat, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST( tmplev, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obslev, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST( tmpdat, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obsdat, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST( tmperr, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obserr, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
-  !STEVE: compile the tmphdxf array on all procs
+  !STEVE: compile the obshdxf array on all procs
   ALLOCATE(wk2d(nobs,nbv))
-  wk2d = tmphdxf
+  wk2d = obshdxf
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   WRITE(6,*) "Calling MPI_ALLREDUCE..."
-  CALL MPI_ALLREDUCE(wk2d,tmphdxf,nobs*nbv,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+  CALL MPI_ALLREDUCE(wk2d,obshdxf,nobs*nbv,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   DEALLOCATE(wk2d)
 
-  !STEVE: compile the tmpqc0 array on all procs
+  !STEVE: compile the obsqc0 array on all procs
   ALLOCATE(iwk2d(nobs,nbv))
-  iwk2d = tmpqc0
+  iwk2d = obsqc0
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   WRITE(6,*) "Calling MPI_ALLREDUCE..."
-  CALL MPI_ALLREDUCE(iwk2d,tmpqc0,nobs*nbv,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+  CALL MPI_ALLREDUCE(iwk2d,obsqc0,nobs*nbv,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   DEALLOCATE(iwk2d)
   WRITE(6,*) "Finished collecting obs on all procs."
 
   WRITE(6,*) "STEVE: DEBUGGING..."
   WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS, MYRANK = ',myrank
-  WRITE(6,*) "tmphdxf(1,:) = ", tmphdxf(1,:)
-  WRITE(6,*) "tmphdxf(2,:) = ", tmphdxf(2,:)
-  WRITE(6,*) "tmphdxf(3,:) = ", tmphdxf(3,:)
+  WRITE(6,*) "obshdxf(1,:) = ", obshdxf(1,:)
+  WRITE(6,*) "obshdxf(2,:) = ", obshdxf(2,:)
+  WRITE(6,*) "obshdxf(3,:) = ", obshdxf(3,:)
   WRITE(6,*) "..."
-  WRITE(6,*) "tmphdxf(nobs,:) = ", tmphdxf(nobs,:)
+  WRITE(6,*) "obshdxf(nobs,:) = ", obshdxf(nobs,:)
   WRITE(6,*)
   n=1
   WRITE(6,*) "For n=1,"
-  WRITE(6,*) "MINVAL(tmpqc0(n,:)) = ",MINVAL(tmpqc0(n,:))
-  WRITE(6,*) "tmpelm(n) = ", tmpelm(n) 
-  WRITE(6,*) "tmplon(n) = ", tmplon(n) 
-  WRITE(6,*) "tmplat(n) = ", tmplat(n) 
-  WRITE(6,*) "tmplev(n) = ", tmplev(n) 
-  WRITE(6,*) "tmpdat(n) = ", tmpdat(n) 
-  WRITE(6,*) "tmperr(n) = ", tmperr(n) 
+  WRITE(6,*) "MINVAL(obsqc0(n,:)) = ",MINVAL(obsqc0(n,:))
+  WRITE(6,*) "obselm(n) = ", obselm(n) 
+  WRITE(6,*) "obslon(n) = ", obslon(n) 
+  WRITE(6,*) "obslat(n) = ", obslat(n) 
+  WRITE(6,*) "obslev(n) = ", obslev(n) 
+  WRITE(6,*) "obsdat(n) = ", obsdat(n) 
+  WRITE(6,*) "obserr(n) = ", obserr(n) 
   WRITE(6,*)
   n=nobs
   WRITE(6,*) "For n=nobs=",nobs
-  WRITE(6,*) "MINVAL(tmpqc0(n,:)) = ",MINVAL(tmpqc0(n,:))
-  WRITE(6,*) "tmpelm(n) = ", tmpelm(n) 
-  WRITE(6,*) "tmplon(n) = ", tmplon(n) 
-  WRITE(6,*) "tmplat(n) = ", tmplat(n) 
-  WRITE(6,*) "tmplev(n) = ", tmplev(n) 
-  WRITE(6,*) "tmpdat(n) = ", tmpdat(n) 
-  WRITE(6,*) "tmperr(n) = ", tmperr(n) 
+  WRITE(6,*) "MINVAL(obsqc0(n,:)) = ",MINVAL(obsqc0(n,:))
+  WRITE(6,*) "obselm(n) = ", obselm(n) 
+  WRITE(6,*) "obslon(n) = ", obslon(n) 
+  WRITE(6,*) "obslat(n) = ", obslat(n) 
+  WRITE(6,*) "obslev(n) = ", obslev(n) 
+  WRITE(6,*) "obsdat(n) = ", obsdat(n) 
+  WRITE(6,*) "obserr(n) = ", obserr(n) 
   WRITE(6,*) "STEVE: END DEBUGGING."
   WRITE(6,*)
 
@@ -273,7 +238,7 @@ SUBROUTINE set_letkf_obs
   gross_cnt = 0
   gross_2x_cnt = 0
   
-  WRITE(6,*) "Processing tmphdxf for n=1 to n=nobs=",nobs 
+  WRITE(6,*) "Processing obshdxf for n=1 to n=nobs=",nobs 
   WRITE(6,*) "and filtering bad observations..."
 
 quality_control : if (.true.) then
@@ -281,42 +246,40 @@ quality_control : if (.true.) then
 
   do n=1,nobs
 
-    !Skip sst obs, since they are more prevalent
-    if (tmpelm(n) .eq. id_sst_obs) CYCLE
-
-    tmpqc(n) = MINVAL(tmpqc0(n,:))
-    if (tmpqc(n) /= 1) CYCLE
-    tmpdep(n) = tmphdxf(n,1) !note: tmpdep is just used as a dummy variable to compute the mean over the next few lines
+    obsqc(n) = MINVAL(obsqc0(n,:))
+    if (obsqc(n) /= 1) CYCLE
+    obsdep(n) = obshdxf(n,1) !note: obsdep is just used as a dummy variable to compute the mean over the next few lines
     do i=2,nbv
-      tmpdep(n) = tmpdep(n) + tmphdxf(n,i)
+      obsdep(n) = obsdep(n) + obshdxf(n,i)
     enddo
-    tmpdep(n) = tmpdep(n) / REAL(nbv,r_size)
+    obsdep(n) = obsdep(n) / REAL(nbv,r_size)
     do i=1,nbv
-      tmphdxf(n,i) = tmphdxf(n,i) - tmpdep(n) ! Hdxf (perturbations from mean)
+      obshdxf(n,i) = obshdxf(n,i) - obsdep(n) ! Hdxf (perturbations from mean)
     enddo
-    ! Now, tmpdep is defined appropriately as the obs departure from mean background
-    tmpdep(n) = tmpdat(n) - tmpdep(n) ! y-Hx
-    if (ABS(tmpdep(n)) > gross_error*tmperr(n)) then !gross error
-      tmpqc(n) = 0
+    ! Now, obsdep is defined appropriately as the obs departure from mean background
+    obsdep(n) = obsdat(n) - obsdep(n) ! y-Hx
+
+    !STEVE: Keep all SST obs
+    if ((id_sst_obs .ne. obselm(n)) .and. ABS(obsdep(n)) > gross_error*obserr(n)) then !gross error
+      obsqc(n) = 0
       gross_cnt = gross_cnt + 1
     endif
 
     !STEVE: as a check, count the number of each type of observation
-    if (tmpelm(n) .eq. id_u_obs) cnt_obs_u = cnt_obs_u + 1
-    if (tmpelm(n) .eq. id_v_obs) cnt_obs_v = cnt_obs_v + 1
-    if (tmpelm(n) .eq. id_t_obs) cnt_obs_t = cnt_obs_t + 1
-    if (tmpelm(n) .eq. id_s_obs) cnt_obs_s = cnt_obs_s + 1
-    if (tmpelm(n) .eq. id_ssh_obs) cnt_obs_ssh = cnt_obs_ssh + 1
-    if (tmpelm(n) .eq. id_eta_obs) cnt_obs_eta = cnt_obs_eta + 1
-    if (tmpelm(n) .eq. id_sst_obs) cnt_obs_sst = cnt_obs_sst + 1
-    if (tmpelm(n) .eq. id_sss_obs) cnt_obs_sss = cnt_obs_sss + 1
+    if (obselm(n) .eq. id_u_obs) cnt_obs_u = cnt_obs_u + 1
+    if (obselm(n) .eq. id_v_obs) cnt_obs_v = cnt_obs_v + 1
+    if (obselm(n) .eq. id_t_obs) cnt_obs_t = cnt_obs_t + 1
+    if (obselm(n) .eq. id_s_obs) cnt_obs_s = cnt_obs_s + 1
+    if (obselm(n) .eq. id_ssh_obs) cnt_obs_ssh = cnt_obs_ssh + 1
+    if (obselm(n) .eq. id_eta_obs) cnt_obs_eta = cnt_obs_eta + 1
+    if (obselm(n) .eq. id_sst_obs) cnt_obs_sst = cnt_obs_sst + 1
+    if (obselm(n) .eq. id_sss_obs) cnt_obs_sss = cnt_obs_sss + 1
     !(DRIFTERS)
-    if (tmpelm(n) .eq. id_x_obs) cnt_obs_x = cnt_obs_x + 1
-    if (tmpelm(n) .eq. id_y_obs) cnt_obs_y = cnt_obs_y + 1
-    if (tmpelm(n) .eq. id_z_obs) cnt_obs_z = cnt_obs_z + 1
+    if (obselm(n) .eq. id_x_obs) cnt_obs_x = cnt_obs_x + 1
+    if (obselm(n) .eq. id_y_obs) cnt_obs_y = cnt_obs_y + 1
+    if (obselm(n) .eq. id_z_obs) cnt_obs_z = cnt_obs_z + 1
 
   enddo
-  DEALLOCATE(tmpqc0)
 
 else
 
@@ -326,100 +289,98 @@ else
   do n=1,nobs
     !WRITE(6,*) "n = ", n
 
-    !Skip sst obs, since they are more prevalent
-    if (tmpelm(n) .eq. id_sst_obs) CYCLE
-
-    tmpqc(n) = MINVAL(tmpqc0(n,:))
-    if (tmpqc(n) /= 1) CYCLE
-    tmpdep(n) = tmphdxf(n,1)
+    obsqc(n) = MINVAL(obsqc0(n,:))
+    if (obsqc(n) /= 1) CYCLE
+    obsdep(n) = obshdxf(n,1)
     do i=2,nbv
-      tmpdep(n) = tmpdep(n) + tmphdxf(n,i)
+      obsdep(n) = obsdep(n) + obshdxf(n,i)
     enddo
-    tmpdep(n) = tmpdep(n) / REAL(nbv,r_size)
+    obsdep(n) = obsdep(n) / REAL(nbv,r_size)
 
     hdx2=0
     do i=1,nbv
-      tmphdxf(n,i) = tmphdxf(n,i) - tmpdep(n) ! Hdx
-      hdx2 = hdx2 + tmphdxf(n,i)**2 !STEVE: for std dev
+      obshdxf(n,i) = obshdxf(n,i) - obsdep(n) ! Hdx
+      hdx2 = hdx2 + obshdxf(n,i)**2 !STEVE: for std dev
       !STEVE: SUBTRACT THE MEAN
       !STEVE: make sure none are zero
-      if ( debug_hdxf_0 .AND. tmphdxf(n,i) == 0 ) then
+      if ( debug_hdxf_0 .AND. obshdxf(n,i) == 0 ) then
         WRITE(6,*) "================================================================="
-        WRITE(6,*) "letkf_obs.f90:: WARNING: tmphdxf(n,i) == 0"
+        WRITE(6,*) "letkf_obs.f90:: WARNING: obshdxf(n,i) == 0"
         WRITE(6,*) "n,nobs = ", n,nobs
         WRITE(6,*) "i,nbv = ", i,nbv
-        WRITE(6,*) "tmphdxf(n,i) = ", tmphdxf(n,i)
-        WRITE(6,*) "tmpdep(n) = ", tmpdep(n)
+        WRITE(6,*) "obshdxf(n,i) = ", obshdxf(n,i)
+        WRITE(6,*) "obsdep(n) = ", obsdep(n)
         WRITE(6,*) "hdx2 = ", hdx2
         WRITE(6,*) "This is later used as a divisor for adaptive inflation."
 !       WRITE(6,*) "EXITING... (STOP 10)"
-        WRITE(6,*) "tmphdxf(n,:) = ", tmphdxf(n,:)
+        WRITE(6,*) "obshdxf(n,:) = ", obshdxf(n,:)
 !       STOP(10)
         WRITE(6,*) "================================================================="
       endif
     enddo
     !STEVE: FORM THE DEPARTURE (OBS INNOVATION)
-    tmpdep(n) = tmpdat(n) - tmpdep(n) ! y-Hx
+    obsdep(n) = obsdat(n) - obsdep(n) ! y-Hx
 
     ! Use the max of obs and background error to test for compliance of ob
     hdx2 = hdx2 / REAL(nbv-1,r_size) !STEVE: for std dev
     hdx2 = SQRT(hdx2) !STEVE: std dev
-    mstd = MAX(tmperr(n),hdx2)
+    mstd = MAX(obserr(n),hdx2)
            !STEVE: This is so that if the ensemble spread collapses, then it
            !will still not throw out obs that are outside the spread. Otherwise,
            !the model should grow the spread greater than the obs error.
 
-    qc_obs : if (ABS(tmpdep(n)) > gross_error*mstd) then !gross error
-      !tmpqc(n) = 0
+    !STEVE: keep all SST obs
+    qc_obs : if ((id_sst_obs .ne. obselm(n)) .and. ABS(obsdep(n)) > gross_error*mstd) then !gross error
+      !obsqc(n) = 0
       !STEVE: changing this to gradual adjustment method
       ! Rather than removing the observation, increase the obs error so it 
       ! satisfies the QC condition...
       ! STEVE: new feature, 12/31/10
-      if (ABS(tmpdep(n)) > 2.0*gross_error*mstd) then
-        tmpqc(n) = 0
+      if (ABS(obsdep(n)) > 2.0*gross_error*mstd) then
+        obsqc(n) = 0
         gross_2x_cnt = gross_2x_cnt + 1
       else !STEVE: scale up the observational error
-        !tmperr(n) = ABS(tmpdep(n))-ABS(hdx2)
-        !tmperr(n) = ABS(tmpdep(n))/gross_error
+        !obserr(n) = ABS(obsdep(n))-ABS(hdx2)
+        !obserr(n) = ABS(obsdep(n))/gross_error
         !!STEVE: more agressive scaling
-        !tmperr(n) = (1 + ABS(tmpdep(n))/gross_error)**2 - 1.0 
+        !obserr(n) = (1 + ABS(obsdep(n))/gross_error)**2 - 1.0 
         ! 9/29/14: Scale up the obs error
-        tmperr(n) = tmperr(n) * ABS(tmpdep(n)) / (gross_error*mstd)
+        obserr(n) = obserr(n) * ABS(obsdep(n)) / (gross_error*mstd)
         !!STEVE:'just barely satisfying qc' scaling
         gross_cnt = gross_cnt + 1
       endif
         !STEVE: How does adaptive inflation interact with these points?
-    ENDIF qc_obs
+    endif qc_obs
 
     !STEVE: as a check, count the number of each type of observation
-    if (tmpelm(n) .eq. id_u_obs) cnt_obs_u = cnt_obs_u + 1
-    if (tmpelm(n) .eq. id_v_obs) cnt_obs_v = cnt_obs_v + 1
-    if (tmpelm(n) .eq. id_t_obs) cnt_obs_t = cnt_obs_t + 1
-    if (tmpelm(n) .eq. id_s_obs) cnt_obs_s = cnt_obs_s + 1
-    if (tmpelm(n) .eq. id_ssh_obs) cnt_obs_ssh = cnt_obs_ssh + 1
-    if (tmpelm(n) .eq. id_eta_obs) cnt_obs_eta = cnt_obs_eta + 1
-    if (tmpelm(n) .eq. id_sst_obs) cnt_obs_sst = cnt_obs_sst + 1
-    if (tmpelm(n) .eq. id_sss_obs) cnt_obs_sss = cnt_obs_sss + 1
+    if (obselm(n) .eq. id_u_obs) cnt_obs_u = cnt_obs_u + 1
+    if (obselm(n) .eq. id_v_obs) cnt_obs_v = cnt_obs_v + 1
+    if (obselm(n) .eq. id_t_obs) cnt_obs_t = cnt_obs_t + 1
+    if (obselm(n) .eq. id_s_obs) cnt_obs_s = cnt_obs_s + 1
+    if (obselm(n) .eq. id_ssh_obs) cnt_obs_ssh = cnt_obs_ssh + 1
+    if (obselm(n) .eq. id_eta_obs) cnt_obs_eta = cnt_obs_eta + 1
+    if (obselm(n) .eq. id_sst_obs) cnt_obs_sst = cnt_obs_sst + 1
+    if (obselm(n) .eq. id_sss_obs) cnt_obs_sss = cnt_obs_sss + 1
     !(DRIFTERS)
-    if (tmpelm(n) .eq. id_x_obs) cnt_obs_x = cnt_obs_x + 1
-    if (tmpelm(n) .eq. id_y_obs) cnt_obs_y = cnt_obs_y + 1
-    if (tmpelm(n) .eq. id_z_obs) cnt_obs_z = cnt_obs_z + 1
+    if (obselm(n) .eq. id_x_obs) cnt_obs_x = cnt_obs_x + 1
+    if (obselm(n) .eq. id_y_obs) cnt_obs_y = cnt_obs_y + 1
+    if (obselm(n) .eq. id_z_obs) cnt_obs_z = cnt_obs_z + 1
 
   enddo
-  DEALLOCATE(tmpqc0)
+  DEALLOCATE(obsqc0)
 
 endif quality_control
 
 !STEVE: this removed everything above 65S for some reason...?  
 ! N65cut : if (DO_REMOVE_65N) then
 !   do n=1,nobs
-!     if (tmplat(n) > 65.0) then
-!       tmpqc(n) = 0  
+!     if (obslat(n) > 65.0) then
+!       obsqc(n) = 0  
 !     endif
 !   enddo 
 ! endif N65cut
 
-  WRITE(6,'(I10,A)') SUM(tmpqc),' OBSERVATIONS TO BE ASSIMILATED'
+  WRITE(6,'(I10,A)') SUM(obsqc),' OBSERVATIONS TO BE ASSIMILATED'
   !STEVE:
   WRITE(6,*) "cnt_obs_u = ", cnt_obs_u
   WRITE(6,*) "cnt_obs_v = ", cnt_obs_v
@@ -435,16 +396,7 @@ endif quality_control
   WRITE(6,*) "gross_cnt = ", gross_cnt
   WRITE(6,*) "gross_2x_cnt = ", gross_2x_cnt
 
-! cnt_obs(iv3d_u) = cnt_obs_u
-! cnt_obs(iv3d_v) = cnt_obs_v
-! cnt_obs(iv3d_t) = cnt_obs_t
-! cnt_obs(iv3d_s) = cnt_obs_s
-! cnt_obs(nv3d+iv2d_ssh) = cnt_obs_ssh
-! cnt_obs(nv3d+iv2d_eta) = cnt_obs_eta
-! cnt_obs(nv3d+iv2d_sst) = cnt_obs_sst
-! cnt_obs(nv3d+iv2d_sss) = cnt_obs_sss
-
-  CALL monit_dep(nobs,tmpelm,tmpdep,tmpqc)
+  CALL monit_dep(nobs,obselm,obsdep,obsqc)
 
 !STEVE: maybe use this if there are enough observations...
 !
@@ -466,199 +418,34 @@ endif quality_control
 !  nn = 0
 !  do islot=1,nslots
 !    if ( islot .ne. nbslot ) then
-!      tmperr(nn+1:nn+nobslots(islot)) = tmperr(nn+1:nn+nobslots(islot)) &
+!      obserr(nn+1:nn+nobslots(islot)) = obserr(nn+1:nn+nobslots(islot)) &
 !                                      & * exp(0.25d0 * (REAL(islot-nbslot,r_size) / sigma_obst)**2)
 !    endif
 !    nn = nn + nobslots(islot)
 !  enddo
 
-!
-! SELECT OBS IN THE NODE
-!
+  !-----------------------------------------------------------------------------
+  ! SELECT OBS IN THE NODE
+  !-----------------------------------------------------------------------------
   nn = 0
-  !STEVE: first, remove all of the Quality-Controlled data
+  !STEVE: remove all of the Quality-Controlled data
   do n=1,nobs
-    if (tmpqc(n) /= 1) CYCLE
-!    if (tmplat(n) < MINVAL(lat1) .OR. MAXVAL(lat1) < tmplat(n)) then
-!      dlat = MIN( ABS(MINVAL(lat1)-tmplat(n)),ABS(MAXVAL(lat1)-tmplat(n)) )
-!      if (dlat > dlat_zero) CYCLE
-!    endif
-!    if (tmplon(n) < MINVAL(lon1) .OR. MAXVAL(lon1) < tmplon(n)) then
-!      dlon1 = ABS(MINVAL(lon1) - tmplon(n))
-!      dlon1 = MIN(dlon1,360.0d0-dlon1)
-!      dlon2 = ABS(MAXVAL(lon1) - tmplon(n))
-!      dlon2 = MIN(dlon2,360.0d0-dlon2)
-!      dlon =  MIN(dlon1,dlon2) &
-!         & * pi*re*COS(tmplat(n)*pi/180.d0)/180.0d0
-!      if (dlon > dist_zero) CYCLE
-!    endif
+    if (obsqc(n) /= 1) CYCLE
     nn = nn+1
-    tmpelm(nn) = tmpelm(n)
-    tmplon(nn) = tmplon(n)
-    tmplat(nn) = tmplat(n)
-    tmplev(nn) = tmplev(n)
-    tmpdat(nn) = tmpdat(n)
-    tmperr(nn) = tmperr(n)
-    tmpk(nn) = tmpk(n)
-    tmpdep(nn) = tmpdep(n)
-    tmphdxf(nn,:) = tmphdxf(n,:)
-    tmpqc(nn) = tmpqc(n)
-    tmpid(nn) = tmpid(n)     !(DRIFTERS)
-    tmptime(nn) = tmptime(n) !(DRIFTERS)
+    obselm(nn) = obselm(n)
+    obslon(nn) = obslon(n)
+    obslat(nn) = obslat(n)
+    obslev(nn) = obslev(n)
+    obsdat(nn) = obsdat(n)
+    obserr(nn) = obserr(n)
+    obsdep(nn) = obsdep(n)
+    obshdxf(nn,:) = obshdxf(n,:)
+    obsqc(nn) = obsqc(n)
+    obsid(nn) = obsid(n)     !(DRIFTERS)
+    obstime(nn) = obstime(n) !(DRIFTERS)
   enddo
   nobs = nn
   WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS TO BE ASSIMILATED IN MYRANK ',myrank
-
-!
-! SORT
-!
-  ALLOCATE( tmp2elm(nobs) )
-  ALLOCATE( tmp2lon(nobs) )
-  ALLOCATE( tmp2lat(nobs) )
-  ALLOCATE( tmp2lev(nobs) )
-  ALLOCATE( tmp2dat(nobs) )
-  ALLOCATE( tmp2err(nobs) )
-  ALLOCATE( tmp2dep(nobs) )
-  ALLOCATE( tmp2hdxf(nobs,nbv) )
-  ALLOCATE( tmp2id(nobs) )    !(DRIFTERS)
-  ALLOCATE( tmp2time(nobs) )  !(DRIFTERS)
-  ALLOCATE( obselm(nobs) )
-  ALLOCATE( obslon(nobs) )
-  ALLOCATE( obslat(nobs) )
-  ALLOCATE( obslev(nobs) )
-  ALLOCATE( obsdat(nobs) )
-  ALLOCATE( obserr(nobs) )
-  ALLOCATE( obsdep(nobs) )
-  ALLOCATE( obshdxf(nobs,nbv) )
-  ALLOCATE( obsid(nobs) )    !(DRIFTERS)
-  ALLOCATE( obstime(nobs) )  !(DRIFTERS)
-
-  ALLOCATE(nobsgrd(nlon,nlat)) !STEVE: added 07/09/15, changed nobsgrd to ALLOCATABLE
-  nobsgrd = 0
-  nj = 0
-  ! Count the number of observations within each latitude range
-  do j=1,nlat-1
-    do n=1,nobs
-      if (tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
-      nj(j) = nj(j) + 1
-    enddo
-  enddo
-  ! Record cumulative sum of observations up to this latitude
-  ! Creates the basis for an indexing of observations from lat to lat
-  do j=1,nlat-1
-    njs(j) = SUM(nj(0:j-1))
-  enddo
-
-  ! Rearrange observations by latitude
-  do j=1,nlat-1
-    nn = 0
-    do n=1,nobs
-      if (tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
-!     if (tmplon(n) >= lon(nlon)-EPSILON(1.0d0)) CYCLE   !STEVE: I added this to align with the same condition in the code above
-                                                        !       Otherwise, sometimes nn /= nj(j)
-      nn = nn + 1
-      tmp2elm(njs(j)+nn) = tmpelm(n)
-      tmp2lon(njs(j)+nn) = tmplon(n)
-      tmp2lat(njs(j)+nn) = tmplat(n)
-      tmp2lev(njs(j)+nn) = tmplev(n)
-      tmp2dat(njs(j)+nn) = tmpdat(n)
-      tmp2err(njs(j)+nn) = tmperr(n)
-!      tmp2k(njs(j)+nn) = tmpk(n)
-      tmp2dep(njs(j)+nn) = tmpdep(n)
-      tmp2hdxf(njs(j)+nn,:) = tmphdxf(n,:)
-      tmp2id(njs(j)+nn) = tmpid(n)     !(DRIFTERS)
-      tmp2time(njs(j)+nn) = tmptime(n) !(DRIFTERS)
-    enddo
-  enddo
-
-  ! For each latitude, identify the number of obs per longitude.
-  ! Then, rearrange observations by longitude within each latitude step
-  do j=1,nlat-1
-    if (nj(j) == 0) then
-      nobsgrd(:,j) = njs(j)
-      CYCLE
-    endif
-    nn = 0
-    do i=1,nlon
-      do n=njs(j)+1,njs(j)+nj(j)
-
-        ! Find the correct longitude bin for this observation...
-        if (i < nlon) then
-          if (tmp2lon(n) < lon(i) .OR. lon(i+1) <= tmp2lon(n)) CYCLE
-        else
-! STEVE: this is causing nn /= nj(j), the error thrown below.
-!        We need these points that are skipped, otherwise there are
-!        blank entries in the obselm etc. arrays, and this will
-!        lead to problems during the main letkf algorithm.
-!        Another solution may be to cut out all the empty entries
-!        by changing the obsxxx indicies.
-!
-          if (tmp2lon(n) < lon(nlon)) CYCLE
-
-          !STEVE: debugging
-          if (.false.) then
-            WRITE(6,*) "n, nn, njs(j), nj(j) = ", n, nn, njs(j), nj(j)
-            WRITE(6,*) "KEEPING, i == nlon == ", i, nlon
-            WRITE(6,*) "tmp2lon(n) = ", tmp2lon(n)
-            WRITE(6,*) "lon(nlon) = ", lon(nlon)
-            !WRITE(6,*) "either tmp2lon(n) >= lon(nlon) .OR. 360.0d0 > tmp2lon(n)"
-            WRITE(6,*) "tmp2lon(n) >= lon(nlon)"
-            WRITE(6,*) "========================================================"
-          ENDIF
-        endif
-        nn = nn + 1
-        obselm(njs(j)+nn) = tmp2elm(n)
-        obslon(njs(j)+nn) = tmp2lon(n)
-        obslat(njs(j)+nn) = tmp2lat(n)
-        obslev(njs(j)+nn) = tmp2lev(n)
-        obsdat(njs(j)+nn) = tmp2dat(n)
-        obserr(njs(j)+nn) = tmp2err(n)
-        obsdep(njs(j)+nn) = tmp2dep(n)
-        obshdxf(njs(j)+nn,:) = tmp2hdxf(n,:)
-        obsid(njs(j)+nn) = tmp2id(n)     !(DRIFTERS)
-        obstime(njs(j)+nn) = tmp2time(n) !(DRIFTERS)
-      enddo
-      
-      ! This now contains the accumulated count of obs up to this lat, up to this lon
-      nobsgrd(i,j) = njs(j) + nn
-    enddo
-
-    if (nn /= nj(j)) then
-      WRITE(6,'(A,2I)') 'OBS DATA SORT ERROR: ',nn,nj(j)
-      WRITE(6,'(F6.2,A,F6.2)') lat(j),'<= LAT <',lat(j+1)
-      WRITE(6,'(F6.2,A,F6.2)') MINVAL(tmp2lat(njs(j)+1:njs(j)+nj(j))),'<= OBSLAT <',MAXVAL(tmp2lat(njs(j)+1:njs(j)+nj(j)))
-      WRITE(6,*) "j = ", j
-      WRITE(6,*) "njs(j) = ", njs(j)
-      WRITE(6,*) "nj(j) = ", nj(j)
-      !STEVE: this is bad, something is wrong
-      WRITE(6,*) "STEVE: this error will cause matrix eigenvalue < 0 error."
-      STOP 3
-    endif
-
-  enddo
-
-  DEALLOCATE( tmp2elm )
-  DEALLOCATE( tmp2lon )
-  DEALLOCATE( tmp2lat )
-  DEALLOCATE( tmp2lev )
-  DEALLOCATE( tmp2dat )
-  DEALLOCATE( tmp2err )
-  DEALLOCATE( tmp2dep )
-  DEALLOCATE( tmp2hdxf )
-  DEALLOCATE( tmp2id )    !(DRIFTERS)
-  DEALLOCATE( tmp2time )  !(DRIFTERS)
-  DEALLOCATE( tmpelm )
-  DEALLOCATE( tmplon )
-  DEALLOCATE( tmplat )
-  DEALLOCATE( tmplev )
-  DEALLOCATE( tmpdat )
-  DEALLOCATE( tmperr )
-  DEALLOCATE( tmpk )
-  DEALLOCATE( tmpdep )
-  DEALLOCATE( tmphdxf )
-  DEALLOCATE( tmpqc )
-  DEALLOCATE( tmpid )     !(DRIFTERS)
-  DEALLOCATE( tmptime )   !(DRIFTERS)
 
 END SUBROUTINE set_letkf_obs
 

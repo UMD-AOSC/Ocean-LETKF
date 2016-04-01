@@ -251,6 +251,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         else
           !STEVE: need to change localization for obs below mlev - added to input arguments (3/25/2016)
           CALL obs_local(ij,ilev,mlev,var_local(n,:),hdxf,rdiag,rloc,dep,nobsl,nobstotal)
+          if (dodebug) WRITE(6,*) "letkf_tools.f90::post-obs_local:: Assimilating ", nobsl, " observations."
 
           parm = work3d(ij,ilev,n)
 
@@ -268,6 +269,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
           endif
           !STEVE: end
+
+          !STEVE: debug
+          if ( MINVAL(rdiag(1:nobsl)) .le. 0.0 ) then
+            WRITE(6,*) "common_letkf.f90:: ERROR: rdiag <=0 (i.e. there is an obserr <= 0)"
+            WRITE(6,*) "nbv = ", nbv
+            WRITE(6,*) "MINVAL(rdiag) = ",MINVAL(rdiag)
+            STOP(1)
+          endif
 
           !-------------------------------------------------------------------------
           ! Call LETKF MAIN subroutine
