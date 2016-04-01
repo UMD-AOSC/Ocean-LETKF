@@ -78,6 +78,9 @@ PROGRAM obsop_sst
   REAL(r_size) :: ri,rj,rk
   INTEGER :: n, i,j,k
   REAL(r_size), DIMENSION(1) :: rand
+  
+  LOGICAL :: remap_obs_coords = .true.
+
   INTEGER :: bdyobs=2                 !STEVE: use of boundary obs.
                                       !       1 := less restrictive, remove obs inside boundary
                                       !       2 := remove all observations touching a boundary
@@ -110,6 +113,7 @@ PROGRAM obsop_sst
   INTEGER, DIMENSION(nlon,nlat) :: supercnt
   INTEGER :: idx
   INTEGER :: cnt_obs_thinning = 0
+  REAL(r_size) :: min_oerr = 1.0 !ÂC !ÂC
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_mom4 module, and process command line options
@@ -151,27 +155,12 @@ PROGRAM obsop_sst
     print *, "oerr(1:40) = ", oerr(1:40)
   endif
 
-
   !-----------------------------------------------------------------------------
   ! Update the coordinate to match the model grid
   !-----------------------------------------------------------------------------
-  do i=1,nobs
-    if (abs(rlon(i) - lonf) < wrapgap ) then
-      ! First, handle observations that are just outside of the model grid
-      !STEVE: shift it if it's just outside grid
-      if (abs(rlon(i) - lonf) < wrapgap/2) then
-        rlon(i) = lonf
-      else
-        rlon(i) = lon0
-      endif
-      ! Increase error to compensate
-      oerr(i) = oerr(i)*2
-    else
-      ! Otherwise, wrap the observation coordinate to be inside of the defined model grid coordinates
-      !Wrap the coordinate
-      rlon(i) = REAL(lon0 + abs(rlon(i) - lonf) - wrapgap,r_size)
-    endif
-  enddo
+  if (remap_obs_coords) then
+    CALL center_obs_coords(rlon,oerr,nobs)
+  endif
 
   !-----------------------------------------------------------------------------
   ! Bin the obs and estimate the obs error based on bin standard deviations
@@ -208,7 +197,7 @@ PROGRAM obsop_sst
           idx = idx+1
           if (dodebug1) print *, "idx = ", idx
           odat(idx) = superobs(i,j)
-          oerr(idx) = 1.0d0 + SQRT(M2(i,j))
+          oerr(idx) = min_oerr + SQRT(M2(i,j))
           rlon(idx) = (lon(i+1)-lon(i))/2.0d0
           rlat(idx) = (lat(j+1)-lat(j))/2.0d0
           rlev(idx) = 0

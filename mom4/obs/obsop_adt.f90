@@ -42,6 +42,7 @@ PROGRAM obsop_adt
   USE vars_obs
   USE common_obs_mom4
   USE params_letkf,              ONLY: DO_ALTIMETRY, DO_ADT
+  USE read_aviso_adt,            ONLY: read_aviso_adt_nc, obs_data
 
   IMPLICIT NONE
 
@@ -65,11 +66,13 @@ PROGRAM obsop_adt
   REAL(r_size), ALLOCATABLE :: v2d(:,:,:)
   REAL(r_size) :: dk,tg,qg
   REAL(r_size) :: ri,rj,rk
-  INTEGER :: n
+  INTEGER :: i,j,k,n
 
   REAL(r_size) :: obserr_scaling=1.0d0 !STEVE: use this to scale the input observations
   REAL(r_size) :: obs_randselect=1.0d0 !STEVE: use this to select random input observations
   REAL(r_size), DIMENSION(1) :: rand
+
+  LOGICAL :: remap_obs_coords = .true.
 
   !-----------------------------------------------------------------------------
   ! Debugging parameters
@@ -84,7 +87,8 @@ PROGRAM obsop_adt
                                       ! surface temp data from the model (v3d(:,:,1)).
   !STEVE: to adjust writing to output file
   LOGICAL :: verbose = .false.
-! LOGICAL :: dodebug = .false.
+  LOGICAL :: dodebug1 = .false.
+  LOGICAL :: print1st = .true.
 
   INTEGER :: cnt_obs_u=0, cnt_obs_v=0, cnt_obs_t=0, cnt_obs_s=0
   INTEGER :: cnt_obs_ssh=0, cnt_obs_sst=0, cnt_obs_sss=0, cnt_obs_eta=0
@@ -107,6 +111,18 @@ PROGRAM obsop_adt
                                   !NOTE: while the 'cnt_' naming convention used above
                                   !      is applied for counting removed observations,
                                   !      the cnt_adt variable counts kept observations.
+  INTEGER :: typ = id_eta_obs
+  LOGICAL :: DO_SUPEROBS = .false.
+  REAL(r_size), DIMENSION(nlon,nlat) :: superobs, delta, M2 ! for online computation of the mean and variance
+  INTEGER, DIMENSION(nlon,nlat) :: supercnt
+  INTEGER :: idx
+  INTEGER :: cnt_obs_thinning = 0
+  INTEGER :: days_since ! 1-1-1950
+                        ! For input from command line, use linux gnu date: 
+                        ! day0=`date '+%s' -d $Y0-$M0-$D0`
+                        ! day1=`date '+%s' -d $YYYY-$MM-$DD`
+                        ! days_since=$(( ( $day1 - $day0 ) / ( 86400 ) ))
+  REAL(r_size) :: min_oerr = 0.01
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_mom4 module, and process command line options
@@ -117,7 +133,7 @@ PROGRAM obsop_adt
   !-----------------------------------------------------------------------------
   ! Read observations from file
   !-----------------------------------------------------------------------------
-  CALL get_nobs(obsinfile,6,nobs)
+  CALL read_aviso_adt_nc(obsinfile,days_since,obs_data,nobs)
   ALLOCATE( elem(nobs) )
   ALLOCATE( rlon(nobs) )
   ALLOCATE( rlat(nobs) )
@@ -127,13 +143,84 @@ PROGRAM obsop_adt
   ALLOCATE( ohx(nobs) )
   ALLOCATE( oqc(nobs) )
   ALLOCATE( obhr(nobs) )
-  if (obs2nrec==8) then
-    CALL read_obs(trim(obsinfile),nobs,elem,rlon,rlat,rlev,odat,oerr)
-  elseif (obs2nrec==9) then
-    CALL read_obs(trim(obsinfile),nobs,elem,rlon,rlat,rlev,odat,oerr,obhr)
-  else
-    WRITE(6,*) "obsop.f90:: no read_obs option for obs2nrec = ", obs2nrec
-    STOP 95
+
+  print *, "obsop_adt.f90:: starting nobs = ", nobs
+  do i=1,nobs
+    elem(i) = obs_data(i)%typ
+    rlon(i) = obs_data(i)%x_grd(1)
+    rlat(i) = obs_data(i)%x_grd(2)
+    rlev(i) = 0
+    odat(i) = obs_data(i)%value
+    oerr(i) = obs_data(i)%oerr
+    ohx(i)  = 0
+    oqc(i)  = 0
+    obhr(i) = obs_data(i)%hour
+  enddo
+  DEALLOCATE(obs_data)
+
+  if (print1st) then
+    print *, "elem(1),rlon(1),rlat(1),obhr(1) = ", elem(1),rlon(1),rlat(1),obhr(1)
+    print *, "odat(1:40) = ", odat(1:40)
+    print *, "oerr(1:40) = ", oerr(1:40)
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! Update the coordinate to match the model grid
+  !-----------------------------------------------------------------------------
+  if (remap_obs_coords) then
+    CALL center_obs_coords(rlon,oerr,nobs)
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! Bin the obs and estimate the obs error based on bin standard deviations
+  !-----------------------------------------------------------------------------
+  if (DO_SUPEROBS) then
+    print *, "Computing superobs..."
+    supercnt = 0
+    superobs = 0.0d0
+    do n=1,nobs ! for each ob,
+!     if (dodebug1) print *, "n = ", n
+      ! Scan the longitudes
+      do i=1,nlon-1
+        if (lon(i+1) > rlon(n)) exit
+      enddo
+      ! Scan the latitudes
+      do j=1,nlat-1
+        if (lat(j+1) > rlat(n)) exit
+      enddo
+
+      supercnt(i,j) = supercnt(i,j) + 1
+      delta(i,j) = odat(n) - superobs(i,j)
+      superobs(i,j) = superobs(i,j) + delta(i,j)/supercnt(i,j)
+      M2(i,j) = M2(i,j) + delta(i,j)*(odat(n) - superobs(i,j))
+!     if (dodebug1) print *, "supercnt(",i,",",j,") = ", supercnt(i,j)
+    enddo
+    !"superobs" contains the mean
+    !M2 contains the variance:
+    WHERE(supercnt > 1) M2 = M2 / (supercnt - 1)
+
+    idx=0
+    do j=1,nlat-1
+      do i=1,nlon-1
+        if (supercnt(i,j) > 1) then
+          idx = idx+1
+          if (dodebug1) print *, "idx = ", idx
+          odat(idx) = superobs(i,j)
+          oerr(idx) = min_oerr + SQRT(M2(i,j))
+          rlon(idx) = (lon(i+1)-lon(i))/2.0d0
+          rlat(idx) = (lat(j+1)-lat(j))/2.0d0
+          rlev(idx) = 0
+          elem(idx) = id_sst_obs
+          if (dodebug1) print *, "odat(idx) = ", odat(idx)
+          if (dodebug1) print *, "oerr(idx) = ", oerr(idx)
+          if (dodebug1) print *, "ocnt(idx) = ", supercnt(i,j)
+        endif
+      enddo
+    enddo
+    print *, "DO_SUPEROBS:: superobs reducing from ",nobs," to ",idx, " observations."
+    print *, "with min obs error = ", MINVAL(oerr(1:idx))
+    print *, "with max obs error = ", MAXVAL(oerr(1:idx))
+    nobs = idx
   endif
 
   !-----------------------------------------------------------------------------
@@ -158,6 +245,17 @@ PROGRAM obsop_adt
   ohx=0.0d0
   oqc=0
   DO n=1,nobs
+    ! Thin observations
+    ! Select random subset of observations to speed up processing
+    !STEVE: I know this would be more efficient up above when obs are first introduced.
+    thin : if (obs_randselect < 1.0d0) then
+      CALL com_rand(1,rand)
+      if (rand(1) > obs_randselect) then
+        cnt_obs_thinning = cnt_obs_thinning + 1
+        CYCLE
+      endif
+    endif thin
+
     !---------------------------------------------------------------------------
     ! Count bad obs errors associated with observations, and skip the ob
     !---------------------------------------------------------------------------
@@ -311,7 +409,7 @@ PROGRAM obsop_adt
       cnt_adt=cnt_adt+1
     end if
     
-    if (dodebug .and. DO_ALTIMETRY .and. elem(n) .eq. id_eta_obs) then
+    if (dodebug .and. elem(n) .eq. id_eta_obs) then
       WRITE(6,*) "post-Trans_XtoY:: id_eta_obs, ohx(n) = ", ohx(n)
     endif
     oqc(n) = 1
@@ -380,22 +478,26 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       obsoutfile = arg2
-    case('-aoerin')
+    case('-superob')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-      aoerinfile = arg2
-    case('-aoerout')
+      read (arg2,*) DO_SUPEROBS
+    case('-thin')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-      aoeroutfile = arg2
-    case('-alt')
+      read (arg2,*) obs_randselect
+    case('-day')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-      read (arg2,*) DO_ALTIMETRY
+      read (arg2,*) days_since !1-1-1950
     case('-rm65N')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) DO_REMOVE_65N
+    case('-debug')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) dodebug1
     case default
       PRINT *, "ERROR: option is not supported: ", arg1
       PRINT *, "(with value : ", trim(arg2), " )"

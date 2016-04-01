@@ -1,0 +1,452 @@
+MODULE letkf_obs
+!===============================================================================
+! MODULE: letkf_obs
+! 
+! USES:
+!   use common
+!   use common_mpi
+!   use common_mom4
+!   use common_obs_mom4
+!   use common_mpi_mom4
+!   use common_letkf
+!   use letkf_drifters !(DRIFTERS)
+!
+! !PUBLIC TYPES:
+!                 implicit none
+!                 [save]
+!
+!                 <type declaration>
+!     
+! !PUBLIC MEMBER FUNCTIONS:
+!           <function>                     ! Description      
+!
+! !PUBLIC DATA MEMBERS:
+!           <type> :: <variable>           ! Variable description
+!
+! DESCRIPTION: 
+!   This module reads all observation data and stores in appropriate data structures
+!
+! !REVISION HISTORY:
+!   04/26/2011 Steve PENNY converted to OCEAN for use with MOM4
+!   01/23/2009 Takemasa MIYOSHI  created
+! 
+!-------------------------------------------------------------------------------
+! $Author: Steve Penny $
+!===============================================================================
+  USE common
+  USE common_mpi
+  USE common_mom4
+  USE common_obs_mom4
+  USE common_mpi_mom4
+  USE common_letkf
+  USE params_letkf, ONLY: sigma_obs, sigma_obsv, sigma_obs0, gross_error, nslots, nbv
+  USE params_obs
+  USE vars_obs
+
+  IMPLICIT NONE
+  PUBLIC
+
+  !--
+  !STEVE: for adaptive obs error:
+  LOGICAL :: oerfile_exists
+
+  !-----------------------------------------------------------------------------
+  ! For debugging
+  !-----------------------------------------------------------------------------
+  LOGICAL :: debug_hdxf_0 = .true.   !This error occured because there was not a model representation of the observed value (i.e. SST obs with no SST model field)
+                                     ! Solution was to populate a SST model field (v2d) with surface temp data from the model (v3d(:,:,1))
+  INTEGER :: cnt_obs_u, cnt_obs_v, cnt_obs_t, cnt_obs_s, cnt_obs_x, cnt_obs_y, cnt_obs_z, cnt_obs_ssh, cnt_obs_eta, cnt_obs_sst, cnt_obs_sss
+! INTEGER, DIMENSION(nv3d+nv2d), SAVE :: cnt_obs = 0
+  !STEVE: for debugging observation culling:
+  INTEGER :: cnt_yout=0, cnt_xout=0, cnt_zout=0, cnt_triout=0
+  INTEGER :: cnt_rigtnlon=0, cnt_nearland=0
+
+CONTAINS
+
+SUBROUTINE set_letkf_obs
+!===============================================================================
+! Initialize the module
+!===============================================================================
+  IMPLICIT NONE
+  REAL(r_size) :: dz,tg,qg
+  REAL(r_size) :: ri,rj,rk
+  REAL(r_size) :: dlon1,dlon2,dlon,dlat
+  REAL(r_size),ALLOCATABLE :: wk2d(:,:)
+  INTEGER,ALLOCATABLE :: iwk2d(:,:)
+  INTEGER :: nobslots(nslots)
+  INTEGER :: n,i,j,ierr,islot,nn,l,im
+  INTEGER :: nj(0:nlat-1)
+  INTEGER :: njs(1:nlat-1)
+  CHARACTER(12) :: obsfile='obsTTNNN.dat'
+
+  !STEVE: for adaptive observation error:
+  REAL(r_size) :: tmpoerr 
+  !STEVE: to adjust writing to output file
+  LOGICAL :: verbose = .false.
+  LOGICAL :: dodebug = .true.
+  !STEVE: for obs qc:
+  REAL(r_size) :: hdx2,mstd
+  INTEGER :: gross_cnt,gross_2x_cnt
+  !STEVE: for DO_ALTIMETRY
+  REAL(r_size) :: SSH_CLM_m 
+
+  WRITE(6,'(A)') 'Hello from set_letkf_obs'
+
+
+  if (myrank == 0) then !Assuming all members have the identical obs records
+    do islot=1,nslots
+      im = myrank+1
+      WRITE(obsfile(4:8),'(I2.2,I3.3)') islot,im
+      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading an obs2-formatted file ',obsfile
+      CALL get_nobs(obsfile,obs2nrec,nobslots(islot))
+    enddo
+  endif
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(nobslots,nslots,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+  nobs = SUM(nobslots)
+  WRITE(6,'(I10,A)') nobs,' TOTAL OBSERVATIONS INPUT'
+
+  if (nobs == 0) then
+    WRITE(6,'(A)') 'No observation assimilated'
+    RETURN
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! INITIALIZE GLOBAL VARIABLES
+  !-----------------------------------------------------------------------------
+  ALLOCATE( obselm(nobs) )
+  ALLOCATE( obslon(nobs) )
+  ALLOCATE( obslat(nobs) )
+  ALLOCATE( obslev(nobs) )
+  ALLOCATE( obsdat(nobs) )
+  ALLOCATE( obserr(nobs) )
+  ALLOCATE( obsdep(nobs) )
+  ALLOCATE( obshdxf(nobs,nbv) )
+  ALLOCATE( obsqc0(nobs,nbv) )
+  ALLOCATE( obsqc(nobs) )
+  ALLOCATE( obsid(nobs) )   !(DRIFTERS)
+  ALLOCATE( obstime(nobs) ) !(DRIFTERS)
+  obshdxf = 0.0d0
+  obserr = 0.0d0
+
+  !-----------------------------------------------------------------------------
+  ! LOOP of timeslots
+  !-----------------------------------------------------------------------------
+  nn=0
+  timeslots0: do islot=1,nslots
+    if (nobslots(islot) == 0) CYCLE
+    l=0
+    do
+      im = myrank+1 + nprocs * l
+      if (im > nbv) EXIT
+      WRITE(obsfile(4:8),'(I2.2,I3.3)') islot,im
+      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',obsfile
+      CALL read_obs2(obsfile,nobslots(islot),&
+       & obselm(nn+1:nn+nobslots(islot)),obslon(nn+1:nn+nobslots(islot)),&
+       & obslat(nn+1:nn+nobslots(islot)),obslev(nn+1:nn+nobslots(islot)),&
+       & obsdat(nn+1:nn+nobslots(islot)),obserr(nn+1:nn+nobslots(islot)),&
+       & obshdxf(nn+1:nn+nobslots(islot),im),obsqc0(nn+1:nn+nobslots(islot),im),&
+       & obstime(nn+1:nn+nobslots(islot)) )
+      l = l+1
+    enddo
+    nn = nn + nobslots(islot)
+  enddo timeslots0
+
+  WRITE(6,*) "Commencing collecting obs on all procs..."
+  !STEVE: broadcast the 1d arrays from root onto all procs
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  WRITE(6,*) "Calling MPI_BCAST's..."
+  CALL MPI_BCAST( obselm, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  !STEVE: just to be safe, calling MPI_BARRIER after each MPI_BCAST
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obslon, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obslat, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obslev, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obsdat, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST( obserr, nobs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,ierr)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+  !STEVE: compile the obshdxf array on all procs
+  ALLOCATE(wk2d(nobs,nbv))
+  wk2d = obshdxf
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  WRITE(6,*) "Calling MPI_ALLREDUCE..."
+  CALL MPI_ALLREDUCE(wk2d,obshdxf,nobs*nbv,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  DEALLOCATE(wk2d)
+
+  !STEVE: compile the obsqc0 array on all procs
+  ALLOCATE(iwk2d(nobs,nbv))
+  iwk2d = obsqc0
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  WRITE(6,*) "Calling MPI_ALLREDUCE..."
+  CALL MPI_ALLREDUCE(iwk2d,obsqc0,nobs*nbv,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  DEALLOCATE(iwk2d)
+  WRITE(6,*) "Finished collecting obs on all procs."
+
+  WRITE(6,*) "STEVE: DEBUGGING..."
+  WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS, MYRANK = ',myrank
+  WRITE(6,*) "obshdxf(1,:) = ", obshdxf(1,:)
+  WRITE(6,*) "obshdxf(2,:) = ", obshdxf(2,:)
+  WRITE(6,*) "obshdxf(3,:) = ", obshdxf(3,:)
+  WRITE(6,*) "..."
+  WRITE(6,*) "obshdxf(nobs,:) = ", obshdxf(nobs,:)
+  WRITE(6,*)
+  n=1
+  WRITE(6,*) "For n=1,"
+  WRITE(6,*) "MINVAL(obsqc0(n,:)) = ",MINVAL(obsqc0(n,:))
+  WRITE(6,*) "obselm(n) = ", obselm(n) 
+  WRITE(6,*) "obslon(n) = ", obslon(n) 
+  WRITE(6,*) "obslat(n) = ", obslat(n) 
+  WRITE(6,*) "obslev(n) = ", obslev(n) 
+  WRITE(6,*) "obsdat(n) = ", obsdat(n) 
+  WRITE(6,*) "obserr(n) = ", obserr(n) 
+  WRITE(6,*)
+  n=nobs
+  WRITE(6,*) "For n=nobs=",nobs
+  WRITE(6,*) "MINVAL(obsqc0(n,:)) = ",MINVAL(obsqc0(n,:))
+  WRITE(6,*) "obselm(n) = ", obselm(n) 
+  WRITE(6,*) "obslon(n) = ", obslon(n) 
+  WRITE(6,*) "obslat(n) = ", obslat(n) 
+  WRITE(6,*) "obslev(n) = ", obslev(n) 
+  WRITE(6,*) "obsdat(n) = ", obsdat(n) 
+  WRITE(6,*) "obserr(n) = ", obserr(n) 
+  WRITE(6,*) "STEVE: END DEBUGGING."
+  WRITE(6,*)
+
+  !STEVE: After processing ensemble members, apply some actions based on
+  !forecast mean, to all observations
+  cnt_obs_u = 0
+  cnt_obs_v = 0
+  cnt_obs_t = 0
+  cnt_obs_s = 0
+  cnt_obs_x = 0
+  cnt_obs_y = 0
+  cnt_obs_z = 0
+  cnt_obs_ssh = 0
+  cnt_obs_eta = 0
+  cnt_obs_sst = 0
+  cnt_obs_sss = 0
+  gross_cnt = 0
+  gross_2x_cnt = 0
+  
+  WRITE(6,*) "Processing obshdxf for n=1 to n=nobs=",nobs 
+  WRITE(6,*) "and filtering bad observations..."
+
+quality_control : if (.true.) then
+  !STEVE: this is the original version
+
+  do n=1,nobs
+
+    obsqc(n) = MINVAL(obsqc0(n,:))
+    if (obsqc(n) /= 1) CYCLE
+    obsdep(n) = obshdxf(n,1) !note: obsdep is just used as a dummy variable to compute the mean over the next few lines
+    do i=2,nbv
+      obsdep(n) = obsdep(n) + obshdxf(n,i)
+    enddo
+    obsdep(n) = obsdep(n) / REAL(nbv,r_size)
+    do i=1,nbv
+      obshdxf(n,i) = obshdxf(n,i) - obsdep(n) ! Hdxf (perturbations from mean)
+    enddo
+    ! Now, obsdep is defined appropriately as the obs departure from mean background
+    obsdep(n) = obsdat(n) - obsdep(n) ! y-Hx
+
+    !STEVE: Keep all SST obs
+    if ((id_sst_obs .ne. obselm(n)) .and. ABS(obsdep(n)) > gross_error*obserr(n)) then !gross error
+      obsqc(n) = 0
+      gross_cnt = gross_cnt + 1
+    endif
+
+    !STEVE: as a check, count the number of each type of observation
+    if (obselm(n) .eq. id_u_obs) cnt_obs_u = cnt_obs_u + 1
+    if (obselm(n) .eq. id_v_obs) cnt_obs_v = cnt_obs_v + 1
+    if (obselm(n) .eq. id_t_obs) cnt_obs_t = cnt_obs_t + 1
+    if (obselm(n) .eq. id_s_obs) cnt_obs_s = cnt_obs_s + 1
+    if (obselm(n) .eq. id_ssh_obs) cnt_obs_ssh = cnt_obs_ssh + 1
+    if (obselm(n) .eq. id_eta_obs) cnt_obs_eta = cnt_obs_eta + 1
+    if (obselm(n) .eq. id_sst_obs) cnt_obs_sst = cnt_obs_sst + 1
+    if (obselm(n) .eq. id_sss_obs) cnt_obs_sss = cnt_obs_sss + 1
+    !(DRIFTERS)
+    if (obselm(n) .eq. id_x_obs) cnt_obs_x = cnt_obs_x + 1
+    if (obselm(n) .eq. id_y_obs) cnt_obs_y = cnt_obs_y + 1
+    if (obselm(n) .eq. id_z_obs) cnt_obs_z = cnt_obs_z + 1
+
+  enddo
+
+else
+
+  !STEVE: this is the augmented version I created to do 
+  !       something more sophisticated based on ensemble spread
+
+  do n=1,nobs
+    !WRITE(6,*) "n = ", n
+
+    obsqc(n) = MINVAL(obsqc0(n,:))
+    if (obsqc(n) /= 1) CYCLE
+    obsdep(n) = obshdxf(n,1)
+    do i=2,nbv
+      obsdep(n) = obsdep(n) + obshdxf(n,i)
+    enddo
+    obsdep(n) = obsdep(n) / REAL(nbv,r_size)
+
+    hdx2=0
+    do i=1,nbv
+      obshdxf(n,i) = obshdxf(n,i) - obsdep(n) ! Hdx
+      hdx2 = hdx2 + obshdxf(n,i)**2 !STEVE: for std dev
+      !STEVE: SUBTRACT THE MEAN
+      !STEVE: make sure none are zero
+      if ( debug_hdxf_0 .AND. obshdxf(n,i) == 0 ) then
+        WRITE(6,*) "================================================================="
+        WRITE(6,*) "letkf_obs.f90:: WARNING: obshdxf(n,i) == 0"
+        WRITE(6,*) "n,nobs = ", n,nobs
+        WRITE(6,*) "i,nbv = ", i,nbv
+        WRITE(6,*) "obshdxf(n,i) = ", obshdxf(n,i)
+        WRITE(6,*) "obsdep(n) = ", obsdep(n)
+        WRITE(6,*) "hdx2 = ", hdx2
+        WRITE(6,*) "This is later used as a divisor for adaptive inflation."
+!       WRITE(6,*) "EXITING... (STOP 10)"
+        WRITE(6,*) "obshdxf(n,:) = ", obshdxf(n,:)
+!       STOP(10)
+        WRITE(6,*) "================================================================="
+      endif
+    enddo
+    !STEVE: FORM THE DEPARTURE (OBS INNOVATION)
+    obsdep(n) = obsdat(n) - obsdep(n) ! y-Hx
+
+    ! Use the max of obs and background error to test for compliance of ob
+    hdx2 = hdx2 / REAL(nbv-1,r_size) !STEVE: for std dev
+    hdx2 = SQRT(hdx2) !STEVE: std dev
+    mstd = MAX(obserr(n),hdx2)
+           !STEVE: This is so that if the ensemble spread collapses, then it
+           !will still not throw out obs that are outside the spread. Otherwise,
+           !the model should grow the spread greater than the obs error.
+
+    !STEVE: keep all SST obs
+    qc_obs : if ((id_sst_obs .ne. obselm(n)) .and. ABS(obsdep(n)) > gross_error*mstd) then !gross error
+      !obsqc(n) = 0
+      !STEVE: changing this to gradual adjustment method
+      ! Rather than removing the observation, increase the obs error so it 
+      ! satisfies the QC condition...
+      ! STEVE: new feature, 12/31/10
+      if (ABS(obsdep(n)) > 2.0*gross_error*mstd) then
+        obsqc(n) = 0
+        gross_2x_cnt = gross_2x_cnt + 1
+      else !STEVE: scale up the observational error
+        !obserr(n) = ABS(obsdep(n))-ABS(hdx2)
+        !obserr(n) = ABS(obsdep(n))/gross_error
+        !!STEVE: more agressive scaling
+        !obserr(n) = (1 + ABS(obsdep(n))/gross_error)**2 - 1.0 
+        ! 9/29/14: Scale up the obs error
+        obserr(n) = obserr(n) * ABS(obsdep(n)) / (gross_error*mstd)
+        !!STEVE:'just barely satisfying qc' scaling
+        gross_cnt = gross_cnt + 1
+      endif
+        !STEVE: How does adaptive inflation interact with these points?
+    endif qc_obs
+
+    !STEVE: as a check, count the number of each type of observation
+    if (obselm(n) .eq. id_u_obs) cnt_obs_u = cnt_obs_u + 1
+    if (obselm(n) .eq. id_v_obs) cnt_obs_v = cnt_obs_v + 1
+    if (obselm(n) .eq. id_t_obs) cnt_obs_t = cnt_obs_t + 1
+    if (obselm(n) .eq. id_s_obs) cnt_obs_s = cnt_obs_s + 1
+    if (obselm(n) .eq. id_ssh_obs) cnt_obs_ssh = cnt_obs_ssh + 1
+    if (obselm(n) .eq. id_eta_obs) cnt_obs_eta = cnt_obs_eta + 1
+    if (obselm(n) .eq. id_sst_obs) cnt_obs_sst = cnt_obs_sst + 1
+    if (obselm(n) .eq. id_sss_obs) cnt_obs_sss = cnt_obs_sss + 1
+    !(DRIFTERS)
+    if (obselm(n) .eq. id_x_obs) cnt_obs_x = cnt_obs_x + 1
+    if (obselm(n) .eq. id_y_obs) cnt_obs_y = cnt_obs_y + 1
+    if (obselm(n) .eq. id_z_obs) cnt_obs_z = cnt_obs_z + 1
+
+  enddo
+  DEALLOCATE(obsqc0)
+
+endif quality_control
+
+!STEVE: this removed everything above 65S for some reason...?  
+! N65cut : if (DO_REMOVE_65N) then
+!   do n=1,nobs
+!     if (obslat(n) > 65.0) then
+!       obsqc(n) = 0  
+!     endif
+!   enddo 
+! endif N65cut
+
+  WRITE(6,'(I10,A)') SUM(obsqc),' OBSERVATIONS TO BE ASSIMILATED'
+  !STEVE:
+  WRITE(6,*) "cnt_obs_u = ", cnt_obs_u
+  WRITE(6,*) "cnt_obs_v = ", cnt_obs_v
+  WRITE(6,*) "cnt_obs_t = ", cnt_obs_t
+  WRITE(6,*) "cnt_obs_s = ", cnt_obs_s
+  WRITE(6,*) "cnt_obs_x = ", cnt_obs_x
+  WRITE(6,*) "cnt_obs_y = ", cnt_obs_y
+  WRITE(6,*) "cnt_obs_z = ", cnt_obs_z
+  WRITE(6,*) "cnt_obs_ssh = ", cnt_obs_ssh
+  WRITE(6,*) "cnt_obs_eta = ", cnt_obs_eta
+  WRITE(6,*) "cnt_obs_sst = ", cnt_obs_sst
+  WRITE(6,*) "cnt_obs_sss = ", cnt_obs_sss
+  WRITE(6,*) "gross_cnt = ", gross_cnt
+  WRITE(6,*) "gross_2x_cnt = ", gross_2x_cnt
+
+  CALL monit_dep(nobs,obselm,obsdep,obsqc)
+
+!STEVE: maybe use this if there are enough observations...
+!
+! temporal observation localization
+!
+! If nbslot == 5, multiplier is approximately
+! At islot = 1, ~ 1.04
+!          = 2, ~ 1.02
+!          = 3, ~ 1.01
+!          = 4, ~ 1.0025
+!          = 5, ~ 1.0
+!
+! STEVE: watch out if using this for adaptive observation error, this scaling
+! may cause problems if applied here...
+! STEVE: commenting out because the observations are not having enough of an
+! impact. It may be due to the increased error on the observations.
+! PLUS, the temporal correlation scales are much longer than 5 days, so we can just ignore this
+
+!  nn = 0
+!  do islot=1,nslots
+!    if ( islot .ne. nbslot ) then
+!      obserr(nn+1:nn+nobslots(islot)) = obserr(nn+1:nn+nobslots(islot)) &
+!                                      & * exp(0.25d0 * (REAL(islot-nbslot,r_size) / sigma_obst)**2)
+!    endif
+!    nn = nn + nobslots(islot)
+!  enddo
+
+  !-----------------------------------------------------------------------------
+  ! SELECT OBS IN THE NODE
+  !-----------------------------------------------------------------------------
+  nn = 0
+  !STEVE: remove all of the Quality-Controlled data
+  do n=1,nobs
+    if (obsqc(n) /= 1) CYCLE
+    nn = nn+1
+    obselm(nn) = obselm(n)
+    obslon(nn) = obslon(n)
+    obslat(nn) = obslat(n)
+    obslev(nn) = obslev(n)
+    obsdat(nn) = obsdat(n)
+    obserr(nn) = obserr(n)
+    obsdep(nn) = obsdep(n)
+    obshdxf(nn,:) = obshdxf(n,:)
+    obsqc(nn) = obsqc(n)
+    obsid(nn) = obsid(n)     !(DRIFTERS)
+    obstime(nn) = obstime(n) !(DRIFTERS)
+  enddo
+  nobs = nn
+  WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS TO BE ASSIMILATED IN MYRANK ',myrank
+
+END SUBROUTINE set_letkf_obs
+
+END MODULE letkf_obs
