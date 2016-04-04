@@ -19,7 +19,8 @@ MODULE gsw_pot_to_insitu
 
 IMPLICIT NONE
 
-PUBLIC :: t_from_pt, p_from_z
+PUBLIC :: t_from_pt, p_from_z    ! Computing in situ from potential temperature
+PUBLIC :: sa_from_sp, pt_from_t  ! Computing potential temperature from in situ
 
 PRIVATE
 
@@ -32,6 +33,8 @@ FUNCTION t_from_pt(pt_in,sp_in,p_in,lon_in,lat_in)
 !===============================================================================
   USE common, ONLY: r_size
 ! USE gsw_oceanographic_toolbox, ONLY: gsw_sa_from_sp, gsw_ct_from_pt, gsw_t_from_ct !, r14
+  !STEVE: The toolbox is not coded as a module, so this will not work.
+  !       I'll leave it unaltered as a list of functions in order to facilitate forward compatibility.
 
   IMPLICIT NONE
   REAL(r14) :: gsw_sa_from_sp, gsw_ct_from_pt, gsw_t_from_ct
@@ -93,5 +96,49 @@ PURE FUNCTION p_from_z(dpth,xlat)
   p_from_z=((1-c1)-sqrt(((1-c1)**2)-(8.84e-6*dpth)))/4.42e-6
 
 END FUNCTION p_from_z
+
+!===============================================================================
+FUNCTION sa_from_sp(sp,p,long,lat)
+!===============================================================================
+
+! Calculates Absolute Salinity, SA, from Practical Salinity, SP
+!
+! sp     : Practical Salinity                              [unitless]
+! p      : sea pressure                                    [dbar]
+! long   : longitude                                       [DEG E]     
+! lat    : latitude                                        [DEG N]
+!
+! gsw_sa_from_sp   : Absolute Salinity                     [g/kg]
+
+IMPLICIT NONE
+REAL (r14) :: sa_from_sp
+REAL (r14), INTENT(IN) :: sp, long, lat, p
+REAL (r14) :: gsw_sa_from_sp
+
+sa_from_sp = gsw_sa_from_sp(sp,p,long,lat)
+
+END FUNCTION sa_from_sp
+
+!===============================================================================
+FUNCTION pt_from_t(sa,t,p,p_ref)
+!===============================================================================
+
+! Calculates potential temperature of seawater from in-situ temperature 
+!
+! sa     : Absolute Salinity                               [g/kg]
+! t      : in-situ temperature                             [deg C]
+! p      : sea pressure                                    [dbar]
+! p_ref  : reference sea pressure                          [dbar]
+!
+! gsw_pt_from_t : potential temperature                    [deg C]
+
+IMPLICIT NONE
+REAL (r14) :: pt_from_t
+REAL (r14), INTENT(IN) :: sa, t, p, p_ref
+REAL (r14) :: gsw_pt_from_t
+
+pt_from_t = gsw_pt_from_t(sa,t,p,p_ref)
+
+END FUNCTION pt_from_t
 
 END MODULE gsw_pot_to_insitu

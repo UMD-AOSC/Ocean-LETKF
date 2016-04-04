@@ -40,7 +40,7 @@ INTEGER :: obs2nrec = 9                     ! The number of records in the obs2-
 LOGICAL :: DO_REMOVE_65N = .false.
 !STEVE: I made this a command line adjustable argument in obsop.f90 :: -rm65N .true.
 
-LOGICAL, PARAMETER :: DO_POTTEMP_to_INSITU = .true.  ! Conversion to observation space. This is needed if the
+LOGICAL            :: DO_POTTEMP_to_INSITU = .true.  ! Conversion to observation space. This is needed if the
                                                      ! observations aren't converted to potential temperature
                                                      ! (as is done by most - NCEP, SODA, NASA/GMAO, etc.). But
                                                      ! unlike that approach, this does not require synthetic salinity
@@ -51,7 +51,7 @@ LOGICAL, PARAMETER :: DO_POTTEMP_to_INSITU = .true.  ! Conversion to observation
                                                      !
                                                      ! Only one can be true, this one takes prioirty
                                                      !
-LOGICAL, PARAMETER :: DO_INSITU_to_POTTEMP = .false. ! Technically, this would require matching an observed salinity
+LOGICAL            :: DO_INSITU_to_POTTEMP = .false. ! Technically, this would require matching an observed salinity
                                                      ! measurement with each observed in situ temperature measurement
                                                      ! and using it to compute the potential temperature. The opposite
                                                      ! process is quite a bit easier.

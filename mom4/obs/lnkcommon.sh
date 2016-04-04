@@ -21,9 +21,10 @@ ln -fs ../letkf/vars_model.f90 ./
 ln -fs ../letkf/letkf_obs.f90 ./
 ln -fs ../letkf/letkf_local.f90 ./
 ln -fs ../letkf/letkf_tools.f90 ./
+ln -fs ../letkf/vars_obs.f90 ./
 
-ln -fs ../letkf_drifters/letkf_drifters_local.f90 ./
-ln -fs ../letkf_drifters/letkf_drifters_tools.f90 ./
+#ln -fs ../letkf_drifters/letkf_drifters_local.f90 ./
+#ln -fs ../letkf_drifters/letkf_drifters_tools.f90 ./
 
 ln -fs gsw_fortran_v3_03/gsw_oceanographic_toolbox.f90 ./
 ln -fs gsw_fortran_v3_03/gsw_data_v3_0.dat ./

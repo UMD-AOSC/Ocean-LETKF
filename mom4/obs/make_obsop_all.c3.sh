@@ -1,8 +1,11 @@
 #!/bin/sh
 set -exv
 
-# sh make_obsop.sh $MEM
-source ../../config/machine.sh
+source $MODULESHOME/init/sh
+module use /sw/eslogin-c3/modulefiles
+
+#source ../../config/machine.sh
+MACHINE="GAEA3"
 source ../../config/$MACHINE.fortran.sh
 source ../../config/$MACHINE.netcdf.sh
 
@@ -11,17 +14,8 @@ sh lnkcommon.sh
 rm -f *.mod
 rm -f *.o
 
-# Ensemble size
-# STEVE: figure out how to read from params_letkf.f90 and put here (e.g. with awk/perl/etc.)
-#        -> grep and sed seem to work ok:
-#        (Set the ensemble size in params_letkf.f90, it will read it in here)
-MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1/'`
-echo "MEM=$MEM"
-MEM3=`printf %.3d ${MEM}`
-
 name=TESTc3
 PGM=obsop.$name
-#F90OPT='-ftz -ip -ipo -O2 -parallel -i_dynamic -what -fpp -fno-alias -stack_temps -safe_cray_ptr -fast'
 
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90

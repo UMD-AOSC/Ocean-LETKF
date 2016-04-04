@@ -41,12 +41,13 @@ PROGRAM obsop_tprof
   USE params_obs,                ONLY: DO_INSITU_to_POTTEMP, DO_POTTEMP_to_INSITU
   USE vars_obs
   USE common_obs_mom4
-  USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z
+  USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z, sa_from_sp, pt_from_t
   USE read_argo,                 ONLY: obs_data, read_argo_nc
 
   IMPLICIT NONE
 
   CHARACTER(slen) :: obsinfile='obsin.nc'     !IN (default)
+  CHARACTER(slen) :: obsinfile2='obsin2.nc'     !IN (default)
   CHARACTER(slen) :: guesfile='gues'          !IN (default) i.e. prefix to '.ocean_temp_salt.res.nc'
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
   
@@ -65,11 +66,19 @@ PROGRAM obsop_tprof
   REAL(r_size) :: ri,rj,rk
   INTEGER :: i,j,k,n
 
+  ! For climatological salinity:
+  REAL(r_size), ALLOCATABLE :: selm(:)
+  REAL(r_size), ALLOCATABLE :: slon(:)
+  REAL(r_size), ALLOCATABLE :: slat(:)
+  REAL(r_size), ALLOCATABLE :: slev(:)
+  REAL(r_size), ALLOCATABLE :: sdat(:)
+
+  ! For observation error modification:
   REAL(r_size) :: obserr_scaling=1.0d0 !STEVE: use this to scale the input observations
   REAL(r_size) :: obs_randselect=1.0d0 !STEVE: use this to select random input observations
   REAL(r_size), DIMENSION(1) :: rand
 
-  LOGICAL :: remap_obs_coords = .true.
+  LOGICAL :: remap_obs_coords = .true.  ! Remap to mom4p1's -280 to 80 longitude range
 
   !-----------------------------------------------------------------------------
   ! Debugging parameters
@@ -101,6 +110,9 @@ PROGRAM obsop_tprof
   !-----------------------------------------------------------------------------
   ! For potential temperature conversion to in situ:
   REAL(r_size) :: p,pt,sp
+  ! For in situ temperature conversion to potential temperature:
+  REAL(r_size) :: sa,t,p_ref
+  INTEGER :: nobs_s ! number of salinity obs (should match number of temperature obs)
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_mom4 module, and process command line options
@@ -141,6 +153,43 @@ PROGRAM obsop_tprof
   endif
 
   DEALLOCATE(obs_data)
+
+  if (DO_INSITU_to_POTTEMP) then ! Need to read in climatological salinity to compute potential temperature
+
+    CALL read_argo_nc(obsinfile2,id_s_obs,obs_data,nobs_s)
+
+    if (nobs .ne. nobs_s) then
+      print *, "ERROR: if using merged observed/synthetic salinity for conversion to potential temperature,"
+      print *, "       then the provided salinity data must correspond one-to-one with the temperature data."
+      print *, "nobs_t = ", nobs
+      print *, "nobs_s = ", nobs_s
+      print *, "EXITING..."
+      STOP(52)
+    endif
+
+    ALLOCATE( selm(nobs) )
+    ALLOCATE( slon(nobs) )
+    ALLOCATE( slat(nobs) )
+    ALLOCATE( slev(nobs) )
+    ALLOCATE( sdat(nobs) )
+
+    print *, "obsop_sprof.f90:: starting nobs = ", nobs_s
+    do i=1,nobs_s
+      selm(i) = obs_data(i)%typ
+      slon(i) = obs_data(i)%x_grd(1)
+      slat(i) = obs_data(i)%x_grd(2)
+      slev(i) = obs_data(i)%x_grd(3)
+      sdat(i) = obs_data(i)%value
+    enddo
+    if (print1st) then
+      print *, "elem(1),rlon(1),rlat(1),obhr(1) = ", elem(1),rlon(1),rlat(1),obhr(1)
+      print *, "odat(1:40) = ", odat(1:40)
+      print *, "oerr(1:40) = ", oerr(1:40)
+    endif
+
+    DEALLOCATE(obs_data)
+
+  endif
 
   !-----------------------------------------------------------------------------
   ! Update the coordinate to match the model grid
@@ -330,16 +379,52 @@ PROGRAM obsop_tprof
       !       http://www.argo.ucsd.edu/Argo_date_guide.html#gtsusers
       ohx(n) = t_from_pt(pt,sp,p,rlon(n),rlat(n))
 
-      if (dodebug1 .AND. n<=40) then
+      if (dodebug1 .AND. n<=40 .OR. (abs(ohx(n)-pt) > oerr(n)*5.0)) then
         print *, "======================================"
         print *, "n = ", n
         print *, "pt,sp,p,rlon(n),rlat(n) = ", pt,sp,p,rlon(n),rlat(n)
-        print *, "ohx(n) = ", ohx(n)
+        print *, "ohx(n)  = ", ohx(n)
+        print *, "odat(n) = ", odat(n)
+        print *, "odep(n) = ", odat(n) - ohx(n)
+        print *, "tdep    = ", ohx(n) - pt
         print *, "======================================"
       endif
 
     elseif (DO_INSITU_to_POTTEMP) then  
-      STOP "obsop_tprof.f90::post-Trans_XtoY::  DO_INSITU_to_POTTEMP case must be coded."
+!     STOP "obsop_tprof.f90::post-Trans_XtoY::  DO_INSITU_to_POTTEMP case must be coded."
+
+      ! First, we will need to read in some climatological salinity value at this point:
+      ! (or merged argo plus climatological salinity)
+      sp = sdat(n)
+
+      !STEVE: eventually use pressure from model output,
+      !       for now, use computation:
+      p = p_from_z(rlev(n),rlat(n))
+
+      ! Convert practical salinity units to absolute salinity:
+      sa = sa_from_sp(sp,p,rlon(n),rlat(n))
+
+      ! We are converting the observation data, not the modeled state value:
+      t = odat(n)
+
+      ! specify reference pressure:
+      !p_ref = 10.0d0 ! 10 decibars -> 1000 millibars (hPa)
+      p_ref = 100d0 ! db (used in gsw checks)
+
+      ! Convert in situ temperature to potential temperature:
+      odat(n) = pt_from_t(sa,t,p,p_ref)
+
+      if (dodebug1 .AND. n<=40 .OR. (abs(odat(n)-t) > oerr(n)*5.0)) then
+        print *, "======================================"
+        print *, "n = ", n
+        print *, "t,sp,p,rlon(n),rlat(n) = ", t,sp,p,rlon(n),rlat(n)
+        print *, "ohx(n)  = ", ohx(n)
+        print *, "odat(n) = ", odat(n)
+        print *, "odep(n) = ", odat(n) - ohx(n)
+        print *, "tdep    = ", odat(n) - t
+        print *, "======================================"
+      endif
+
     endif
 
     oqc(n) = 1
@@ -364,6 +449,9 @@ PROGRAM obsop_tprof
   CALL write_obs2(obsoutfile,nobs,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
 
   DEALLOCATE( elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,v3d,v2d )
+  if (DO_INSITU_to_POTTEMP) then
+    DEALLOCATE(selm,slon,slat,slev,sdat)
+  endif
 
 CONTAINS
 
@@ -389,6 +477,10 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       obsinfile = arg2
+    case('-obsin2')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      obsinfile2 = arg2
     case('-gues')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
@@ -405,6 +497,16 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) dodebug1
+    case('-i2p')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) DO_INSITU_to_POTTEMP
+      if (DO_INSITU_to_POTTEMP) DO_POTTEMP_to_INSITU = .false.
+    case('-p2i')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) DO_POTTEMP_to_INSITU
+      if (DO_POTTEMP_to_INSITU) DO_INSITU_to_POTTEMP = .false.
     case default
       PRINT *, "ERROR: option is not supported: ", arg1
       PRINT *, "(with value : ", trim(arg2), " )"
