@@ -7,6 +7,11 @@ IMPLICIT NONE
 PUBLIC
 
 !-------------------------------------------------------------------------------
+! Ensemble Size
+!-------------------------------------------------------------------------------
+INTEGER :: nbv=56
+
+!-------------------------------------------------------------------------------
 ! Details for LETKF localization and quality control
 !-------------------------------------------------------------------------------
 !STEVE: making these namelist accessible:
@@ -19,12 +24,6 @@ REAL(r_size),SAVE :: sigma_obst=5.0d0     ! Not using this at the moment
 REAL(r_size),SAVE :: gross_error=3.0d0    ! number of standard deviations
 ! REAL(r_size),PARAMETER :: gross_error=10.0d0 !3.0d0 ! number of standard deviations   (Use for OSSEs)
                                                       ! used to filter out observations
-
-!-------------------------------------------------------------------------------
-! Ensemble Size
-!-------------------------------------------------------------------------------
-INTEGER,PARAMETER :: nbv=56
-
 
 !-------------------------------------------------------------------------------
 ! From letkf_local.f90

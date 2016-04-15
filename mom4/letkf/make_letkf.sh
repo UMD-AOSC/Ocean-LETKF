@@ -10,15 +10,17 @@ source ../../config/$MACHINE.mpi.sh
 # STEVE: figure out how to read from params_letkf.f90 and put here (e.g. with awk/perl/etc.)
 #        -> grep and sed seem to work ok:
 #        (Set the ensemble size in params_letkf.f90, it will read it in here)
-MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1/'`
-echo "MEM=$MEM"
-MEM3=`printf %.3d ${MEM}`
+#MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1/'`
+#MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER :: nbv=([0-9]+)/\1/'`
+#echo "MEM=$MEM"
+#MEM3=`printf %.3d ${MEM}`
 
 # Experiment name
-name=TEST5
-#name=EXP_M2O
+#name=TEST5
+#name=TEST5_dyn
+name=EXP_M2O
 # Executable for letkf
-PGM=letkf.$name.$MEM3
+PGM=letkf.$name.x
 
 OMP=
 PWD=`pwd`
@@ -38,6 +40,11 @@ else
   LBLAS=""
 fi
 
+F90_FPP='-fpp' # Fortran preprocessor
+# If dynamic model grid specification is desired (e.g. via input.nml namelist):
+#FPP_FLAG='-DDYNAMIC'
+FPP_FLAG=""
+
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG common.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_mpi.f90
@@ -45,8 +52,8 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG common_mtx.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG netlib2.f
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG params_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_letkf.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG params_model.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_model.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $FPP_FLAG $F90_OBJECT_FLAG params_model.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $FPP_FLAG $F90_OBJECT_FLAG vars_model.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_mom4.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG params_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_obs.f90
@@ -57,8 +64,9 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG kdtree.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.o letkf_tools.f90
-#$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_drifters_tools.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $FPP_FLAG $F90_OBJECT_FLAG letkf.f90
+
+# Generate executable:
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE -o ${PGM} *.o $MPI_LIB $NETCDF_LIB $LBLAS
 
 #STEVE: keep a record of the build:
@@ -70,6 +78,5 @@ rm -f *.o
 rm -f netlib2.f
 sh ulnkcommon.sh
 
-echo "STEVE: min temp is set to -4 ºC and max salt is set to 50.0 psu incommon_mom4:: write_grd4"
 echo "STEVE: don't forget - in phys2ijk, obs above model level 1 are set to model level 1"
 echo "NORMAL END"

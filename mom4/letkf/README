@@ -11,3 +11,14 @@ The code has been reogranized to put static PARAMETERS and namelist controllable
 in params_XYZ.f90 files, while SAVE variables and other reused variables are in vars_XYZ.f90 files.  
 
 Notably, the ensemble size 'nbv' has been placed in the params_letkf.f90 file.  
+nbv is now adjustable via namelist file input.nml
+
+I am currently transitioning from Gaea to "Gaea3". There is some duplication due to that change.
+
+# Dynamic versus static arrays:
+vars_model.f90 and params_model.f90 can either be linked from the "".static version or the "".dynamic version.
+On Gaea, the dynamic version takes about 50% longer than the static. However, the dynamic version
+allows one to specify the model dimension at runtime and was desired by some users.
+
+The hit going from static to dynamic for the ensemble size was only a few seconds, so for now we're
+keeping the dynamic version for that parameter so that ensemble size can be specified at runtime.

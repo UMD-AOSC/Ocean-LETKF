@@ -10,14 +10,14 @@ source ../../config/$MACHINE.mpi.sh
 # STEVE: figure out how to read from params_letkf.f90 and put here (e.g. with awk/perl/etc.)
 #        -> grep and sed seem to work ok:
 #        (Set the ensemble size in params_letkf.f90, it will read it in here)
-MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1/'`
-echo "MEM=$MEM"
-MEM3=`printf %.3d ${MEM}`
+#MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1/'`
+#echo "MEM=$MEM"
+#MEM3=`printf %.3d ${MEM}`
 
 # Experiment name
 name=TESTc3
 # Executable for letkf
-PGM=letkf.$name.$MEM3
+PGM=letkf.$name.x
 
 OMP=
 PWD=`pwd`
@@ -37,6 +37,8 @@ else
   LBLAS=""
 fi
 
+F90_FPP='-fpp' # Fortran preprocessor
+
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG common.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_mpi.f90
@@ -44,8 +46,8 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG common_mtx.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG netlib2.f
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG params_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_letkf.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG params_model.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_model.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG params_model.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG vars_model.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_mom4.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG params_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_obs.f90
@@ -53,10 +55,11 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_obs_mom4.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG $NETCDF_INC common_mpi_mom4.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_letkf.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG kdtree.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.o letkf_tools.f90
 #$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_drifters_tools.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE -o ${PGM} *.o $MPI_LIB $NETCDF_LIB $LBLAS
 
 #STEVE: keep a record of the build:

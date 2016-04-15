@@ -43,12 +43,9 @@ PROGRAM letkf
   USE params_obs
 
   IMPLICIT NONE
-  REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
-  REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
-  REAL(r_size),ALLOCATABLE :: gues4d(:,:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: anal4d(:,:,:,:,:)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:)     :: gues2d, anal2d
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:,:)   :: gues3d, anal3d
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:,:,:) :: gues4d, anal4d
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(9) :: stdoutf='NOUT-0000'
@@ -61,10 +58,16 @@ PROGRAM letkf
   LOGICAL :: dodebug0=.false.  ! Debug flag for various routines
 
   NAMELIST /params_model_nml/ gridfile, &  ! MOM4 grid_spec.nc file 
+!#ifdef DYNAMIC
+!                              nlon, &      ! number of longitude grid points (Can be specified via namelist or in netcdf gridfile)
+!                              nlat, &      ! number of latitude grid points
+!                              nlev, &      ! number of model levels
+!#endif
                               SSHclm_file  ! model ssh climatology for altimetry assimilation
   NAMELIST /params_obs_nml/   obs1nrec, &  ! number of records in obs.dat type file
                               obs2nrec     ! number of records in obs2.dat type file
-  NAMELIST /params_letkf_nml/ nslots, &              ! Number of time slots for 4D assimilation
+  NAMELIST /params_letkf_nml/ nbv, &                 ! Number of ensemble members
+                              nslots, &              ! Number of time slots for 4D assimilation
                               nbslot, &              ! Index of base timeslot (time at which to form analysis)
                               sigma_obs, &           ! Sigma-radius (half-width) for horizontal localization at the equator (m)
                               sigma_obs0, &          ! Sigma-radius for horizontal localization at the poles (m)
@@ -78,6 +81,8 @@ PROGRAM letkf
                               DO_NO_VERT_LOC, &      ! logical flag to skip all vertical localization and project weights (default)
                               DO_MLD, &              ! logical flag to use 2-layer vertical localization: (1) SFC and mixed layer, (2) below mixed layer
                               DO_REMOVE_65N, &       ! option to remove points above 65ÂN in letkf instead of in observation operators
+                              DO_QC_MEANDEP, &       ! option to quality control observations based on mean departure
+                              DO_QC_MAXDEP, &        ! option to quality control observation based on maximum departure across ensemble members
                               localization_method, & ! localization method to be used in letkf_local.f90
                               cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
                               sp_infl_add            ! additive inflation factor (default none)
@@ -87,6 +92,8 @@ PROGRAM letkf
 !------------------------------------------------------------------------------
   CALL CPU_TIME(rtimer00)
   CALL initialize_mpi
+  CALL initialize_params_model
+  CALL initialize_vars_model
 
   WRITE(stdoutf(6:9), '(I4.4)') myrank
   WRITE(6,'(3A,I4.4)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank

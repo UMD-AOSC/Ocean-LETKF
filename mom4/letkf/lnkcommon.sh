@@ -9,6 +9,7 @@ ln -fs $COMMONDIR/common_mtx.f90 ./
 ln -fs $COMMONDIR/common_letkf.f90 ./
 ln -fs $COMMONDIR/netlib.f ./
 ln -fs $COMMONDIR/netlibblas.f ./
+ln -fs $COMMONDIR/kdtree.f90 ./
 
 ln -fs ../common/common_mom4.f90 ./
 ln -fs ../common/common_mpi_mom4.f90 ./

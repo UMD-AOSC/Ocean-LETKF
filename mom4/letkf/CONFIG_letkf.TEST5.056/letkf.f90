@@ -43,12 +43,9 @@ PROGRAM letkf
   USE params_obs
 
   IMPLICIT NONE
-  REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
-  REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
-  REAL(r_size),ALLOCATABLE :: gues4d(:,:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: anal4d(:,:,:,:,:)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:)     :: gues2d, anal2d
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:,:)   :: gues3d, anal3d
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:,:,:) :: gues4d, anal4d
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(9) :: stdoutf='NOUT-0000'
@@ -64,7 +61,8 @@ PROGRAM letkf
                               SSHclm_file  ! model ssh climatology for altimetry assimilation
   NAMELIST /params_obs_nml/   obs1nrec, &  ! number of records in obs.dat type file
                               obs2nrec     ! number of records in obs2.dat type file
-  NAMELIST /params_letkf_nml/ nslots, &              ! Number of time slots for 4D assimilation
+  NAMELIST /params_letkf_nml/ nbv, &                 ! Number of ensemble members
+                              nslots, &              ! Number of time slots for 4D assimilation
                               nbslot, &              ! Index of base timeslot (time at which to form analysis)
                               sigma_obs, &           ! Sigma-radius (half-width) for horizontal localization at the equator (m)
                               sigma_obs0, &          ! Sigma-radius for horizontal localization at the poles (m)
