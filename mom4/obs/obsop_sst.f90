@@ -10,7 +10,6 @@ PROGRAM obsop_sst
 !  use params_obs
 !  use vars_obs
 !  use common_obs_mom4
-!  use params_letkf,     ONLY: DO_ALTIMETRY, DO_SLA, DO_ADT, DO_DRIFTERS
 !
 !
 ! DESCRIPTION: 
@@ -435,10 +434,6 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       obsoutfile = arg2
-    case('-alt')
-      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-      read (arg2,*) DO_ALTIMETRY
     case('-rm65N')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)

@@ -94,6 +94,8 @@ PROGRAM obsop_tprof
   !-----------------------------------------------------------------------------
   ! Instantiations specific to this observation type:
   !-----------------------------------------------------------------------------
+  LOGICAL :: DO_REMOVE_BLACKSEA=.true.
+  INTEGER :: cnt_blacksea=0
   !(none)
 
   !-----------------------------------------------------------------------------
@@ -180,6 +182,17 @@ PROGRAM obsop_tprof
       if (verbose) WRITE(6,'(A)') "Latitude above 65.0N, in tripolar region. Removing observation..."
       cnt_triout = cnt_triout + 1
       CYCLE
+    endif
+
+    !---------------------------------------------------------------------------
+    ! Filter out observations in the black sea, which may cause problems
+    !---------------------------------------------------------------------------
+    if (DO_REMOVE_BLACKSEA) then
+      if (40 < rlat(n) .and. rlat(n) < 50 .and. &
+          25 < rlon(n) .and. rlon(n) < 45) then
+        cnt_blacksea = cnt_blacksea + 1
+        CYCLE
+      endif
     endif
 
     !---------------------------------------------------------------------------
@@ -321,6 +334,7 @@ PROGRAM obsop_tprof
   WRITE(6,*) "cnt_rigtnlon = ", cnt_rigtnlon
   WRITE(6,*) "cnt_nearland = ", cnt_nearland
   WRITE(6,*) "cnt_altlatrng = ", cnt_altlatrng
+  if (DO_REMOVE_BLACKSEA) WRITE(6,*) "cnt_blacksea = ", cnt_blacksea
 
   !-----------------------------------------------------------------------------
   ! Write the observations and their associated innovations to file
@@ -365,6 +379,10 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) DO_REMOVE_65N
+    case('-rmBlackSea')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) DO_REMOVE_BLACKSEA
     case('-debug')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)

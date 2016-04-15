@@ -121,24 +121,37 @@ ELSE
 endif
 
 ! Scan the times and pick out the start and end records of the date of interest:
-start_idx=0
-do i=1,cnt
-  if (FLOOR(times(i)) >= days_since) then
-    start_idx = i 
-    EXIT
-  endif
-enddo
-do j=start_idx,cnt-1
-  if (FLOOR(times(j+1)) > days_since) then
-    EXIT
-  endif
-enddo
-if (FLOOR(times(cnt)) == days_since) then
-  end_idx = cnt
-else
-  end_idx = j 
-endif
-subcnt = end_idx - start_idx
+!start_idx=0
+!do i=1,cnt
+!  if (FLOOR(times(i)) >= days_since) then
+!    start_idx = i 
+!    EXIT
+!  endif
+!enddo
+!do j=start_idx,cnt-1
+!  if (FLOOR(times(j+1)) > days_since) then
+!    EXIT
+!  endif
+!enddo
+!if (FLOOR(times(cnt)) == days_since) then
+!  end_idx = cnt
+!else
+!  end_idx = j 
+!endif
+!subcnt = end_idx - start_idx
+start_idx = 1
+end_idx = cnt
+subcnt = cnt
+i = 1
+j = cnt
+print *, "---------------------------------------------------------------------"
+print *, "start_idx  = ", start_idx
+print *, "end_idx    = ", end_idx
+print *, "days_since = ", days_since
+print *, "subcnt     = ", subcnt
+print *, "times(i)   = ", times(i)
+print *, "times(j)   = ", times(j)
+print *, "---------------------------------------------------------------------"
 
 !-------------------------------------------------------------------------------
 ! Read the longitude coordinates
@@ -155,15 +168,17 @@ if (istat /= NF90_NOERR) then
   STOP
 endif
 
-istat = nf90_get_att(ncid, varid, 'scale_factor', scale_factor)
-xlon = xlon * scale_factor
-
 if (istat /= NF90_NOERR) then
   print *, "NF90_GET_VAR scale_factor failed"
   STOP
 else
   print *, "xlon(1:10) = ", xlon(1:10)
 endif
+
+istat = nf90_get_att(ncid, varid, 'scale_factor', scale_factor)
+print *, "scale_factor = ", scale_factor
+xlon = xlon * scale_factor
+print *, "xlon(1:10) = ", xlon(1:10)
 
 !-------------------------------------------------------------------------------
 ! Read the latitude coordinates
@@ -180,15 +195,17 @@ if (istat /= NF90_NOERR) then
   STOP
 endif
 
-istat = nf90_get_att(ncid, varid, 'scale_factor', scale_factor)
-ylat = ylat * scale_factor
-
 if (istat /= NF90_NOERR) then
   print *, "NF90_GET_VAR scale_factor failed"
   STOP
 else
   print *, "ylat(1:10) = ", ylat(1:10)
 endif
+
+istat = nf90_get_att(ncid, varid, 'scale_factor', scale_factor)
+print *, "scale_factor = ", scale_factor
+ylat = ylat * scale_factor
+print *, "ylat(1:10) = ", ylat(1:10)
 
 !-------------------------------------------------------------------------------
 ! Read the time as 'day'
@@ -258,6 +275,7 @@ endif
 
 istat = nf90_get_att(ncid, varid, 'scale_factor', scale_factor)
 vals = vals * scale_factor
+print *, "ADT(1:10) = ", vals(1:10)
 istat = nf90_get_att(ncid, varid, '_FillValue', missing_value)
 missing_value = missing_value*scale_factor
 
