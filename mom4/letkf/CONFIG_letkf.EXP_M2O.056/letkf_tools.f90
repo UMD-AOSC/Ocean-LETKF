@@ -310,7 +310,20 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
               WRITE(6,*) "ij, ilev, m, n = ", ij,ilev,m,n
               WRITE(6,*) "anal3d(ij,ilev,m,n) = ", anal3d(ij,ilev,m,n)
               WRITE(6,*) "gues3d(ij,ilev,m,n) = ", gues3d(ij,ilev,m,n)
-              STOP 6 
+              !ij = 895
+              WRITE(6,*) "lon = ", lon1(ij)
+              WRITE(6,*) "lat = ", lat1(ij)
+              WRITE(6,*) "letkf_tools.f90:: (3D) ij = ", ij
+              WRITE(6,*) "letkf_tools.f90:: inputs to letkf_core:"
+              WRITE(6,*) "nobstotal = ", nobstotal
+              WRITE(6,*) "nobsl = ", nobsl
+              WRITE(6,*) "hdxf(1:nobsl,1:nbv) = ", hdxf(1:nobsl,:)
+              WRITE(6,*) "rdiag(1:nobsl) = ", rdiag(1:nobsl)
+              WRITE(6,*) "rloc(1:nobsl) = ", rloc(1:nobsl)
+              WRITE(6,*) "dep(1:nobsl) = ", dep(1:nobsl)
+              WRITE(6,*) "parm = ", parm
+              WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
+              STOP(6)
             endif
           enddo
         enddo

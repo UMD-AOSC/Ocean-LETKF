@@ -40,27 +40,6 @@ MODULE common_mom4
 
   PUBLIC
 
-  !-----------------------------------------------------------------------------
-  ! General parameters
-  !-----------------------------------------------------------------------------
-  REAL(r_size),SAVE :: dy2(nlat)
-  REAL(r_size),SAVE :: fcori(nlat)
-  REAL(r_size),SAVE :: wet(nlon,nlat)                !(OCEAN)
-  REAL(r_size),SAVE :: area_t(nlon,nlat)             !(OCEAN)
-  INTEGER, DIMENSION(nlon,nlat), SAVE     :: kmt=-1  !(OCEAN) STEVE: the bottom topography for mom4
-  !STEVE: for Custom Localization
-  INTEGER :: nobids(nij0*nlev)                       !(OCEAN)
-  !STEVE: for verifying against input netcdf file
-  INTEGER :: nlon0=0, nlat0=0, nlev0=0               !(OCEAN)
-  !STEVE: for filtering undef values from netcdf file
-  REAL(r_size), PARAMETER :: vmax = 1.0e18
-  REAL(r_size), DIMENSION(nlon,nlat) :: SSHclm_m
-  REAL(r_sngl) :: buf4_2d(nlon,nlat)
-! For AMOC computation
-  REAL(r_size) :: zb(nlev)
-  REAL(r_size) :: dz(nlev)
-
-  INTEGER :: islot
   REAL(r_size), DIMENSION(:), ALLOCATABLE :: xc,yc
   REAL(r_size), DIMENSION(:,:), ALLOCATABLE :: sfc_data
   INTEGER, DIMENSION(:), ALLOCATABLE :: xi,yi
@@ -82,6 +61,7 @@ SUBROUTINE set_common_mom4
   INTEGER :: ncid,varid
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
+  !STEVE: for verifying against input netcdf file
 
   WRITE(6,'(A)') 'Hello from set_common_mom4'
 
@@ -145,16 +125,12 @@ SUBROUTINE set_common_mom4
   call check( NF90_GET_VAR(ncid,varid,dx) ) 
   call check( NF90_INQ_VARID(ncid,'ds_10_12_T',varid) )    ! height of T_cell (meters)
   call check( NF90_GET_VAR(ncid,varid,dy) ) 
-  call check( NF90_INQ_VARID(ncid,'area_T',varid) )        ! area of T_cell
-  call check( NF90_GET_VAR(ncid,varid,area_t) ) 
 
   if (doverbose) then
     WRITE(6,*) "common_mom4:: grid_spec.nc MIN(dx) = ", MINVAL(dx)
     WRITE(6,*) "common_mom4:: grid_spec.nc MAX(dx) = ", MAXVAL(dx)
     WRITE(6,*) "common_mom4:: grid_spec.nc MIN(dy) = ", MINVAL(dy)
     WRITE(6,*) "common_mom4:: grid_spec.nc MAX(dy) = ", MAXVAL(dy)
-    WRITE(6,*) "common_mom4:: grid_spec.nc MIN(area_t) = ", MINVAL(area_t)
-    WRITE(6,*) "common_mom4:: grid_spec.nc MAX(area_t) = ", MAXVAL(area_t)
   endif
 
   !
@@ -167,13 +143,6 @@ SUBROUTINE set_common_mom4
     WRITE(6,*) "kmt0(nlon,nlat) = ", kmt0(nlon,nlat)
   endif
   kmt = NINT(kmt0)
-  call check( NF90_INQ_VARID(ncid,'wet',varid) )        ! land/sea flag (0=land) for T-cell
-  call check( NF90_GET_VAR(ncid,varid,wet) )
-
-  if (doverbose) then
-    WRITE(6,*) "wet(1,1) = ", wet(1,1)
-    WRITE(6,*) "wet(nlon,nlat) = ", wet(nlon,nlat)
-  endif
 
   if (doverbose) then
     WRITE(6,*) "Using dx and dy from netcdf file: ", gridfile
@@ -198,20 +167,8 @@ SUBROUTINE set_common_mom4
     dz(k) = zb(k)-zb(k-1)
   enddo
 
-  !
-  ! Corioris parameter
-  !
-  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
-
   ! Close the grid_spec.nc file:
   call check( NF90_CLOSE(ncid) )
-
-  ! STEVE: for (more) generalized (longitude) grid:
-  lon0 = lon(1)
-  lonf = lon(nlon)
-  lat0 = lat(1)
-  latf = lat(nlat)
-  wrapgap = 360.0d0 - abs(lon0) - abs(lonf)
 
 END SUBROUTINE set_common_mom4
 
@@ -288,16 +245,18 @@ SUBROUTINE read_history(infile,v3d,v2d)
   if (DO_MLD) then
     WRITE(6,*) "Reading mixed layer depth from history file..."
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !---------------------------------------------------------------------------
     ! Open the T/S netcdf restart file
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !---------------------------------------------------------------------------
     call check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
  
     if (doverbose) then
       WRITE(6,*) "read_diag:: just opened file ", infile
     endif  
 
-    !!! mixed layer depth (mld)
+    !---------------------------------------------------------------------------
+    ! mixed layer depth (mld)
+    !---------------------------------------------------------------------------
     buf4=0.0
     call check( NF90_INQ_VARID(ncid,'mld',varid) )
     call check( NF90_GET_VAR(ncid,varid,buf4) )
@@ -378,7 +337,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
   REAL(r_size), PARAMETER :: vmax = 1.0e18
 
   
+  !-----------------------------------------------------------------------------
   ! Set default precision:
+  !-----------------------------------------------------------------------------
   if (.not. present(prec_in)) then  
     prec = 1 
   else
@@ -402,7 +363,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
 
   call check( NF90_OPEN(tsfile,NF90_NOWRITE,ncid) )
 
-  !!! t
+  !-----------------------------------------------------------------------------
+  ! t
+  !-----------------------------------------------------------------------------
   varname='temp'
   ivid=iv3d_t 
 
@@ -428,7 +391,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
   endif
 ! !STEVE: end
 
-  !!! s
+  !-----------------------------------------------------------------------------
+  ! s
+  !-----------------------------------------------------------------------------
   varname='salt'
   ivid=iv3d_s
 
@@ -461,7 +426,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
   !-----------------------------------------------------------------------------
   call check( NF90_OPEN(uvfile,NF90_NOWRITE,ncid) )
 
-  !!! u
+  !-----------------------------------------------------------------------------
+  ! u
+  !-----------------------------------------------------------------------------
   varname='u'
   ivid=iv3d_u
 
@@ -487,7 +454,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
   endif
 ! !STEVE: end
 
-  !!! v
+  !-----------------------------------------------------------------------------
+  ! v
+  !-----------------------------------------------------------------------------
   varname='v'
   ivid=iv3d_v
 
@@ -515,9 +484,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
 
   call check( NF90_CLOSE(ncid) )
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
   ! Set the SST and SSS data for the SFC
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
   if (.false.) then
     v2d(:,:,iv2d_sst) = v3d(:,:,ilev_sfc,iv3d_t)
     v2d(:,:,iv2d_sss) = v3d(:,:,ilev_sfc,iv3d_s)
@@ -525,7 +494,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
     call check( NF90_OPEN(sffile,NF90_NOWRITE,ncid) )
     WRITE(6,*) "read_restart:: just opened file ", sffile
 
-    !!! SST
+    !---------------------------------------------------------------------------
+    ! SST
+    !---------------------------------------------------------------------------
     varname='t_surf'
     ivid=iv2d_ssh
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) ) 
@@ -552,7 +523,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
     endif
 ! !STEVE: end
 
-    !!! SSS
+    !---------------------------------------------------------------------------
+    ! SSS
+    !---------------------------------------------------------------------------
     varname='s_surf'
     ivid=iv2d_ssh
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -581,13 +554,15 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
     call check( NF90_CLOSE(ncid) )
   endif
   
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
   ! Open the ALTIMETRY netcdf diagnostic file (SSH)
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
   call check( NF90_OPEN(sffile,NF90_NOWRITE,ncid) )
   WRITE(6,*) "read_restart:: just read file ", sffile
 
-  !!! SSH
+  !-----------------------------------------------------------------------------
+  ! SSH
+  !-----------------------------------------------------------------------------
   varname='sea_lev'
   ivid=iv2d_ssh
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -615,6 +590,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
 
   call check( NF90_CLOSE(ncid) )
 
+  !-----------------------------------------------------------------------------
+  ! Do altimetry
+  !-----------------------------------------------------------------------------
   altimetry : if(DO_ALTIMETRY) then
     !STEVE: use the sea level perturbation from ocean_barotropic.res.nc
     call check( NF90_OPEN(bfile,NF90_NOWRITE,ncid) )
@@ -626,7 +604,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
     if (dodebug) WRITE(6,*) "read_restart:: just got data for variable eta_t"
     if (dodebug) WRITE(6,*) "read_restart:: finished processing data for variable SSH"
 
-    !!! SSH
+    !---------------------------------------------------------------------------
+    ! SSH
+    !---------------------------------------------------------------------------
     select case(prec)
       case(1)
         buf4=0.0
@@ -689,8 +669,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
     STOP(10)
   endif
 ! !STEVE: debug end
-
-! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
 
 END SUBROUTINE read_restart
 
@@ -823,9 +801,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in) !,prec_in)
   enddo
   endif
   
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !STEVE: open temp/salt file
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
+  ! Open temp/salt file
+  !-----------------------------------------------------------------------------
   call check( NF90_OPEN(tsfile,NF90_WRITE,ncid) )
 
   !!! t
@@ -842,9 +820,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in) !,prec_in)
 
   call check( NF90_CLOSE(ncid) )
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!! uv file
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
+  ! Open uv file
+  !-----------------------------------------------------------------------------
   call check( NF90_OPEN(uvfile,NF90_WRITE,ncid) )
 
   !!! u
@@ -861,9 +839,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in) !,prec_in)
 
   call check( NF90_CLOSE(ncid) )
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!! sfc file
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
+  ! Open sfc file
+  !-----------------------------------------------------------------------------
   call check( NF90_OPEN(sffile,NF90_WRITE,ncid) )
   
   !!! SST
@@ -886,9 +864,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in) !,prec_in)
   call check( NF90_PUT_VAR(ncid,varid,v2d(:,:,ivid)) )
   call check( NF90_CLOSE(ncid) )
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
   ! Write the updated eta_t to analysis restart file
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
   if (DO_ALTIMETRY) then
     call check( NF90_OPEN(bfile,NF90_WRITE,ncid) )
     varname = 'eta_t'
@@ -975,8 +953,6 @@ SUBROUTINE read_bingrd4(filename,v3d,v2d)
   enddo
 
   CLOSE(iunit)
-
-! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
 
 END SUBROUTINE read_bingrd4
 

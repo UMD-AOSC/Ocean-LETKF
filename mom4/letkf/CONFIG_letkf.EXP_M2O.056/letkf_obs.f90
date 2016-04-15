@@ -40,6 +40,7 @@ MODULE letkf_obs
   USE common_mpi_mom4
   USE common_letkf
   USE params_letkf, ONLY: sigma_obs, sigma_obsv, sigma_obs0, gross_error, nslots, nbv
+  USE params_letkf, ONLY: DO_QC_MEANDEP, DO_QC_MAXDEP
   USE params_obs
   USE vars_obs
 
@@ -68,7 +69,6 @@ SUBROUTINE set_letkf_obs
 ! Initialize the module
 !===============================================================================
   IMPLICIT NONE
-  REAL(r_size) :: dz,tg,qg
   REAL(r_size) :: ri,rj,rk
   REAL(r_size) :: dlon1,dlon2,dlon,dlat
   REAL(r_size),ALLOCATABLE :: wk2d(:,:)
@@ -254,15 +254,21 @@ quality_control : if (.true.) then
     enddo
     obsdep(n) = obsdep(n) / REAL(nbv,r_size)
     do i=1,nbv
+      if (DO_QC_MAXDEP .and. (id_sst_obs .ne. obselm(n)) .and. ABS(obsdat(n) - obshdxf(n,i)) > gross_error*obserr(n)) then
+        if (obsqc(n)==1) gross_cnt = gross_cnt + 1  !STEVE: add to data removed for exceeding gross_error range
+        obsqc(n) = 0
+      endif
       obshdxf(n,i) = obshdxf(n,i) - obsdep(n) ! Hdxf (perturbations from mean)
     enddo
     ! Now, obsdep is defined appropriately as the obs departure from mean background
     obsdep(n) = obsdat(n) - obsdep(n) ! y-Hx
 
     !STEVE: Keep all SST obs
-    if ((id_sst_obs .ne. obselm(n)) .and. ABS(obsdep(n)) > gross_error*obserr(n)) then !gross error
-      obsqc(n) = 0
-      gross_cnt = gross_cnt + 1
+    if (DO_QC_MEANDEP) then
+      if ((id_sst_obs .ne. obselm(n)) .and. ABS(obsdep(n)) > gross_error*obserr(n)) then !gross error
+        if (obsqc(n)==1) gross_cnt = gross_cnt + 1
+        obsqc(n) = 0
+      endif
     endif
 
     !STEVE: as a check, count the number of each type of observation

@@ -1,6 +1,10 @@
+!nlon=720,
+!nlat=410,
+!nlev=40,
+
 &params_model_nml
  gridfile  = 'grid_spec.nc', 
- SSHclm_file = 'aEtaCds9399.nc'
+ SSHclm_file = 'aEtaCds9399.nc',
 /
 
 &params_obs_nml
@@ -9,6 +13,7 @@
 /
 
 &params_letkf_nml
+ nbv = 56,
  nslots = 5,
  nbslot = 5,
  sigma_obs = 720.0d3,
