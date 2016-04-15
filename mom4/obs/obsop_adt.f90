@@ -38,7 +38,7 @@ PROGRAM obsop_adt
   USE params_model
   USE vars_model
   USE common_mom4
-  USE params_obs,                ONLY: nobs, id_t_obs, id_s_obs, id_u_obs, id_v_obs, id_eta_obs, DO_REMOVE_65N
+  USE params_obs,                ONLY: nobs, id_eta_obs, DO_REMOVE_65N
   USE vars_obs
   USE common_obs_mom4
   USE params_letkf,              ONLY: DO_ALTIMETRY, DO_ADT
@@ -122,7 +122,7 @@ PROGRAM obsop_adt
                         ! day0=`date '+%s' -d $Y0-$M0-$D0`
                         ! day1=`date '+%s' -d $YYYY-$MM-$DD`
                         ! days_since=$(( ( $day1 - $day0 ) / ( 86400 ) ))
-  REAL(r_size) :: min_oerr = 0.01
+  REAL(r_size) :: min_oerr = 0.04
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_mom4 module, and process command line options
@@ -157,6 +157,9 @@ PROGRAM obsop_adt
     obhr(i) = obs_data(i)%hour
   enddo
   DEALLOCATE(obs_data)
+
+  !STEVE: set a default minimum observation error value (i.e. an 'instrument error')
+  oerr = oerr + min_oerr
 
   if (print1st) then
     print *, "elem(1),rlon(1),rlat(1),obhr(1) = ", elem(1),rlon(1),rlat(1),obhr(1)
@@ -210,7 +213,7 @@ PROGRAM obsop_adt
           rlon(idx) = (lon(i+1)-lon(i))/2.0d0
           rlat(idx) = (lat(j+1)-lat(j))/2.0d0
           rlev(idx) = 0
-          elem(idx) = id_sst_obs
+          elem(idx) = id_eta_obs
           if (dodebug1) print *, "odat(idx) = ", odat(idx)
           if (dodebug1) print *, "oerr(idx) = ", oerr(idx)
           if (dodebug1) print *, "ocnt(idx) = ", supercnt(i,j)
@@ -409,7 +412,7 @@ PROGRAM obsop_adt
       cnt_adt=cnt_adt+1
     end if
     
-    if (dodebug .and. elem(n) .eq. id_eta_obs) then
+    if (dodebug1 .and. elem(n) .eq. id_eta_obs) then
       WRITE(6,*) "post-Trans_XtoY:: id_eta_obs, ohx(n) = ", ohx(n)
     endif
     oqc(n) = 1
@@ -501,7 +504,7 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
     case default
       PRINT *, "ERROR: option is not supported: ", arg1
       PRINT *, "(with value : ", trim(arg2), " )"
-      stop 1
+      STOP 1
   end select
 enddo
 

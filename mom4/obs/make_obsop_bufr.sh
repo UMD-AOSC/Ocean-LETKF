@@ -23,10 +23,15 @@ name=BUFR
 PGM=obsop.$name
 #F90OPT='-ftz -ip -ipo -O2 -parallel -i_dynamic -what -fpp -fno-alias -stack_temps -safe_cray_ptr -fast'
 
+F90_FPP='-fpp' # Fortran preprocessor
+# If dynamic model grid specification is desired (e.g. via input.nml namelist):
+#FPP_FLAG='-DDYNAMIC'
+FPP_FLAG=""
+
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90
-$F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_model.f90
-$F90 $OMP $F90_OPT $F90_OBJECT_FLAG vars_model.f90
+$F90 $OMP $F90_OPT $F90_FPP $FPP_FLAG $F90_OBJECT_FLAG params_model.f90
+$F90 $OMP $F90_OPT $F90_FPP $FPP_FLAG $F90_OBJECT_FLAG vars_model.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_mom4.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_obs.f90

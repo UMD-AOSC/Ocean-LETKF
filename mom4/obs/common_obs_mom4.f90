@@ -1,0 +1,1 @@
+../common/common_obs_mom4.f90
