@@ -1,0 +1,149 @@
+#!/bin/ksh --login
+# This script prepares background and observation data for letkf 
+# Tripolar background grid is converted to spherical if necessary
+#
+# Written by Dr. Stephen G. Penny
+#
+set -e
+module load mpt
+module load intel
+module load netcdf/4.1.3-intel
+module load nco
+
+echo "LETKF preparation step"
+echo "processing cycle: ${YYYYMMDDHH}"
+echo "I am member ${MEMBERID}"
+echo "Posting forecast ${FCST}"
+workdir=${EXP_DATA}/${YYYYMMDDHH}/letkf_prep/${MEMBERID}/${FCST}
+mkdir -p ${workdir}
+cd ${workdir}
+workdir_fcst=${EXP_DATA}/${YYYYMMDDHH}/model/${MEMBERID}/RESTART
+
+echo "This is the LETKF preparation step for member ${MEMBERID}, forecast ${FCST}, for cycle ${YYYYMMDDHH}" > letkf_prep_${FCST}.out
+
+#STEVE: active code:
+USE_SFC=1
+USE_TRI2SPH=1
+TMPDIR=${EXP_DATA}/${YYYYMMDDHH}
+IY=${YYYYMMDDHH:0:4}
+IM=${YYYYMMDDHH:4:2}
+ID=${YYYYMMDDHH:6:2}
+IH=${YYYYMMDDHH:8:2}
+IN=00
+IS=00
+
+# Update the ISLOT date
+date=/bin/date
+#sinc=`expr $FCST - 1` #STEVE: use this if I want the dates offset
+sinc=$FCST
+sinc_units=days
+NY=`$date -d "$IY-$IM-$ID $sinc $sinc_units" +%Y`
+NM=`$date -d "$IY-$IM-$ID $sinc $sinc_units" +%m`
+ND=`$date -d "$IY-$IM-$ID $sinc $sinc_units" +%d`
+NH=`$date -d "$IY-$IM-$ID $sinc $sinc_units" +%H`
+IY=$NY
+IM=$NM
+ID=$ND
+IH=$NH
+echo "processing cycle as: $IY$IM$ID$IH"
+
+# FIRST, link the (0-360 degree spherical) topography for letkf to read grid information
+
+MEM3=`printf %.3d ${MEMBERID}`
+ISLOTL=`printf %.2d ${FCST}`
+
+if [ $USE_TRI2SPH ]; then
+  grid_spec_file="grid_spec_tri2sph0360.nc"
+  ln -fs $REGRID/$grid_spec_file .
+  ln -fs $workdir_fcst/$IY$IM$ID.$IH$IN$IS.ocean_temp_salt.res.nc .
+  ln -fs $workdir_fcst/$IY$IM$ID.$IH$IN$IS.ocean_velocity.res.nc .
+  ln -fs $workdir_fcst/$IY$IM$ID.$IH$IN$IS.ocean_sbc.res.nc .
+
+  # For temp/salt
+  cat >input.nml <<!
+&regrid_nml
+  src_data       = "$IY$IM$ID.$IH$IN$IS.ocean_temp_salt.res.nc",
+  grid_spec_file = '$grid_spec_file',
+  dst_data       = "gs${ISLOTL}$MEM3.ocean_temp_salt.res.nc",
+  num_flds       = 2
+  fld_name       = 'temp', 'salt'
+  fld_pos        =  'T', 'T'
+  vector_fld     = .false.
+  debug          = .false. /
+!
+
+  mpiexec_mpt -np $PBS_NP $REGRID/regrid_tri2sph.x
+
+  # For velocity
+  cat >input.nml <<!
+&regrid_nml
+  src_data       = "$IY$IM$ID.$IH$IN$IS.ocean_velocity.res.nc",
+  grid_spec_file = '$grid_spec_file',
+  dst_data       = "gs${ISLOTL}$MEM3.ocean_velocity.res.nc",
+  num_flds       = 2
+  fld_name = 'u','v'
+  fld_pos  =  'C','C'
+  vector_fld = .true., .true.
+  debug          = .false. /
+!
+  mpiexec_mpt -np $PBS_NP $REGRID/regrid_tri2sph.x
+
+# For sbc
+# if [ $USE_SFC ]; then
+    cat >input.nml <<!
+&regrid_nml
+  src_data       = "$IY$IM$ID.$IH$IN$IS.ocean_sbc.res.nc",
+  grid_spec_file = '$grid_spec_file',
+  dst_data       = "gs${ISLOTL}$MEM3.ocean_sbc.res.nc",
+  num_flds       = 6
+  fld_name       = 't_surf','s_surf','u_surf','v_surf','sea_lev','frazil'
+  fld_pos        =  'T','T','C','C','T','T'
+  vector_fld     = .false.,.false.,.true.,.true.,.false.,.false.
+  debug          = .false. /
+!
+  mpiexec_mpt -np $PBS_NP $REGRID/regrid_tri2sph.x
+fi
+#else #Not using USE_TRI2SPH...
+#  ln -fs $workdir_fcst/$IY$IM$ID.$IH$IN$IS.ocean_temp_salt.res.nc gs${ISLOTL}$MEM3.ocean_temp_salt.res.nc
+#  ln -fs $workdir_fcst/$IY$IM$ID.$IH$IN$IS.ocean_velocity.res.nc  gs${ISLOTL}$MEM3.ocean_velocity.res.nc
+## if [ $USE_SFC ]; then
+#  ln -fs $workdir_fcst/$IY$IM$ID.$IH$IN$IS.ocean_sbc.res.nc       gs${ISLOTL}$MEM3.ocean_sbc.res.nc
+## fi
+#fi
+
+#STEVE: add 'fill value' to netcdf files
+ncatted -O -a _FillValue,temp,o,f,-1.e+34 gs${ISLOTL}$MEM3.ocean_temp_salt.res.nc
+ncatted -O -a _FillValue,salt,o,f,-1.e+34 gs${ISLOTL}$MEM3.ocean_temp_salt.res.nc
+ncatted -O -a _FillValue,u,o,f,-1.e+34 gs${ISLOTL}$MEM3.ocean_velocity.res.nc
+ncatted -O -a _FillValue,v,o,f,-1.e+34 gs${ISLOTL}$MEM3.ocean_velocity.res.nc
+ncatted -O -a _FillValue,sea_lev,o,f,-1.e+34 gs${ISLOTL}$MEM3.ocean_sbc.res.nc
+
+# FIRST (a), Link background files to the letkf working directory:
+workdir2=${EXP_DATA}/${YYYYMMDDHH}/letkf
+mkdir -p ${workdir2}
+for file in `ls -d ${workdir}/gs${ISLOTL}$MEM3.*`; do
+  echo "linking $file to ${workdir2}..."
+  ln -fs $file ${workdir2}/
+done
+
+#STEVE: need a template for the output files:
+if [ ${ISLOTL} -lt "02" ]; then #STEVE: trying to only do it once per member...
+  cp ${workdir}/gs${ISLOTL}$MEM3.ocean_temp_salt.res.nc ${workdir2}/anal$MEM3.ocean_temp_salt.res.nc
+  cp ${workdir}/gs${ISLOTL}$MEM3.ocean_velocity.res.nc  ${workdir2}/anal$MEM3.ocean_velocity.res.nc
+#if [ $USE_SFC ]; then
+  cp ${workdir}/gs${ISLOTL}$MEM3.ocean_sbc.res.nc     ${workdir2}/anal$MEM3.ocean_sbc.res.nc
+#fi
+fi
+
+# SECOND (b), link the observations
+if [ ${MEMBERID} -lt "02" ]; then #STEVE: trying to only do it once per slot...
+  if [ -s ${OBSDIR}/$IY$IM$ID$IH.dat ]; then
+    echo "Linking obs: ${OBSDIR}/$IY$IM$ID$IH.dat to obs${ISLOTL}.dat"
+    ln -fs $OBSDIR/$IY$IM$ID$IH.dat ${workdir2}/obs${ISLOTL}.dat
+  else
+    echo "Linking obs: ${OBSDIR}/$IY$IM$ID.dat to obs${ISLOTL}.dat"
+    ln -fs $OBSDIR/$IY$IM$ID.dat ${workdir2}/obs${ISLOTL}.dat
+  fi
+fi
+
+exit 0

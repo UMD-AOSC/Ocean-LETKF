@@ -18,7 +18,7 @@ source ../../config/$MACHINE.mpi.sh
 # Experiment name
 #name=TEST5
 #name=TEST5_dyn
-name=EXP_M2O
+name=TEST6
 # Executable for letkf
 PGM=letkf.$name.x
 

@@ -34,6 +34,7 @@
     <!ENTITY WINDFALL "-l qos=windfall">
     <!ENTITY PROJECT "cpo_orr">
     <!ENTITY QUEUE "batch">
+    <!ENTITY QUEUE_PREP "ldtn">
     <!ENTITY GAEA "-l partition=c1:c2">
     <!ENTITY ZEUS "">
     <!ENTITY CUSTOM "&GAEA;">
@@ -41,22 +42,24 @@
     <!ENTITY CUSTOM "&GAEA; &WINDFALL;">
     !STEVE: ncatted isn't accessible on ldtn...
     <!ENTITY MODEL_PREP_CUSTOM "&CUSTOM;">
+    <!ENTITY MODEL_PREP_CUSTOM "-l partition=es">
     <!ENTITY MODEL_PREP_QUEUE "&QUEUE;">
     <!ENTITY LETKF_PREP_CUSTOM "-l partition=es">
     <!ENTITY LETKF_PREP_QUEUE "ldtn">
+    <!ENTITY LETKF_PREP_WALLTIME "00:02:00">
 -->
 
-    <!ENTITY MODEL_PREP_CUSTOM "-l partition=es">
-    <!ENTITY MODEL_PREP_QUEUE "ldtn">
+    <!ENTITY MODEL_PREP_CUSTOM "">
+    <!ENTITY MODEL_PREP_QUEUE "&QUEUE_PREP;">
     <!ENTITY MODEL_PREP_CORES "1">
-    <!ENTITY MODEL_PREP_WALLTIME "00:00:50"> 
+    <!ENTITY MODEL_PREP_WALLTIME "00:00:20"> 
     <!ENTITY MODEL_CORES "256">
-    <!ENTITY MODEL_WALLTIME "0:30:00">
+    <!ENTITY MODEL_WALLTIME "0:20:00">
 
-    <!ENTITY LETKF_PREP_CUSTOM "&CUSTOM;">
-    <!ENTITY LETKF_PREP_QUEUE "&QUEUE;">
+    <!ENTITY LETKF_PREP_CUSTOM "">
+    <!ENTITY LETKF_PREP_QUEUE "&QUEUE_PREP;">
     <!ENTITY LETKF_PREP_CORES "1">
-    <!ENTITY LETKF_PREP_WALLTIME "00:02:00">
+    <!ENTITY LETKF_PREP_WALLTIME "00:00:59">
     <!ENTITY LETKF_CORES "960">
     <!ENTITY LETKF_WALLTIME "00:20:00">
 
@@ -156,8 +159,11 @@
 
   STEVE: started deep ocean:
   <cycledef>200307120000 201101010000 &days;:00:00:00</cycledef>
--->
+
+  STEVE: started experiment:
   <cycledef>199210020000 201201010000 &days;:00:00:00</cycledef>
+-->
+  <cycledef>201012170000 201201010000 &days;:00:00:00</cycledef>
 
 <!-- MODEL PREP -->
 
@@ -324,8 +330,9 @@
     </task>
 
   </metatask>
- 
-  <!-- MODEL  --> 
+
+  <!-- MODEL -->
+  
   <metatask>
 
     <var name="member">&MEMBERS;</var>
@@ -402,14 +409,14 @@
     </task>
 
   </metatask>
- 
-<!-- LETKF PREP -->
+   
+<!-- LETKF PREP  -->
 
   <metatask>
 
     <var name="member">&MEMBERS;</var>
 
-     <task name="lprep_#member#" maxtries="10">
+     <task name="lprep_#member#" maxtries="4">
       
       <command>&SCRIPTS;/letkf_prepc.ksh</command>
       <account>&PROJECT;</account>
@@ -503,8 +510,8 @@
       <dependency>
         <or>
           <and>
-            <taskdep task="model_#member#"/>
 <!--
+            <taskdep task="model_#member#"/>
 -->
             <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/RESTART/ocean_temp_salt.res.nc</cyclestr></datadep>
             <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/RESTART/ocean_velocity.res.nc</cyclestr></datadep>
@@ -515,9 +522,9 @@
 
      </task>
   </metatask>
- 
+
 <!-- LETKF -->
-  <task name="letkf" maxtries="5">
+  <task name="letkf" maxtries="3">
 
       <command>&SCRIPTS;/letkf.ksh</command>
       <account>&PROJECT;</account>
@@ -588,6 +595,8 @@
       <and>
         <datadep age="01"><cyclestr>&EXP_DATA;/@Y@m@d@H/letkf/obs01001.dat</cyclestr></datadep>
         <datadep age="01"><cyclestr>&EXP_DATA;/@Y@m@d@H/letkf/gs01001.ocean_temp_salt.res.nc</cyclestr></datadep>
+<!--
+-->
         <taskdep task="lprep_01"/>
         <taskdep task="lprep_02"/>
         <taskdep task="lprep_03"/>
@@ -650,7 +659,7 @@
   </task>
 
  <!-- GODAS SOLO --> 
-  <task name="g4p1" maxtries="6">
+  <task name="g4p1" maxtries="3">
 
       <command>&SCRIPTS;/g4p1_robs.ksh</command>
 
