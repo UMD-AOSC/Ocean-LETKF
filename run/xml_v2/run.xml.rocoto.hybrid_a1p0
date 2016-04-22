@@ -1,0 +1,635 @@
+<?xml version="1.0"?>
+<!DOCTYPE workflow
+[
+    <!ENTITY EXP_HOME "/autofs/na1_home1/Steve.Penny/HYBRID">
+    <!ENTITY EXP_DATA "/lustre/f1/unswept/Steve.Penny/OUTPUT/tmp_hybrid_ts_a1p0">
+    <!ENTITY LOGDIR "&EXP_HOME;/log_a1p0">
+    <!ENTITY SCRIPTS "&EXP_HOME;/scripts">
+    <!ENTITY UTIL "&EXP_HOME;/util">
+    <!ENTITY INPUT_INIT "&EXP_DATA;/INIT/INPUT">
+
+    <!ENTITY MEMBERS_10 "01 02 03 04 05 06 07 08 09 10">    
+    <!ENTITY MEMBERS_20 "&MEMBERS_10; 11 12 13 14 15 16 17 18 19 20">
+    <!ENTITY MEMBERS_28 "&MEMBERS_20; 21 22 23 24 25 26 27 28">
+    <!ENTITY MEMBERS "&MEMBERS_28;">
+    <!ENTITY MEM2 "28">
+    <!ENTITY MEM3 "0&MEM2;">
+    <!ENTITY GMEM2 "01">
+
+    <!ENTITY days "5">
+    <!ENTITY ATIME "05">
+    <!ENTITY NSLOTS "&days;">
+<!--
+    <!ENTITY PROJECT "cmp">
+-->
+    <!ENTITY PROJECT "cpo_orr">
+    <!ENTITY QUEUE "batch">
+    <!ENTITY GAEA "-l partition=c1:c2">
+    <!ENTITY ZEUS "">
+    <!ENTITY CUSTOM "&GAEA;">
+
+    <!ENTITY CUSTOM_PREP "&GAEA;">
+    <!ENTITY QUEUE_PREP "batch">
+
+    <!ENTITY MODEL_PREP_CORES "1">
+    <!ENTITY MODEL_PREP_WALLTIME "00:00:50"> 
+    <!ENTITY MODEL_CORES "256">
+    <!ENTITY MODEL_WALLTIME "0:20:00">
+
+    <!ENTITY LETKF_PREP_CORES "1">
+    <!ENTITY LETKF_PREP_WALLTIME "00:00:50">
+    <!ENTITY LETKF_CORES "480">
+    <!ENTITY LETKF_WALLTIME "00:20:00">
+
+    <!ENTITY G4P1_CORES "64">
+    <!ENTITY G4P1_WALLTIME "0:10:00">
+
+    <!-- Experiment Parameters -->
+<!--
+    <!ENTITY name "NCEP_ENS">
+-->
+    <!ENTITY ltype "CPO_SOLO.&MEM3;">
+    <!ENTITY mtype "solo_prod">
+    <!ENTITY rtype "ocean_solo">
+    <!ENTITY datype "HYBRID">
+
+    <!-- Data Directories -->
+    <!ENTITY lroot  "/autofs/na1_home1/Steve.Penny/letkf/mom4">
+    <!ENTITY troot  "/lustre/f1/unswept/Steve.Penny">
+    <!ENTITY mroot  "&troot;/mom4p1">
+
+    <!ENTITY LDIR   "&lroot;/letkf_GAEA">
+
+    <!ENTITY OBSDIR1 "&troot;/OBS/synthetic/letkf_fmt/PROFS_gerr_TS">
+    <!ENTITY OBSDIR5 "&troot;/OBS/synthetic/letkf_fmt/PROFS_gerr_TS">
+
+    <!ENTITY GOBSDIR_t "/lustre/f1/unswept/Steve.Penny/OBS/synthetic/TMP_profs">
+    <!ENTITY GOBSDIR_s "/lustre/f1/unswept/Steve.Penny/OBS/synthetic/SAL_profs">
+
+<!--
+    STEVE: All letkf exe's below are stored in &LDIR;
+-->
+    <!ENTITY LETKFexe "letkf.&ltype;">
+    <!ENTITY OBSOPexe "obsope.&MEM3;">
+    <!ENTITY ADAPTexe "aoerl.&ltype;">
+    <!ENTITY INFLadj "infladj.x">
+
+    <!ENTITY FLXDIR "/lustre/f1/unswept/ncep/David.Behringer/SBC/R2/DAILYnc">
+    <!ENTITY FLXDIR2 "&troot;/SFLUX/R2CR">
+    <!ENTITY SSTDIR  "/lustre/f1/unswept/ncep/David.Behringer/SBC/SST2/DAILY">
+
+    <!ENTITY MOM4run "&SCRIPTS;/mom4run_GAEA.csh">
+    <!ENTITY MOM4exe "fms_mom4p1_&mtype;.x">
+    <!ENTITY MOM4dir "&mroot;/exec_ftn/mom4p1_&mtype;">
+
+    <!ENTITY DO_SFCFLUXES "0">
+
+    <!ENTITY gtype "gds4p1_solo2">
+    <!ENTITY gdays "&days;">
+    <!ENTITY gmonths "0">
+    <!ENTITY groot "/autofs/na1_home1/Steve.Penny/godas4p1">
+    <!ENTITY G4P1exe "&groot;/exec_ftn/&gtype;/fms_&gtype;.x">
+    <!ENTITY gsupdir "&EXP_HOME;/godas_support">
+
+    <!ENTITY alpha "1.0">
+
+]>
+
+<!--
+<workflow realtime="F" scheduler="moabtorque" cyclethrottle="5">
+-->
+<workflow realtime="F" scheduler="moab" cyclethrottle="5">
+
+  <log verbosity="2"><cyclestr>&LOGDIR;/workflow/@Y@m@d@H.log</cyclestr></log>
+
+<!-- START TIME: 
+  <cycledef>201012020000 201101010000 05:00:00:00</cycledef>
+  <cycledef>201104110000 201109030000 05:00:00:00</cycledef>
+  <cycledef>201202150000 201202150000 05:00:00:00</cycledef>
+-->
+  <cycledef>199301100000 199401010000 &days;:00:00:00</cycledef>
+
+<!-- MODEL PREP -->
+
+  <metatask>
+
+    <var name="member">&MEMBERS;</var>
+
+    <task name="mprep_#member#">
+
+      <command>&SCRIPTS;/model_prep.ksh</command>
+
+      <account>&PROJECT;</account>
+
+      <jobname><cyclestr>mprep_#member#_@Y@m@d@H</cyclestr></jobname>
+
+      <native>&CUSTOM_PREP;</native>
+      <queue>&QUEUE_PREP;</queue>
+
+      <cores>&MODEL_PREP_CORES;</cores>
+      <walltime>&MODEL_PREP_WALLTIME;</walltime>
+
+      <join><cyclestr>&LOGDIR;/model_prep/@Y@m@d@H_#member#.log</cyclestr></join>
+
+      <envar>
+        <name>datype</name>
+        <value>&datype;</value>
+      </envar>
+
+      <envar>
+        <name>days</name>
+        <value>&days;</value>
+      </envar>
+
+      <envar>
+        <name>EXP_DATA</name>
+        <value>&EXP_DATA;</value>
+      </envar>
+
+      <envar>
+        <name>SBCDIR</name>
+        <value>&UTIL;</value>
+      </envar>
+
+      <envar>
+        <name>YYYYMMDDHH</name>
+        <value><cyclestr>@Y@m@d@H</cyclestr></value>
+      </envar>
+
+      <envar>
+        <name>MEMBERID</name>
+        <value>#member#</value>
+      </envar>
+
+      <envar>
+        <name>FLXDIR</name>
+        <value>&FLXDIR;</value>
+      </envar>
+
+      <envar>
+        <name>FLXDIR2</name>
+        <value>&FLXDIR2;</value>
+      </envar>
+
+      <envar>
+        <name>SSTDIR</name>
+        <value>&SSTDIR;</value>
+      </envar>
+
+      <envar>
+        <name>INPUT_INIT</name>
+        <value>&INPUT_INIT;</value>
+      </envar>
+
+      <envar>
+        <name>mroot</name>
+        <value>&mroot;</value>
+      </envar>
+
+      <envar>
+        <name>DO_SFCFLUXES</name>
+        <value>&DO_SFCFLUXES;</value>
+      </envar>
+
+      <envar>
+        <name>rtype</name>
+        <value>&rtype;</value>
+      </envar>
+
+      <envar>
+        <name>mroot</name>
+        <value>&mroot;</value>
+      </envar>
+
+      <dependency>
+        <or>
+          <datadep age="0"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/go</cyclestr></datadep>
+          <and>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/g4p1/g4p1.out</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/hybrid_cor.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal001.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal002.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal003.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal004.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal005.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal006.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal007.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal008.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal009.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal010.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal011.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal012.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal013.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal014.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal015.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal016.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal017.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal018.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal019.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal020.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal021.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal023.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal024.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal025.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal026.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal027.ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr offset="-&days;:00:00:00">&EXP_DATA;/@Y@m@d@H/hybrid/anal028.ocean_temp_salt.res.nc</cyclestr></datadep>
+          </and>
+        </or>
+      </dependency>
+
+    </task>
+
+  </metatask>
+
+  <!-- MODEL  -->
+  <metatask>
+
+    <var name="member">&MEMBERS;</var>
+
+    <task name="model_#member#">
+
+      <command>&SCRIPTS;/model.ksh</command>
+      <account>&PROJECT;</account>
+      <jobname><cyclestr>model_#member#_@Y@m@d@H</cyclestr></jobname>
+      <native>&CUSTOM;</native>
+      <queue>&QUEUE;</queue>
+      <cores>&MODEL_CORES;</cores>
+      <walltime>&MODEL_WALLTIME;</walltime>
+      <join><cyclestr>&LOGDIR;/model/@Y@m@d@H_#member#.log</cyclestr></join>
+
+      <envar>
+        <name>days</name>
+        <value>&days;</value>
+      </envar>
+
+      <envar>
+        <name>EXP_DATA</name>
+        <value>&EXP_DATA;</value>
+      </envar>
+
+      <envar>
+        <name>YYYYMMDDHH</name>
+        <value><cyclestr>@Y@m@d@H</cyclestr></value>
+      </envar>
+
+      <envar>
+        <name>MEMBERID</name>
+        <value>#member#</value>
+      </envar>
+
+      <envar>
+        <name>MOM4run</name>
+        <value>&MOM4run;</value>
+      </envar>
+
+      <envar>
+        <name>MOM4exe</name>
+        <value>&MOM4exe;</value>
+      </envar>
+
+      <envar>
+        <name>MOM4dir</name>
+        <value>&MOM4dir;</value>
+      </envar>
+
+      <envar>
+        <name>mtype</name>
+        <value>&mtype;</value>
+      </envar>
+
+      <dependency>
+        <and>
+          <taskdep task="mprep_#member#"/>
+          <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/INPUT/ocean_temp_salt.res.nc</cyclestr></datadep>
+          <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/INPUT/ocean_velocity.res.nc</cyclestr></datadep>
+          <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/INPUT/ocean_sbc.res.nc</cyclestr></datadep>
+          <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/INPUT/&rtype;.res</cyclestr></datadep>
+          <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/INPUT/temp_sfc_restore.nc</cyclestr></datadep>
+          <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/INPUT/salt_sfc_restore.nc</cyclestr></datadep>
+          <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/INPUT/RA2_daily_TAUX.nc</cyclestr></datadep>
+        </and>
+      </dependency>
+
+    </task>
+
+  </metatask>
+
+<!-- LETKF PREP  -->
+
+  <metatask>
+
+    <var name="member">&MEMBERS;</var>
+
+     <task name="lprep_#member#">
+      
+      <command>&SCRIPTS;/letkf_prepc.ksh</command>
+      <account>&PROJECT;</account>
+      <jobname><cyclestr>lprep_#member#_@Y@m@d@H</cyclestr></jobname>
+      <native>&CUSTOM_PREP;</native>
+      <queue>&QUEUE_PREP;</queue>
+      <cores>&LETKF_PREP_CORES;</cores>
+      <walltime>&LETKF_PREP_WALLTIME;</walltime>
+      <join><cyclestr>&LOGDIR;/letkf_prep/@Y@m@d@H_#member#.log</cyclestr></join>
+
+      <envar>
+        <name>days</name>
+        <value>&days;</value>
+      </envar>
+
+      <envar>
+        <name>EXP_DATA</name>
+        <value>&EXP_DATA;</value>
+      </envar>
+
+      <envar>
+        <name>YYYYMMDDHH</name>
+        <value><cyclestr>@Y@m@d@H</cyclestr></value>
+      </envar>
+
+      <envar>
+        <name>MEMBERID</name>
+        <value>#member#</value>
+      </envar>
+
+      <envar>
+        <name>REGRID</name>
+        <value>&UTIL;</value>
+      </envar>
+
+      <envar>
+        <name>mroot</name>
+        <value>&mroot;</value>
+      </envar>
+
+      <envar>
+        <name>LDIR</name>
+        <value>&LDIR;</value>
+      </envar>
+
+      <envar>
+        <name>INPUT_INIT</name>
+        <value>&INPUT_INIT;</value>
+      </envar>
+
+      <envar>
+        <name>OBSOPexe</name>
+        <value>&OBSOPexe;</value>
+      </envar>
+
+      <envar>
+        <name>OBSDIR1</name>
+        <value>&OBSDIR1;</value>
+      </envar>
+
+      <envar>
+        <name>OBSDIR5</name>
+        <value>&OBSDIR5;</value>
+      </envar>
+
+      <envar>
+        <name>ATIME</name>
+        <value>&ATIME;</value>
+      </envar>
+
+      <envar>
+        <name>NSLOTS</name>
+        <value>&NSLOTS;</value>
+      </envar>
+
+      <envar>
+        <name>DO_SFCFLUXES</name>
+        <value>&DO_SFCFLUXES;</value>
+      </envar>
+
+      <dependency>
+        <or>
+          <and>
+            <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/RESTART/ocean_temp_salt.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/RESTART/ocean_velocity.res.nc</cyclestr></datadep>
+            <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/model/#member#/RESTART/ocean_sbc.res.nc</cyclestr></datadep>
+          </and>
+        </or>
+      </dependency>
+
+     </task>
+  </metatask>
+
+<!-- LETKF -->
+  <task name="letkf">
+
+      <command>&SCRIPTS;/letkf.ksh</command>
+      <account>&PROJECT;</account>
+      <jobname><cyclestr>letkf_@Y@m@d@H</cyclestr></jobname>
+      <native>&CUSTOM;</native>
+      <queue>&QUEUE;</queue>
+      <cores>&LETKF_CORES;</cores>
+      <walltime>&LETKF_WALLTIME;</walltime>
+      <join><cyclestr>&LOGDIR;/letkf/@Y@m@d@H.log</cyclestr></join>
+
+
+    <envar>
+      <name>days</name>
+      <value>&days;</value>
+    </envar>
+
+    <envar>
+      <name>EXP_DATA</name>
+      <value>&EXP_DATA;</value>
+    </envar>
+
+    <envar>
+      <name>YYYYMMDDHH</name>
+      <value><cyclestr>@Y@m@d@H</cyclestr></value>
+    </envar>
+
+    <envar>
+      <name>LDIR</name>
+      <value>&LDIR;</value>
+    </envar>
+
+    <envar>
+      <name>LETKFexe</name>
+      <value>&LETKFexe;</value>
+    </envar>
+
+    <envar>
+      <name>ADAPTexe</name>
+      <value>&ADAPTexe;</value>
+    </envar>
+
+    <envar>
+      <name>INFLadj</name>
+      <value>&INFLadj;</value>
+    </envar>
+
+    <envar>
+      <name>REGRID</name>
+      <value>&UTIL;</value>
+    </envar>
+
+    <envar>
+      <name>INPUT_INIT</name>
+      <value>&INPUT_INIT;</value>
+    </envar>
+
+    <envar>
+      <name>DO_SFCFLUXES</name>
+      <value>&DO_SFCFLUXES;</value>
+    </envar>
+
+    <dependency>
+      <and>
+        <datadep age="01"><cyclestr>&EXP_DATA;/@Y@m@d@H/letkf/obs01001.dat</cyclestr></datadep>
+        <datadep age="01"><cyclestr>&EXP_DATA;/@Y@m@d@H/letkf/gs01001.ocean_temp_salt.res.nc</cyclestr></datadep>
+        <taskdep task="lprep_01"/>
+        <taskdep task="lprep_02"/>
+        <taskdep task="lprep_03"/>
+        <taskdep task="lprep_04"/>
+        <taskdep task="lprep_05"/>
+        <taskdep task="lprep_06"/>
+        <taskdep task="lprep_07"/>
+        <taskdep task="lprep_08"/>
+        <taskdep task="lprep_09"/>
+        <taskdep task="lprep_10"/>
+        <taskdep task="lprep_11"/>
+        <taskdep task="lprep_12"/>
+        <taskdep task="lprep_13"/>
+        <taskdep task="lprep_14"/>
+        <taskdep task="lprep_15"/>
+        <taskdep task="lprep_16"/>
+        <taskdep task="lprep_17"/>
+        <taskdep task="lprep_18"/>
+        <taskdep task="lprep_19"/>
+        <taskdep task="lprep_20"/>
+        <taskdep task="lprep_21"/>
+        <taskdep task="lprep_22"/>
+        <taskdep task="lprep_23"/>
+        <taskdep task="lprep_24"/>
+        <taskdep task="lprep_25"/>
+        <taskdep task="lprep_26"/>
+        <taskdep task="lprep_27"/>
+        <taskdep task="lprep_28"/>
+      </and>
+    </dependency>
+
+  </task>
+
+ <!-- GODAS SOLO --> 
+  <task name="g4p1">
+
+      <command>&SCRIPTS;/g4p1.ksh</command>
+
+      <account>&PROJECT;</account>
+
+      <jobname><cyclestr>g4p1_@Y@m@d@H</cyclestr></jobname>
+
+      <queue>&QUEUE;</queue>
+
+      <cores>&G4P1_CORES;</cores>
+
+      <walltime>&G4P1_WALLTIME;</walltime>
+
+      <join><cyclestr>&LOGDIR;/g4p1/@Y@m@d@H.log</cyclestr></join>
+      
+      <envar>
+        <name>alpha</name>
+        <value>&alpha;</value>
+      </envar>
+
+      <envar>
+        <name>EXP_DATA</name>
+        <value>&EXP_DATA;</value>
+      </envar>
+
+      <envar>
+        <name>YYYYMMDDHH</name>
+        <value><cyclestr>@Y@m@d@H</cyclestr></value>
+      </envar>
+
+      <envar>
+        <name>executable</name>
+        <value>&G4P1exe;</value>
+      </envar>
+
+      <envar>
+        <name>gsupdir</name>
+        <value>&gsupdir;</value>
+      </envar>
+
+      <envar>
+        <name>GOBSDIR_t</name>
+        <value>&GOBSDIR_t;</value>
+      </envar>
+
+      <envar>
+        <name>GOBSDIR_s</name>
+        <value>&GOBSDIR_s;</value>
+      </envar>
+
+      <envar>
+        <name>days</name>
+        <value>&gdays;</value>
+      </envar>
+
+      <envar>
+        <name>months</name>
+        <value>&gmonths;</value>
+      </envar>
+
+      <envar>
+        <name>rtype</name>
+        <value>&rtype;</value>
+      </envar>
+
+      <envar>
+        <name>REGRID</name>
+        <value>&UTIL;</value>
+      </envar>
+
+      <envar>
+        <name>MEMBERID</name>
+        <value>&GMEM2;</value>
+      </envar>
+
+      <envar>
+        <name>MEMBERS</name>
+        <value>&MEM3;</value>
+      </envar>
+
+      <envar>
+        <name>INPUT_INIT</name>
+        <value>&INPUT_INIT;</value>
+      </envar>
+
+      <envar>
+        <name>FLXDIR</name>
+        <value>&FLXDIR;</value>
+      </envar>
+
+      <envar>
+        <name>FLXDIR2</name>
+        <value>&FLXDIR2;</value>
+      </envar>
+
+      <envar>
+        <name>SSTDIR</name>
+        <value>&SSTDIR;</value>
+      </envar>
+
+      <dependency>
+        <or>
+          <taskdep task="letkf"/>
+          <and>
+            <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/letkf/NOUT-001</cyclestr></datadep>
+            <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/letkf/anal_me.grd</cyclestr></datadep>
+            <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/letkf/anal_sp.grd</cyclestr></datadep>
+            <datadep age="60"><cyclestr>&EXP_DATA;/@Y@m@d@H/letkf/letkf.out</cyclestr></datadep>
+          </and>
+        </or>
+      </dependency>
+
+
+  </task>
+
+</workflow>
