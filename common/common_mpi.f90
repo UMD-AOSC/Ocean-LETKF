@@ -23,7 +23,6 @@ SUBROUTINE initialize_mpi
   CALL MPI_COMM_RANK(MPI_COMM_WORLD,myrank,ierr)
   WRITE(6,'(A,I3.3,A,I3.3)') 'Hello from MYRANK ',myrank,'/',nprocs-1
 
-  RETURN
 END SUBROUTINE initialize_mpi
 
 SUBROUTINE finalize_mpi
@@ -31,7 +30,6 @@ SUBROUTINE finalize_mpi
   INTEGER :: ierr
   CALL MPI_FINALIZE(ierr)
 
-  RETURN
 END SUBROUTINE finalize_mpi
 
 END MODULE common_mpi

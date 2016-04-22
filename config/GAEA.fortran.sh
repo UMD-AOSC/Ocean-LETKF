@@ -5,7 +5,8 @@ F90_OPT='-O3 -parallel -what'
 #STEVE: -mcmodel=medium needed for large model grid sizes (e.g. higher than 1 degree resolution of om3_core3)
 # explanation of -mcmodel=medium and -shared-intel: http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
 F90_INLINE= #"-Q -qinline"
-F90_DEBUG= #'-g -qfullpath -v -C -qsigtrap=xl__trcedump' # -qflttrap=en:nanq -qsigtrap'
+F90_DEBUG= #'-check all -debug minimal -g -traceback'
+#F90_DEBUG='-check all -debug minimal -g -traceback' #'-g -qfullpath -v -C -qsigtrap=xl__trcedump' # -qflttrap=en:nanq -qsigtrap'
 F90_IEEE='-fltconsistency' #'-Kieee' #'-fltconsistency'
 F90_OBJECT_FLAG='-c' #STEVE: for some reason, mpxlf doesn't use -c, but rather -g
 BLAS=1
