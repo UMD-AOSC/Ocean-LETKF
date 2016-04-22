@@ -1,0 +1,12 @@
+I realized that sending many jobs through the workflow manager (rocoto) caused a lot of wait time. By sending more
+intensive jobs, but fewer of them, the total wallclock time seems to be improved. The 'compact' versions of the scripts
+are identical functionally but have this organization.
+
+The 'hybrid' version is the current main script.
+
+The 'only' suffix implies that only that part of the code is run, and is meant for a single timestep test run.
+
+
+godas_control is applied to the LETKF/HYBRID forecast
+
+godas_solo is an independent run of godas for comparison
