@@ -1,0 +1,15 @@
+######################################################################
+SRC=mkDlySBCnc4.c
+OBJ=$(SRC:.c=.o)
+LBO=/lustre/ltfs/scratch/ncep/David.Behringer/lib/TUtl.a /opt/cray/netcdf/4.2.0/intel/120/lib/libnetcdf.a
+INC=-I/lustre/ltfs/scratch/ncep/David.Behringer/include -I/opt/cray/netcdf/4.2.0/intel/120/include
+CFLAG=
+LDFLAG=
+CC=cc
+TARGET=mkDlySBCnc4
+
+$(TARGET): $(OBJ) $(LBO)
+	$(CC) $(LDFLAG) -o $(TARGET) $(OBJ) $(LBO)
+
+.c.o:
+	$(CC) $(CFLAG) $(INC) -c $<
