@@ -1,0 +1,17 @@
+Commented out lines in "extDysP4nc.c" to allow for differently formatted observation filenames:
+/scratch2/portfolios/NCEPDEV/climate/noscrub/David.Behringer/ARCS/DAILYnc
+The profiles have a different naming format:
+(It's expecting something like 2006tmpO.tar and 2006salM.tar, but getting 2006tmp.tar and 2006sal.tar) 
+
+
+Need the archive "hydro.a":
+
+
+[Steve.Penny@fe5 SRC]$ make -f Makefile.cDLTh4nc
+icc  -I/home/Steve.Penny/godas4p1/gdsSolo/Time/ -I/apps/netcdf/3.6.3/intel/include -c cmbDLstTh4nc.c
+cmbDLstTh4nc.c(20): catastrophic error: cannot open source file "hydro.h"
+  #include "hydro.h"
+                    ^
+
+compilation aborted for cmbDLstTh4nc.c (code 4)
+

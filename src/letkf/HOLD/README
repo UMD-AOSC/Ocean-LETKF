@@ -1,0 +1,3 @@
+Working on constructing a makefile approach for compiling.
+fmkmf doesn't handle subroutines outside of modules, which causes a problem.
+It also isn't great a handling netcdf (I have to trick it).

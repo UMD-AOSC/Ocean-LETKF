@@ -1,0 +1,3 @@
+# STEVE:
+# The files in this common directory should be necessary for both the letkf src
+# and the obs preprocessing source codes. Organize to ensure this.

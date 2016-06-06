@@ -5,6 +5,9 @@ Main repository for the Ocean-LETKF development
 I am attempting to move all machine-specific details to 'config/'
 For a new machine, create a set of files following the same format.
 
+NOTE: (6/4/16)
+I am in the middle of a reorganization to merge support for multiple ocean models into this one repository
+
 # Parallel decomposition:  
 Currently, the code reads in the entire model grid and sends each grid point to a different processor, in an alternating fashion.
 This is inefficient for the ocean, since   
@@ -26,3 +29,4 @@ assigned to that node.
 
 # To correct merge conflict:
 https://help.github.com/articles/resolving-a-merge-conflict-from-the-command-line/
+
