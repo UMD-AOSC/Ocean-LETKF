@@ -9,8 +9,8 @@ PROGRAM letkf
 ! USES:
 !  use common
 !  use common_mpi
-!  use common_mom4
-!  use common_mpi_mom4
+!  use common_oceanmodel
+!  use common_mpi_oceanmodel
 !  use common_letkf
 !  use letkf_obs
 !  use letkf_tools
@@ -25,7 +25,7 @@ PROGRAM letkf
 !   01/16/2009 Takemasa Miyoshi created for atmospheric analysis
 !   04/26/2011 Steve Penny converted to OCEAN for use with mom4
 !   03/18/2014 Steve Penny adapted to use on Gaea at NCEP/GFDL
-!   07/08/2015 uncomment all the drifters subroutine
+!   06/06/2016 Steve Penny merged MOM4p1/MOM6/HYCOM/ROMS configurations
 !
 !-------------------------------------------------------------------------------
 ! $Authors: Steve Penny, Takemasa Miyoshi $
@@ -33,8 +33,8 @@ PROGRAM letkf
 
   USE common
   USE common_mpi
-  USE common_mom4
-  USE common_mpi_mom4
+  USE common_oceanmodel
+  USE common_mpi_oceanmodel
   USE common_letkf
   USE letkf_obs
   USE letkf_tools
@@ -98,7 +98,7 @@ PROGRAM letkf
 
   WRITE(stdoutf(6:9), '(I4.4)') myrank
   WRITE(6,'(3A,I4.4)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
-  !STEVE: if it halts here, it probably means the nlon, nlat and nlev in common_mom4
+  !STEVE: if it halts here, it probably means the nlon, nlat and nlev in common_oceanmodel
   !       have not been set properly for this model's grid
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I4.4,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
@@ -155,8 +155,8 @@ PROGRAM letkf
   !-----------------------------------------------------------------------------
   ! Initialize modules
   !-----------------------------------------------------------------------------
-  CALL set_common_mom4
-  CALL set_common_mpi_mom4
+  CALL set_common_oceanmodel
+  CALL set_common_mpi_oceanmodel
 
   !-----------------------------------------------------------------------------
   ! Allocate dynamic arrays

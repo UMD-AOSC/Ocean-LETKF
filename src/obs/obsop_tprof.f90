@@ -6,10 +6,10 @@ PROGRAM obsop_tprof
 !  use common
 !  use params_model
 !  use vars_model
-!  use common_mom4
+!  use common_oceanmodel
 !  use params_obs
 !  use vars_obs
-!  use common_obs_mom4
+!  use common_obs_oceanmodel
 !
 !
 ! DESCRIPTION: 
@@ -36,11 +36,11 @@ PROGRAM obsop_tprof
   USE common
   USE params_model
   USE vars_model
-  USE common_mom4
+  USE common_oceanmodel
   USE params_obs,                ONLY: nobs, id_t_obs, id_s_obs, id_u_obs, id_v_obs, id_eta_obs
   USE params_obs,                ONLY: DO_INSITU_to_POTTEMP, DO_POTTEMP_to_INSITU
   USE vars_obs
-  USE common_obs_mom4
+  USE common_obs_oceanmodel
   USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z, sa_from_sp, pt_from_t
   USE read_argo,                 ONLY: obs_data, read_argo_nc
 
@@ -117,9 +117,9 @@ PROGRAM obsop_tprof
   INTEGER :: cnt_blacksea=0
 
   !-----------------------------------------------------------------------------
-  ! Initialize the common_mom4 module, and process command line options
+  ! Initialize the common_oceanmodel module, and process command line options
   !-----------------------------------------------------------------------------
-  CALL set_common_mom4
+  CALL set_common_oceanmodel
   CALL process_command_line !(get: -obsin <obsinfile> -gues <guesfile> -obsout <obsoutfile>)
 
   !-----------------------------------------------------------------------------

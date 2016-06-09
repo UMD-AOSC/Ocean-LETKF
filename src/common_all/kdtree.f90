@@ -16,7 +16,7 @@ MODULE KDTREE
 !===============================================================================
 
   USE common,           ONLY: r_size
-  USE common_obs_mom4
+  USE common_obs_oceanmodel
 
   IMPLICIT NONE
 

@@ -1,4 +1,4 @@
-MODULE common_mom6
+MODULE common_oceanmodel
 !=======================================================================
 !
 ! [PURPOSE:] Common Information for MOM6
@@ -114,7 +114,7 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Set the parameters
 !-----------------------------------------------------------------------
-SUBROUTINE set_common_mom6
+SUBROUTINE set_common_oceanmodel
   USE netcdf
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
@@ -123,7 +123,7 @@ SUBROUTINE set_common_mom6
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
 
-  WRITE(6,'(A)') 'Hello from set_common_mom6'
+  WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
   !
   ! Elements
   !
@@ -197,16 +197,16 @@ SUBROUTINE set_common_mom6
 
 ! call check( NF90_INQ_VARID(ncid3,'dx',varid) )    ! width of T_cell (meters)
 ! call check( NF90_GET_VAR(ncid3,varid,dx) ) 
-! WRITE(6,*) "common_mom6:: ", trim(gridfile3), " MIN(dx) = ", MINVAL(dx)
-! WRITE(6,*) "common_mom6:: ", trim(gridfile3), " MAX(dx) = ", MAXVAL(dx)
+! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MIN(dx) = ", MINVAL(dx)
+! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MAX(dx) = ", MAXVAL(dx)
 ! call check( NF90_INQ_VARID(ncid3,'dy',varid) )    ! height of T_cell (meters)
 ! call check( NF90_GET_VAR(ncid3,varid,dy) ) 
-! WRITE(6,*) "common_mom6:: ", trim(gridfile3), " MIN(dy) = ", MINVAL(dy)
-! WRITE(6,*) "common_mom6:: ", trim(gridfile3), " MAX(dy) = ", MAXVAL(dy)
+! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MIN(dy) = ", MINVAL(dy)
+! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MAX(dy) = ", MAXVAL(dy)
 ! call check( NF90_INQ_VARID(ncid3,'area',varid) )        ! area of T_cell
 ! call check( NF90_GET_VAR(ncid3,varid,area_t) ) 
-! WRITE(6,*) "common_mom6:: ", trim(gridfile3), " MIN(area_t) = ", MINVAL(area_t)
-! WRITE(6,*) "common_mom6:: ", trim(gridfile3), " MAX(area_t) = ", MAXVAL(area_t)
+! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MIN(area_t) = ", MINVAL(area_t)
+! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MAX(area_t) = ", MAXVAL(area_t)
 
   if (.true.) then !STEVE: this is TEMPORARY, until I figure out how to use the ocean_hgrid.nc data
     i=0
@@ -315,7 +315,7 @@ SUBROUTINE set_common_mom6
   wrapgap = 360.0d0 - abs(lon0) - abs(lonf)
 
   RETURN
-END SUBROUTINE set_common_mom6
+END SUBROUTINE set_common_oceanmodel
 
 !-----------------------------------------------------------------------
 ! File I/O
@@ -909,17 +909,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 END SUBROUTINE read_restart
 
 !-----------------------------------------------------------------------
-subroutine check(status)
-  USE netcdf
-  IMPLICIT NONE
-  integer, intent (in) :: status
-  if(status /= nf90_noerr) then 
-    print *, trim(nf90_strerror(status))
-    stop "Stopped"
-  end if
-end subroutine check
-
-!-----------------------------------------------------------------------
 ! Write a set of MOM6 restart files to initialize the next model run
 !-----------------------------------------------------------------------
 SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
@@ -1258,6 +1247,9 @@ SUBROUTINE write_bingrd4(filename,v3d,v2d)
 
   RETURN
 END SUBROUTINE write_bingrd4
+
+
+
 !-----------------------------------------------------------------------
 ! Monitor
 !-----------------------------------------------------------------------
@@ -1280,6 +1272,8 @@ SUBROUTINE monit_grd(v3d,v2d)
 
   RETURN
 END SUBROUTINE monit_grd
+
+!STEVE: put this somewhere more general (non model-specific) (ISSUE)
 
 !-----------------------------------------------------------------------
 ! Ensemble manipulations
@@ -1321,194 +1315,15 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
   RETURN
 END SUBROUTINE ensmean_grd
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!STEVE: additional subroutines for OCEAN
-!STEVE: all of these are still direct copies from mom2 version
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 !-----------------------------------------------------------------------
-! Adjustment available for near-coastline observations
-!-----------------------------------------------------------------------
-SUBROUTINE minkowski_flick(v3d0,v2d0,v3d,v2d)
-  ! The new output v3d has been grown around the ocean perimeter by one grid point.
-  ! This is a simple version of the general minkowski sum.
-  REAL(r_size), DIMENSION(nlon,nlat,nlev,nv3d), INTENT(IN) :: v3d0
-  REAL(r_size), DIMENSION(nlon,nlat,nv2d), INTENT(IN) :: v2d0
-  REAL(r_size), INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
-  REAL(r_size), INTENT(OUT) :: v2d(nlon,nlat,nv2d) !STEVE: not updating v2d for now
-  REAL(r_size), ALLOCATABLE :: buf(:,:) !(nlon+2,nlat+2)
-  REAL(r_size), ALLOCATABLE :: buf3d(:,:,:) !(nlon+2,nlat+2,nlev+2)
-  REAL(r_size), ALLOCATABLE :: buf2d(:,:,:) !(nlon+2,nlat+2,3)
-  REAL(r_size), ALLOCATABLE :: vcnt(:,:,:)   !(nlon,nlat,nlev)
-  REAL(r_size), ALLOCATABLE :: mask(:,:,:,:) !(nlon,nlat,nlev,9) -> stores boundary location
-  INTEGER, ALLOCATABLE :: kmt3d(:,:,:) !(nlon,nlat,nlev)
-  INTEGER, ALLOCATABLE :: kmt2d(:,:) !(nlon,nlat)
-  INTEGER :: nkmterr = 0
-  INTEGER :: i,j,k,n
-! LOGICAL, PARAMETER :: dodebug=.true.
-  LOGICAL, PARAMETER :: do3d=.true.
+subroutine check(status)
+  USE netcdf
+  IMPLICIT NONE
+  integer, intent (in) :: status
+  if(status /= nf90_noerr) then 
+    print *, trim(nf90_strerror(status))
+    stop "Stopped"
+  end if
+end subroutine check
 
-  if (do3d) then
-  WRITE(6,*) "In minkowski flick."
-
-  ALLOCATE(buf(nlon+2,nlat+2))
-  ALLOCATE(buf3d(nlon+2,nlat+2,nlev+2))
-  ALLOCATE(buf2d(nlon+2,nlat+2,3))
-  ALLOCATE(vcnt(nlon,nlat,nlev))
-  ALLOCATE(mask(nlon,nlat,nlev,9))
-  ALLOCATE(kmt3d(nlon,nlat,nlev))
-  ALLOCATE(kmt2d(nlon,nlat))
-
-  ! Create a 3D land sea map from kmt
-  kmt3d=0
-  kmt2d=0
-  do k=1,nlev
-    WHERE(k <= kmt) kmt3d(:,:,k) = 1
-  enddo
-  WHERE(kmt > 0) kmt2d = 1
-
-  ! Do (3D)
-  ! For each variable
-  v3d=0
-  WRITE(6,*) "Doing 3D part of minkowski flick."
-  do n=1,nv3d ! Mostly needed for temperature and salinity (3,4)
-    WRITE(6,*) "Doing variable: ", n
-    mask=0
-    vcnt=0
-    ! Reset buffer
-    buf3d=0
-
-    ! flutter grid up, down left, right and diagonal.
-    ! (Use v3d and v2d to store the boundary data during computation, then add it to v3d0 and v2d0 to get new grd)
-
-    !STEVE: stick the data in the middle of the buffer
-    buf3d(2:nlon+1,2:nlat+1,2:nlev+1) = v3d0(:,:,:,n)
-
-    ! Follow keypad order for: 1..9
-    do i=0,2
-      do j=0,2
-        do k=0,2
-          where(kmt3d .lt. 1 .and. buf3d(1+i:nlon+i,1+j:nlat+j,1+k:nlev+k) > 0.0 )
-            v3d(:,:,:,n) = v3d(:,:,:,n) + buf3d(1+i:nlon+i,1+j:nlat+j,1+k:nlev+k) ! sum all the values on this gridpoint that have water in them
-            vcnt = vcnt + 1
-          end where
-        enddo
-      enddo
-    enddo
-
-    ! If it intersects land (kmt<lev), then it's a boundary point (on the land side).
-    ! Average the flutter values to get an approximate extrapolation value.
-    where(vcnt > 0.0) ! (be careful not to divide by zero...)
-      v3d(:,:,:,n) = v3d(:,:,:,n) / vcnt
-    end where
-  enddo
-
-! Add back on to the pre-existing values
-  v3d = v3d0 + v3d
-
-  ! Do (2D)
-  ! For each variable
-  WRITE(6,*) "Doing 2D part of minkowski flick."
-  v2d=0
-  do n=1,nv2d
-    mask=0
-    vcnt=0
-    ! Reset buffer
-    buf2d=0
-
-    ! flutter grid up, down left, right and diagonal.
-    ! (Use v3d and v2d to store the boundary data during computation, then add it to v3d0 and v2d0 to get new grd)
-
-    !STEVE: stick the data in the middle of the buffer
-    buf2d(2:nlon+1,2:nlat+1,2) = v2d0(:,:,n)
-
-    ! Follow keypad order for: 1..9
-    do i=0,2
-      do j=0,2
-        do k=0,2
-          where(kmt2d .lt. 1 .and. buf2d(1+i:nlon+i,1+j:nlat+j,1+k) > 0.0 )
-            v2d(:,:,n) = v2d(:,:,n) + buf2d(1+i:nlon+i,1+j:nlat+j,1+k) ! sum all the values on this gridpoint that have water in them
-            vcnt(:,:,ilev_sfc) = vcnt(:,:,ilev_sfc) + 1
-          end where
-        enddo
-      enddo
-    enddo
-
-    ! If it intersects land (kmt<lev), then it's a boundary point (on the land side).
-    ! Average the flutter values to get an approximate extrapolation value.
-    where(vcnt(:,:,ilev_sfc) > 0.0) ! (be careful not to divide by zero...)
-      v2d(:,:,n) = v2d(:,:,n) / vcnt(:,:,ilev_sfc)
-    end where
-  enddo
-
-! Add back on to the pre-existing values
-  v2d = v2d0 + v2d
-
-  !Write to test
-  if (dodebug) then
-    CALL write_bingrd('test_mink_v3d.grd',v3d,v2d)
-    CALL write_bingrd('test_mink_v3d0.grd',v3d0,v2d0)
-  endif
-
-  DEALLOCATE(buf)
-  DEALLOCATE(buf3d)
-  DEALLOCATE(buf2d)
-  DEALLOCATE(vcnt)
-  DEALLOCATE(mask)
-  DEALLOCATE(kmt3d)
-  DEALLOCATE(kmt2d)
-
-  return
-  endif
-END SUBROUTINE minkowski_flick
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-SUBROUTINE set_kmt(file)
-  CHARACTER(*), INTENT(IN) :: file
-  REAL(r_size), ALLOCATABLE :: v3d(:,:,:,:)
-  REAL(r_size), ALLOCATABLE :: v2d(:,:,:)
-  INTEGER :: i,j,k,n
-
-  ALLOCATE(v3d(nlon,nlat,nlev,nv3d),v2d(nlon,nlat,nv2d))
-
-  CALL read_bingrd(file,v3d,v2d)
-
-  kmt = 0
-  do k=nlev,1,-1
-    do j=1,nlat
-      do i=1,nlon
-        if ( kmt(i,j) < 1 .and. v3d(i,j,k,3) > 0.0 ) then !STEVE: wanted MAX(v3d(i,j,k,:)), but salinity is 35 on land due to unit conversion
-          kmt(i,j) = k
-        endif
-      enddo
-    enddo
-  enddo
-
-  DEALLOCATE(v3d,v2d)
-
-END SUBROUTINE set_kmt
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-SUBROUTINE update_kmt(v3d,v2d)
-  REAL(r_size), INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
-  REAL(r_size), INTENT(IN) :: v2d(nlon,nlat,nv2d)
-  INTEGER :: nkmterr = 0
-  INTEGER :: i,j,k,n
-
-  do k=nlev,1,-1
-    do j=1,nlat
-      do i=1,nlon
-          if ( kmt(i,j) < 1 .and. v3d(i,j,k,3) > 0.0 ) then !STEVE: wanted MAX(v3d(i,j,k,:)), but salinity is 35 on land due to unit conversion
-            nkmterr = nkmterr+1
-            kmt(i,j) = k
-          endif
-      enddo
-    enddo
-  enddo
-  WRITE(6,*) "common_mom6::update_kmt: KMT entries updated: ", nkmterr
-
-  return
-END SUBROUTINE update_kmt
-
-END MODULE common_mom6
+END MODULE common_oceanmodel

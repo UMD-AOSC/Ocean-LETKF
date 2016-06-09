@@ -1,0 +1,50 @@
+MODULE params_model
+
+USE common, ONLY: slen
+
+IMPLICIT NONE
+
+PUBLIC
+
+INTEGER,PARAMETER :: nlon=1500
+INTEGER,PARAMETER :: nlat=1100
+INTEGER,PARAMETER :: nlev=32
+
+!INTEGER,PARAMETER :: nv3d=4 ! u,v,t,s              !(OCEAN)
+INTEGER,PARAMETER :: nv3d=5 ! u,v,t,s,h            !(OCEAN)(MOM6)(HYCOM)
+INTEGER,PARAMETER :: nv4d=3 ! x,y,z                !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
+!INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
+INTEGER,PARAMETER :: nv2d=3 ! ssh,ubt,vbt          !(OCEAN) !(ALTIMETRY)(HYCOM)
+
+INTEGER,PARAMETER :: nlevall=nlev*nv3d+nv2d
+
+INTEGER,PARAMETER :: iv3d_u=1
+INTEGER,PARAMETER :: iv3d_v=2
+INTEGER,PARAMETER :: iv3d_t=3
+INTEGER,PARAMETER :: iv3d_s=4                      !(OCEAN)
+INTEGER,PARAMETER :: iv3d_h=5                      !(OCEAN)(MOM4p1)
+                                                     !          From ocean_sbc.res.nc:
+INTEGER,PARAMETER :: iv2d_ssh=1                    !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
+INTEGER,PARAMETER :: iv2d_ubt=2                    !(OCEAN) ! Barotropic zonal velocity (HYCOM)
+INTEGER,PARAMETER :: iv2d_vbt=3                    !(OCEAN) ! Barotropic meridional velocity (HYCOM)
+INTEGER,PARAMETER :: iv2d_sst=4                    !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model (MOM4p1)
+INTEGER,PARAMETER :: iv2d_sss=5                    !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models (MOM4p1)
+INTEGER,PARAMETER :: iv4d_x=1                      !(OCEAN) (DRIFTERS)
+INTEGER,PARAMETER :: iv4d_y=2                      !(OCEAN) (DRIFTERS)
+INTEGER,PARAMETER :: iv4d_z=3                      !(OCEAN) (DRIFTERS)
+
+INTEGER,PARAMETER :: ilev_sfc=1
+
+! In place of mom4p1's grid_spec.nc data file, used to define the model grid
+CHARACTER(slen) :: gridfile  = '3zt.nc'
+CHARACTER(slen) :: gridfile1 = 'blkdat.input'
+CHARACTER(slen) :: gridfile2 = 'bot.nc'
+CHARACTER(slen) :: gridfile3 = '3dh.nc'
+
+!For input/output of model binary files (converted form HYCOM ab-format):
+CHARACTER(slen) :: base  = '.fsd.bin'! (HYCOM)(All variables assembled in one binary file)
+
+!model input and output file direct/sequential
+INTEGER, PARAMETER :: hycom_io_access = 1  ! 0 == direct, 1 == sequential
+
+END MODULE params_model

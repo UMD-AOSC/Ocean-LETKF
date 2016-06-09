@@ -6,10 +6,10 @@ PROGRAM obsop_adt
 !  use common
 !  use params_model
 !  use vars_model
-!  use common_mom4
+!  use common_oceanmodel
 !  use params_obs
 !  use vars_obs
-!  use common_obs_mom4
+!  use common_obs_oceanmodel
 !  use params_letkf,     ONLY: DO_ALTIMETRY, DO_ADT
 !
 !
@@ -37,10 +37,10 @@ PROGRAM obsop_adt
   USE common
   USE params_model
   USE vars_model
-  USE common_mom4
+  USE common_oceanmodel
   USE params_obs,                ONLY: nobs, id_eta_obs, DO_REMOVE_65N
   USE vars_obs
-  USE common_obs_mom4
+  USE common_obs_oceanmodel
   USE params_letkf,              ONLY: DO_ALTIMETRY, DO_ADT
   USE read_aviso_adt,            ONLY: read_aviso_adt_nc, obs_data
 
@@ -125,9 +125,9 @@ PROGRAM obsop_adt
   REAL(r_size) :: min_oerr = 0.04
 
   !-----------------------------------------------------------------------------
-  ! Initialize the common_mom4 module, and process command line options
+  ! Initialize the common_oceanmodel module, and process command line options
   !-----------------------------------------------------------------------------
-  CALL set_common_mom4
+  CALL set_common_oceanmodel
   CALL process_command_line !(get: -obsin <obsinfile> -gues <guesfile> -obsout <obsoutfile>)
 
   !-----------------------------------------------------------------------------

@@ -5,9 +5,9 @@ MODULE letkf_obs
 ! USES:
 !   use common
 !   use common_mpi
-!   use common_mom4
-!   use common_obs_mom4
-!   use common_mpi_mom4
+!   use common_oceanmodel
+!   use common_obs_oceanmodel
+!   use common_mpi_oceanmodel
 !   use common_letkf
 !   use letkf_drifters !(DRIFTERS)
 !
@@ -35,9 +35,9 @@ MODULE letkf_obs
 !===============================================================================
   USE common
   USE common_mpi
-  USE common_mom4
-  USE common_obs_mom4
-  USE common_mpi_mom4
+  USE common_oceanmodel
+  USE common_obs_oceanmodel
+  USE common_mpi_oceanmodel
   USE common_letkf
   USE params_letkf, ONLY: sigma_obs, sigma_obsv, sigma_obs0, gross_error, nslots, nbv
   USE params_letkf, ONLY: DO_QC_MEANDEP, DO_QC_MAXDEP

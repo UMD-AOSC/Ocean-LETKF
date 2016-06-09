@@ -1,4 +1,4 @@
-MODULE common_mom4
+MODULE common_oceanmodel
 !===============================================================================
 ! MODULE: common_obs
 ! 
@@ -47,7 +47,7 @@ MODULE common_mom4
 CONTAINS
 
 
-SUBROUTINE set_common_mom4
+SUBROUTINE set_common_oceanmodel
 !===============================================================================
 ! Initialize the module
 !===============================================================================
@@ -63,7 +63,7 @@ SUBROUTINE set_common_mom4
   LOGICAL :: dodebug = .false.
   !STEVE: for verifying against input netcdf file
 
-  WRITE(6,'(A)') 'Hello from set_common_mom4'
+  WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
   CALL initialize_params_model ! (checks to make sure it is initialized)
   CALL initialize_vars_model   ! (checks to make sure it is initialized)
 
@@ -74,7 +74,7 @@ SUBROUTINE set_common_mom4
       CALL read_etaclm(SSHclm_file,SSHclm_m)
     ELSE
       WRITE(6,*) "The model SSH climatology file does not exist: ", SSHclm_file
-      WRITE(6,*) "Exiting common_mom4.f90..."
+      WRITE(6,*) "Exiting set_common_mom4.f90..."
       STOP(1)
     ENDIF
   endif
@@ -87,7 +87,7 @@ SUBROUTINE set_common_mom4
   INQUIRE(FILE=trim(gridfile),EXIST=ex)
   if (.not. ex) then
     WRITE(6,*) "The file does not exist: ", gridfile 
-    WRITE(6,*) "Exiting common_mom4.f90..."
+    WRITE(6,*) "Exiting set_common_mom4.f90..."
     STOP(2)
   ENDIF
 
@@ -129,10 +129,10 @@ SUBROUTINE set_common_mom4
   CALL check( NF90_GET_VAR(ncid,varid,dy) ) 
 
   if (doverbose) then
-    WRITE(6,*) "common_mom4:: grid_spec.nc MIN(dx) = ", MINVAL(dx)
-    WRITE(6,*) "common_mom4:: grid_spec.nc MAX(dx) = ", MAXVAL(dx)
-    WRITE(6,*) "common_mom4:: grid_spec.nc MIN(dy) = ", MINVAL(dy)
-    WRITE(6,*) "common_mom4:: grid_spec.nc MAX(dy) = ", MAXVAL(dy)
+    WRITE(6,*) "set_common_oceanmodel:: grid_spec.nc MIN(dx) = ", MINVAL(dx)
+    WRITE(6,*) "set_common_oceanmodel:: grid_spec.nc MAX(dx) = ", MAXVAL(dx)
+    WRITE(6,*) "set_common_oceanmodel:: grid_spec.nc MIN(dy) = ", MINVAL(dy)
+    WRITE(6,*) "set_common_oceanmodel:: grid_spec.nc MAX(dy) = ", MAXVAL(dy)
   endif
 
   !
@@ -176,7 +176,7 @@ SUBROUTINE set_common_mom4
   ! (e.g. lon0, lat0, lonf, latf, wrapgap, ...)
   CALL set_vars_model 
 
-END SUBROUTINE set_common_mom4
+END SUBROUTINE set_common_oceanmodel
 
 
 !------------------------------------------------------------------------------
@@ -1029,7 +1029,7 @@ SUBROUTINE write_bingrd4(filename,v3d,v2d)
 
 END SUBROUTINE write_bingrd4
 
-
+!STEVE: move this somewhere more general (ISSUE)
 SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
 !===============================================================================
 ! Compute the ensemble mean
@@ -1073,4 +1073,4 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
 END SUBROUTINE ensmean_grd
 
 
-END MODULE common_mom4
+END MODULE common_oceanmodel

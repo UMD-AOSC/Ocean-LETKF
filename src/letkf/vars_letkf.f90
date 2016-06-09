@@ -38,6 +38,7 @@ MODULE vars_letkf
 
   CONTAINS
 
+  !STEVE: I think this would be better in "vars_obs.f90", maybe. (ISSUE)
   SUBROUTINE get_iobs(oelm,iobs)
     USE params_obs, ONLY: id_u_obs, id_v_obs, id_t_obs, id_s_obs, &
                           id_ssh_obs, id_ssh_obs, id_sst_obs, id_sss_obs, id_eta_obs

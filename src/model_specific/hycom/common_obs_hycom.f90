@@ -1,4 +1,4 @@
-MODULE common_obs_hycom
+MODULE common_obs_oceanmodel
 !=======================================================================
 !
 ! [PURPOSE:] Observational procedures
@@ -861,4 +861,4 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
 END SUBROUTINE write_obs2
 
 
-END MODULE common_obs_hycom
+END MODULE common_obs_oceanmodel

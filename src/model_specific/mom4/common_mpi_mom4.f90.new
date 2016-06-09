@@ -1,4 +1,4 @@
-MODULE common_mpi_mom4
+MODULE common_mpi_oceanmodel
 !=======================================================================
 !
 ! [PURPOSE:] MPI procedures
@@ -16,7 +16,7 @@ MODULE common_mpi_mom4
 !=======================================================================
   USE common
   USE common_mpi
-  USE common_mom4
+  USE common_oceanmodel
 
   IMPLICIT NONE
 
@@ -39,7 +39,7 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Initialize the mpi processing
 !-----------------------------------------------------------------------
-SUBROUTINE set_common_mpi_mom4
+SUBROUTINE set_common_mpi_oceanmodel
 
   USE params_model, ONLY: nlon, nlat
   USE vars_model,   ONLY: dx, dy
@@ -55,7 +55,7 @@ SUBROUTINE set_common_mpi_mom4
   INTEGER :: l, ll, mstart, mend, nv0 !(OCEAN)
   LOGICAL :: dodebug = .true.
 
-  WRITE(6,'(A)') 'Hello from set_common_mpi_mom4'
+  WRITE(6,'(A)') 'Hello from set_common_mpi_oceanmodel'
   i = MOD(nlon*nlat,nprocs)
   nij1max = (nlon*nlat - i)/nprocs + 1
   WRITE(6,*) "nij1max = ", nij1max
@@ -131,9 +131,9 @@ SUBROUTINE set_common_mpi_mom4
   j1(:)   = v2d(:,8)                 !(OCEAN)
 
   DEALLOCATE(v2d,v2dg)
-  if (dodebug) WRITE(6,*) "Finished set_common_mpi_mom4..."
+  if (dodebug) WRITE(6,*) "Finished set_common_mpi_oceanmodel..."
 
-END SUBROUTINE set_common_mpi_mom4
+END SUBROUTINE set_common_mpi_oceanmodel
 
 
 !-----------------------------------------------------------------------
@@ -613,7 +613,7 @@ SUBROUTINE write_ens_mpi_grd(file,member,v3d,v2d)
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
 
       !STEVE: debug
-!     print *, "common_mpi_mom4.f90::write_ens_mpi:: MAXVAL(ABS(v3dg(:,:,:,iv3d_t))) = ", MAXVAL(ABS(v3dg(:,:,:,iv3d_t)))
+!     print *, "common_mpi_mom4.f90::write_ens_mpi_grd:: MAXVAL(ABS(v3dg(:,:,:,iv3d_t))) = ", MAXVAL(ABS(v3dg(:,:,:,iv3d_t)))
 
       CALL write_bingrd4(filename,v3dg,v2dg)
     END IF
@@ -1041,4 +1041,4 @@ SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
 
 END SUBROUTINE scatter_grd_mpi_small
 
-END MODULE common_mpi_mom4
+END MODULE common_mpi_oceanmodel

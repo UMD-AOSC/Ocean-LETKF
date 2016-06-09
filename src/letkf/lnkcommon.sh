@@ -13,9 +13,10 @@ ln -fs $COMMONDIR/kdtree.f90 ./
 
 model='mom4'
 MODELDIR=../model_specific/$model
-ln -fs ../common/common_$model.f90 ./
-ln -fs ../common/common_mpi_$model.f90 ./
-ln -fs ../common/common_obs_$model.f90 ./
+ln -fs $MODELDIR/common_$model.f90 ./
+ln -fs $MODELDIR/common_mpi_$model.f90 ./
+ln -fs $MODELDIR/common_obs_$model.f90 ./
+ln -fs $MODELDIR/params_model.f90 ./
 
 OBSDIR=../obs
 ln -fs $OBSDIR/params_obs.f90

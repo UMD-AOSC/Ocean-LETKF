@@ -1,1 +1,1 @@
-params_model.f90.fpp
+../model_specific/mom4/params_model.f90

@@ -1,10 +1,11 @@
 #!/bin/bash
 set -ex
 
-source ../../config/machine.sh
-source ../../config/$MACHINE.fortran.sh
-source ../../config/$MACHINE.netcdf.sh
-source ../../config/$MACHINE.mpi.sh
+CONFIGDIR=../../config
+source $CONFIGDIR/machine.sh
+source $CONFIGDIR/$MACHINE.fortran.sh
+source $CONFIGDIR/$MACHINE.netcdf.sh
+source $CONFIGDIR/$MACHINE.mpi.sh
 
 # Ensemble size
 # STEVE: figure out how to read from params_letkf.f90 and put here (e.g. with awk/perl/etc.)
@@ -13,6 +14,9 @@ source ../../config/$MACHINE.mpi.sh
 #MEM=`grep nbv= params_letkf.f90 | sed -r 's/INTEGER,PARAMETER :: nbv=([0-9]+)/\1/'`
 #echo "MEM=$MEM"
 #MEM3=`printf %.3d ${MEM}`
+
+# Model name
+model=mom4
 
 # Experiment name
 name=mergetest
@@ -50,11 +54,11 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG params_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG params_model.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG vars_model.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_mom4.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_$model.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG params_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_obs.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_obs_mom4.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG $NETCDF_INC common_mpi_mom4.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG common_obs_$model.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG $NETCDF_INC common_mpi_$model.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG kdtree.f90

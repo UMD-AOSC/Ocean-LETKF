@@ -1,4 +1,4 @@
-MODULE common_obs_mom6
+MODULE common_obs_oceanmodel
 !=======================================================================
 !
 ! [PURPOSE:] Observational procedures
@@ -11,7 +11,7 @@ MODULE common_obs_mom6
 !=======================================================================
 !$USE OMP_LIB
   USE common
-  USE common_mom6
+  USE common_oceanmodel
 
   IMPLICIT NONE
   PUBLIC
@@ -903,4 +903,4 @@ REAL(r_size), INTENT(OUT) :: lxap
   return
 end subroutine atlpac
 
-END MODULE common_obs_mom6
+END MODULE common_obs_oceanmodel

@@ -6,10 +6,10 @@ PROGRAM obsop_sst
 !  use common
 !  use params_model
 !  use vars_model
-!  use common_mom4
+!  use common_oceanmodel
 !  use params_obs
 !  use vars_obs
-!  use common_obs_mom4
+!  use common_obs_oceanmodel
 !
 !
 ! DESCRIPTION: 
@@ -34,10 +34,10 @@ PROGRAM obsop_sst
   USE common
   USE params_model
   USE vars_model
-  USE common_mom4
+  USE common_oceanmodel
   USE params_obs,                ONLY: nobs, id_sst_obs
   USE vars_obs
-  USE common_obs_mom4
+  USE common_obs_oceanmodel
   USE read_avhrr_pathfinder,     ONLY: read_avhrr_pathfinder_nc, obs_data
 
   IMPLICIT NONE
@@ -115,9 +115,9 @@ PROGRAM obsop_sst
   REAL(r_size) :: min_oerr = 1.0 !ÂC !ÂC
 
   !-----------------------------------------------------------------------------
-  ! Initialize the common_mom4 module, and process command line options
+  ! Initialize the common_oceanmodel module, and process command line options
   !-----------------------------------------------------------------------------
-  CALL set_common_mom4
+  CALL set_common_oceanmodel
   CALL process_command_line !(get: -obsin <obsinfile> -gues <guesfile> -obsout <obsoutfile>)
 
   !-----------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-MODULE common_obs_mom4
+MODULE common_obs_oceanmodel
 !===============================================================================
 !
 ! [PURPOSE:] Observational procedures
@@ -9,7 +9,7 @@ MODULE common_obs_mom4
 !
 !===============================================================================
   USE common
-  USE common_mom4
+  USE common_oceanmodel
   USE params_obs
 
   IMPLICIT NONE
@@ -886,4 +886,4 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
 
 END SUBROUTINE write_obs2
 
-END MODULE common_obs_mom4
+END MODULE common_obs_oceanmodel

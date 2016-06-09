@@ -1,4 +1,4 @@
-MODULE common_hycom
+MODULE common_oceanmodel
 !=======================================================================
 !
 ! [PURPOSE:] Common Information for HYCOM
@@ -20,7 +20,7 @@ MODULE common_hycom
 
   IMPLICIT NONE
 
-  PUBLIC :: set_common_hycom, read_diag, read_restart, write_restart
+  PUBLIC :: set_common_oceanmodel, read_diag, read_restart, write_restart
   PUBLIC :: read_bingrd, write_bingrd, read_bingrd4, write_bingrd4
   PUBLIC :: ensmean_grd
 
@@ -71,7 +71,7 @@ MODULE common_hycom
 
 CONTAINS
 
-SUBROUTINE set_common_hycom
+SUBROUTINE set_common_oceanmodel
 !===============================================================================
 ! Initialize the module
 !===============================================================================
@@ -84,7 +84,7 @@ SUBROUTINE set_common_hycom
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
 
-  WRITE(6,'(A)') 'Hello from set_common_hycom'
+  WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
   !
   ! Elements
   !
@@ -359,7 +359,7 @@ SUBROUTINE set_common_hycom
   endif
 
   RETURN
-END SUBROUTINE set_common_hycom
+END SUBROUTINE set_common_oceanmodel
 
 !STEVE: ISSUE: need to update for HYCOM
 SUBROUTINE read_etaclm(SSHclm_file,SSHclm_m)
@@ -944,9 +944,9 @@ SUBROUTINE update_kmt(v3d,v2d)
       enddo
     enddo
   enddo
-  WRITE(6,*) "common_hycom::update_kmt: KMT entries updated: ", nkmterr
+  WRITE(6,*) "common_hycom.f90::update_kmt: KMT entries updated: ", nkmterr
 
 END SUBROUTINE update_kmt
 
-END MODULE common_hycom
+END MODULE common_oceanmodel
 

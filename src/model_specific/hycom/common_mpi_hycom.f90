@@ -1,4 +1,4 @@
-MODULE common_mpi_hycom
+MODULE common_mpi_oceanmodel
 !=======================================================================
 !
 ! [PURPOSE:] MPI procedures
@@ -15,7 +15,7 @@ MODULE common_mpi_hycom
   USE params_letkf, ONLY: nbv
   USE params_model, ONLY: nlon, nlev, nlat, nv3d, nv2d, nlevall, iv3d_t, iv3d_s !, base
   USE vars_model,   ONLY: dx, dy, lon2d, lat2d, kmt0, phi0
-  USE common_hycom, ONLY: read_restart, write_restart, ensmean_grd, write_bingrd4
+  USE common_oceanmodel, ONLY: read_restart, write_restart, ensmean_grd, write_bingrd4
 
   IMPLICIT NONE
   PUBLIC
@@ -32,7 +32,7 @@ MODULE common_mpi_hycom
 
 CONTAINS
 
-SUBROUTINE set_common_mpi_hycom
+SUBROUTINE set_common_mpi_oceanmodel
 !===============================================================================
 ! Initialize this module
 !===============================================================================
@@ -44,7 +44,7 @@ SUBROUTINE set_common_mpi_hycom
   INTEGER :: l, ll, mstart, mend, nv0 !(OCEAN)
   LOGICAL :: dodebug = .false.
 
-  WRITE(6,'(A)') 'Hello from set_common_mpi_hycom'
+  WRITE(6,'(A)') 'Hello from set_common_mpi_oceanmodel'
   i = MOD(nlon*nlat,nprocs)
   nij1max = (nlon*nlat - i)/nprocs + 1
   WRITE(6,*) "nij1max = ", nij1max
@@ -122,9 +122,9 @@ SUBROUTINE set_common_mpi_hycom
 
 ! DEALLOCATE(v3d,v2d,v3dg,v2dg)
   DEALLOCATE(v2d,v2dg)
-  if (dodebug) WRITE(6,*) "Finished set_common_mpi_hycom..."
+  if (dodebug) WRITE(6,*) "Finished set_common_mpi_oceanmodel..."
 
-END SUBROUTINE set_common_mpi_hycom
+END SUBROUTINE set_common_mpi_oceanmodel
 
 
 !-----------------------------------------------------------------------
@@ -1011,4 +1011,4 @@ SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
 END SUBROUTINE scatter_grd_mpi_small
 
 
-END MODULE common_mpi_hycom
+END MODULE common_mpi_oceanmodel

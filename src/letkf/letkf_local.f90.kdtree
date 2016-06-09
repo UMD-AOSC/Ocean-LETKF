@@ -5,8 +5,8 @@ MODULE letkf_local
 ! USES:
 !   use common
 !   use common_mpi
-!   use common_mom4
-!   use common_mpi_mom4
+!   use common_oceanmodel
+!   use common_mpi_oceanmodel
 !   use common_letkf
 !   use letkf_obs
 !   use params_letkf
@@ -53,10 +53,10 @@ MODULE letkf_local
 !===============================================================================
 
   USE common
-  USE common_obs_mom4
+  USE common_obs_oceanmodel
   USE common_mpi
-  USE common_mom4
-  USE common_mpi_mom4
+  USE common_oceanmodel
+  USE common_mpi_oceanmodel
   USE common_letkf
   USE letkf_obs !contains debug_hdxf_0, and nobsgrd
   USE vars_letkf,   ONLY: var_local_n2n
@@ -104,7 +104,7 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   REAL(r_size), INTENT(OUT) :: dep(nobstotal)
   INTEGER,      INTENT(OUT) :: nobsl
 
-  !! things used internally for hz loclzlization
+  ! Variables used internally for hz localization
   REAL(r_size) :: sigma_atm_h_ij, sigma_ocn_h_ij
   REAL(r_size) :: sigma_atm_v_ij, sigma_ocn_v_ij
   REAL(r_size) :: dist_zero_h, sigma_h
@@ -120,6 +120,7 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
 
   !STEVE: debug
   LOGICAL :: dodebug = .false.
+  INTEGER :: cnt_sst, cnt_sst0
 
   !-----------------------------------------------------------------------------
   ! Initialize the KD-tree
@@ -186,6 +187,7 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   !  scale the weight of the observation error based on distance from gridpoint.
   !  Outside of a maximum radius, set the obs impact to zero (i.e. remove the ob)
   !-----------------------------------------------------------------------------
+  cnt_sst0 = 0
   nobsl=0        
   do n = 1, nn
     loc_h = 0.0
@@ -222,8 +224,16 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     !! vertical localization cutoff
     if (dlev > dist_zero_v) CYCLE
 
+    !STEVE: (DEBUG)
+    if (dodebug .and. obselm(idx(n))==id_sst_obs) then
+      cnt_sst = cnt_sst + 1
+    endif
+
     !! Skip surface obs below the mixed layer:
-    if (ilev > mlev .and. obselm(idx(n))==id_sst_obs) CYCLE
+    if (ilev > mlev .and. obselm(idx(n))==id_sst_obs) then
+      cnt_sst0 = cnt_sst0+1
+      CYCLE
+    endif
 !   if (ilev > mlev .and. obselm(idx(n))==id_ssh_obs) CYCLE
 !   if (ilev > mlev .and. obselm(idx(n))==id_sss_obs) CYCLE
        
@@ -244,6 +254,9 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     if (dodebug) WRITE(6,*) "rdiag(nobsl) = ", rdiag(nobsl)
     if (dodebug) WRITE(6,*) "dep(nobsl)   = ", dep(nobsl)
   enddo
+
+  if (dodebug) WRITE(6,*) "obs_local:: assimilated SST obs: ", cnt_sst
+  if (dodebug) WRITE(6,*) "obs_local::     skipped SST obs: ", cnt_sst0
 
 END SUBROUTINE obs_local
 

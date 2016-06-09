@@ -1,4 +1,4 @@
-MODULE common_mpi_mom6
+MODULE common_mpi_oceanmodel
 !=======================================================================
 !
 ! [PURPOSE:] MPI procedures
@@ -16,7 +16,7 @@ MODULE common_mpi_mom6
 !$USE OMP_LIB
   USE common
   USE common_mpi
-  USE common_mom6
+  USE common_oceanmodel
 ! use isa  !STEVE: for debugging (isnan, isinf)
   use common_letkf, only : nbv
   IMPLICIT NONE
@@ -33,7 +33,7 @@ MODULE common_mpi_mom6
   REAL(r_size),ALLOCATABLE,SAVE :: i1(:),j1(:)     !(OCEAN) splits grid coordinates out into list like ijs
 
 CONTAINS
-SUBROUTINE set_common_mpi_mom6
+SUBROUTINE set_common_mpi_oceanmodel
   REAL(r_sngl), ALLOCATABLE :: v3dg(:,:,:,:) !(nlon,nlat,nlev,nv3d) != 0 !STEVE: initializing
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d) != 0      !STEVE: initializing
   REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
@@ -42,7 +42,7 @@ SUBROUTINE set_common_mpi_mom6
   INTEGER :: l, ll, mstart, mend, nv0 !(OCEAN)
   LOGICAL :: dodebug = .true.
 
-  WRITE(6,'(A)') 'Hello from set_common_mpi_mom6'
+  WRITE(6,'(A)') 'Hello from set_common_mpi_oceanmodel'
   i = MOD(nlon*nlat,nprocs)
   nij1max = (nlon*nlat - i)/nprocs + 1
   WRITE(6,*) "nij1max = ", nij1max
@@ -127,10 +127,10 @@ SUBROUTINE set_common_mpi_mom6
 
 ! DEALLOCATE(v3d,v2d,v3dg,v2dg)
   DEALLOCATE(v2d,v2dg)
-  if (dodebug) WRITE(6,*) "Finished set_common_mpi_mom6..."
+  if (dodebug) WRITE(6,*) "Finished set_common_mpi_oceanmodel..."
 
   RETURN
-END SUBROUTINE set_common_mpi_mom6
+END SUBROUTINE set_common_mpi_oceanmodel
 
 !-----------------------------------------------------------------------
 ! Scatter gridded data to processes (nrank -> all)
@@ -964,4 +964,4 @@ SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
   RETURN
 END SUBROUTINE scatter_grd_mpi_small
 
-END MODULE common_mpi_mom6
+END MODULE common_mpi_oceanmodel
