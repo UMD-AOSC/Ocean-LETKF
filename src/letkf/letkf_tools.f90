@@ -166,6 +166,17 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     enddo
   enddo
 
+  !STEVE: Check to make sure user supplied a set of non-identical ensemble members:
+  if (dodebug) then
+    WRITE(6,*) "letkf_tools.f90:: After computing perturbations..."
+    WRITE(6,*) "min val for level gues3d(:,1,:,iv3d_t) = ", MINVAL(gues3d(:,1,:,iv3d_t))
+    WRITE(6,*) "max val for level gues3d(:,1,:,iv3d_t) = ", MAXVAL(gues3d(:,1,:,iv3d_t))
+  endif
+  if (MAXVAL(gues3d(:,1,:,iv3d_t)) == MINVAL(gues3d(:,1,:,iv3d_t))) then
+    WRITE(6,*) "letkf_tools.f90::das_letkf:: It appears that all the ensemble members are identical. EXITING..."
+    STOP(833)
+  endif
+
   !-----------------------------------------------------------------------------
   ! multiplicative inflation
   !-----------------------------------------------------------------------------
@@ -276,7 +287,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             WRITE(6,*) "dep(1:nobsl) = ", dep(1:nobsl) 
             WRITE(6,*) "parm = ", parm
             WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
-            STOP(9)
+            STOP(630)
           endif
           !STEVE: end
 

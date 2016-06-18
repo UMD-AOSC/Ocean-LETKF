@@ -38,6 +38,7 @@ PUBLIC
   REAL(r_size),DIMENSION(nlev),SAVE      :: lev !(nlev)                     !(OCEAN)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lon2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
+  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
 
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dx !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dy !(nlon,nlat)
@@ -45,6 +46,7 @@ PUBLIC
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
 
   REAL(r_size),DIMENSION(nlat),SAVE      :: fcori !(nlat)
+  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: fcori2d !(nlon,nlat)
   INTEGER,DIMENSION(nlon,nlat),SAVE      :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
   ! For AMOC computation
@@ -129,7 +131,8 @@ SUBROUTINE set_vars_model
   endif
 
   ! Corioris parameter
-  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
+  fcori(:)   = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
+  fcori2d(:,:) = 2.0d0 * r_omega * sin(lat2d(:,:)*pi/180.0d0)
 
   lon0 = lon(1)
   lonf = lon(nlon)

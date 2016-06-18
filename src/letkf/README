@@ -22,3 +22,7 @@ allows one to specify the model dimension at runtime and was desired by some use
 
 The hit going from static to dynamic for the ensemble size was only a few seconds, so for now we're
 keeping the dynamic version for that parameter so that ensemble size can be specified at runtime.
+
+Locations to update lon/lat to lon2d/lat2d:
+phys2ijk in :: common_obs_oceanmodel.f90
+params_model.f90

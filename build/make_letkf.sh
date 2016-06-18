@@ -15,7 +15,8 @@ source $CONFIGDIR/$MACHINE.modules.sh
 model=mom4 #mom4, mom6, hycom, roms
 
 # Experiment name
-name=test_$model
+name=test_2dlonlat_$model
+#name=test_$model
 #name=TESTc3
 
 # Build directory

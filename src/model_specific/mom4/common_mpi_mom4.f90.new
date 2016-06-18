@@ -44,6 +44,7 @@ SUBROUTINE set_common_mpi_oceanmodel
   USE params_model, ONLY: nlon, nlat
   USE vars_model,   ONLY: dx, dy
   USE vars_model,   ONLY: lon, lat, kmt0, phi0
+  USE vars_model,   ONLY: lon2d, lat2d !, lev2d !STEVE: I'm assuming I'll need this one day
 
   IMPLICIT NONE
 
@@ -100,6 +101,7 @@ SUBROUTINE set_common_mpi_oceanmodel
   ALLOCATE(v2d(nij1,nv0))
   ALLOCATE(v2dg(nlon,nlat,nv0))
 
+!(UPDATE) with lon2d/lat2d search for observation (LON2D/LAT2D)
   ! Distribute that data to the appropriate processors
   if (dodebug) WRITE(6,*) "Converting dx, dy, lon, lat, i, j, phi0, and kmt0 to vectorized form..."
   v2dg=0.0
@@ -107,9 +109,11 @@ SUBROUTINE set_common_mpi_oceanmodel
     ! 2D and 1D Data stored in first layer:
     v2dg(:,j,1) = SNGL(dx(:,j))
     v2dg(:,j,2) = SNGL(dy(:,j))
-    v2dg(:,j,3) = SNGL(lon(:))
-    v2dg(:,j,4) = SNGL(lat(j)) !(Single value promoted to array)
+!   v2dg(:,j,3) = SNGL(lon(:))
+!   v2dg(:,j,4) = SNGL(lat(j)) !(Single value promoted to array)
     ! 2D Data stored in second layer:
+    v2dg(:,j,3) = SNGL(lon2d(:,j))
+    v2dg(:,j,4) = SNGL(lat2d(:,j))
     v2dg(:,j,5) = SNGL(kmt0(:,j))
     v2dg(:,j,6) = SNGL(phi0(:,j))  !STEVE: WARNING - this needs to be generalized to the specified dimensions
     !STEVE: For custom localization: (need to know how the grid points are distributed per node)
@@ -117,6 +121,7 @@ SUBROUTINE set_common_mpi_oceanmodel
       v2dg(i,j,7) = REAL(i,r_sngl)          !(OCEAN)
     ENDDO                                   !(OCEAN)
     v2dg(:,j,8) = REAL(j,r_sngl)            !(OCEAN)
+    !v2dg(:,j,9) = SNGL(lev2d(:,j))
   END DO
   if (dodebug) WRITE(6,*) "Calling scatter_grd_mpi_small..."
   CALL scatter_grd_mpi_small(0,v2dg,v2d,nlon,nlat,nv0)
@@ -129,6 +134,7 @@ SUBROUTINE set_common_mpi_oceanmodel
   phi1(:) = v2d(:,6)                 !(OCEAN)
   i1(:)   = v2d(:,7)                 !(OCEAN)
   j1(:)   = v2d(:,8)                 !(OCEAN)
+  !lev1(:) = v2d(:,9)
 
   DEALLOCATE(v2d,v2dg)
   if (dodebug) WRITE(6,*) "Finished set_common_mpi_oceanmodel..."

@@ -1,1 +1,1 @@
-/autofs/mnt/ncrc-svm1_home1/Steve.Penny/letkf/Ocean-LETKF/build/..//src/obs/read_avhrr_pathfinder.f90
+/ncrc/home1/Steve.Penny/letkf/Ocean-LETKF/build/..//src/obs/read_avhrr_pathfinder.f90

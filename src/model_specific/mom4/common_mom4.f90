@@ -95,6 +95,10 @@ SUBROUTINE set_common_oceanmodel
     WRITE(6,'(A)') '  >> accessing file: ', gridfile
   endif
 
+!(UPDATE) with lon2d/lat2d search for observation (LON2D/LAT2D)
+  !-----------------------------------------------------------------------------
+  ! Get 1d and 2d longitude fields:
+  !-----------------------------------------------------------------------------
   CALL check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
   CALL check( NF90_INQ_VARID(ncid,'grid_x_T',varid) )   ! Longitude for T-cell
   CALL check( NF90_GET_VAR(ncid,varid,lon) )
@@ -104,6 +108,17 @@ SUBROUTINE set_common_oceanmodel
     WRITE(6,*) "lon(nlon) = ", lon(nlon)
   endif
 
+  CALL check( NF90_INQ_VARID(ncid,'x_T',varid) )   ! Longitude for T-cell
+  CALL check( NF90_GET_VAR(ncid,varid,lon2d) )
+
+  if (doverbose) then
+    WRITE(6,*) "lon2d(1,1)       = ", lon2d(1,1)
+    WRITE(6,*) "lon2d(nlon,nlon) = ", lon2d(nlon,nlon)
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! Get 1d and 2d latitude fields:
+  !-----------------------------------------------------------------------------
   CALL check( NF90_INQ_VARID(ncid,'grid_y_T',varid) )   ! Latitude for T-cell
   CALL check( NF90_GET_VAR(ncid,varid,lat) )
 
@@ -112,12 +127,31 @@ SUBROUTINE set_common_oceanmodel
     WRITE(6,*) "lat(nlat) = ", lat(nlat)
   endif
 
+  CALL check( NF90_INQ_VARID(ncid,'y_T',varid) )   ! Longitude for T-cell
+  CALL check( NF90_GET_VAR(ncid,varid,lat2d) )
+
+  if (doverbose) then
+    WRITE(6,*) "lat2d(1,1)       = ", lat2d(1,1)
+    WRITE(6,*) "lat2d(nlon,nlon) = ", lat2d(nlon,nlon)
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! Get 1d and 2d depths of cell:
+  !-----------------------------------------------------------------------------
   CALL check( NF90_INQ_VARID(ncid,'zt',varid) )      ! depth of T-cell
   CALL check( NF90_GET_VAR(ncid,varid,lev) )
 
   if (doverbose) then
     WRITE(6,*) "lev(1) = ", lev(1)
     WRITE(6,*) "lev(nlev) = ", lev(nlev)
+  endif
+
+  CALL check( NF90_INQ_VARID(ncid,'depth_t',varid) )      ! depth of T-cell
+  CALL check( NF90_GET_VAR(ncid,varid,lev) )
+
+  if (doverbose) then
+    WRITE(6,*) "lev2d(1,1)       = ", lev2d(1,1)
+    WRITE(6,*) "lev2d(nlon,nlat) = ", lev2d(nlon,nlat)
   endif
 
   !-----------------------------------------------------------------------------

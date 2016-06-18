@@ -41,7 +41,10 @@ source $CONFIGDIR/$MACHINE.modules_ldtn.sh
 model=mom4
 
 # Experiment name:
-name=test_$model
+name=test_2dlonlat_$model
+#name=test_$model
+#name=TESTc3
+PGM=obsop.$name
 
 # Build directory
 BDIR=$CDIR/obsop_build/$name.build
@@ -52,10 +55,6 @@ sh $CDIR/ulnkcommon.sh
 sh $CDIR/lnkcommon_obsop.sh $model $CDIR/../
 rm -f *.mod
 rm -f *.o
-
-name=test_$model
-#name=TESTc3
-PGM=obsop.$name
 
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90

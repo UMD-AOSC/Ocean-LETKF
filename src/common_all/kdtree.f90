@@ -7,7 +7,8 @@
 !! tsluka@umd.edu
 !!
 !! Edits:
-!! 4-1-2016 :: Steve Penny - converted some subroutines to 'PURE' to improve performance.
+!! 4-1-2016  :: Steve Penny - converted some subroutines to 'PURE' to improve performance.
+!! 6-11-2016 :: Steve Penny - adding nearest neightbor search to support interpolation in obs operator (phys2ijk)
 !!------------------------------------------------------------------------------
 
 MODULE KDTREE
@@ -22,7 +23,7 @@ MODULE KDTREE
 
   PRIVATE
 
-  PUBLIC :: kd_root, kd_init, kd_search
+  PUBLIC :: kd_root, kd_init, kd_search, kd_knn
 
   !! a node for the kd-tree structure
   TYPE boxnode
@@ -44,6 +45,22 @@ MODULE KDTREE
   INTEGER, PARAMETER :: MINDIV = 10
 
 CONTAINS
+
+  SUBROUTINE kd_knn(root,lons,lats, s_point, kn, r_points, r_distance, r_num)
+    !=============================================================================
+    ! Search the tree structure to find k closest points
+    !=============================================================================
+    type(KD_ROOT), intent(in)    :: root
+    real(r_size),  intent(in)    :: lats(:), lons(:)
+    real(r_size),  intent(in)    :: s_point(2)         !! center of search circle
+    real(r_size),  intent(in)    :: kn                 !! number of nearest neighbors to look for
+    integer,       intent(inout) :: r_points(:)
+    real(r_size),  intent(inout) :: r_distance(:)
+    integer,       intent(out)   :: r_num
+
+    ! Traverse tree to find
+
+  END SUBROUTINE kd_knn
 
 
   SUBROUTINE kd_init(root, lons, lats)
@@ -159,10 +176,10 @@ CONTAINS
           taskdim(nowtask) = mod((tdim+1),2)
        end if
     end do
-  end subroutine kd_init
+  END SUBROUTINE kd_init
 
 
-  subroutine kd_search(root, lons, lats, s_point, s_radius, r_points, r_distance, r_num)
+  SUBROUTINE kd_search(root, lons, lats, s_point, s_radius, r_points, r_distance, r_num)
   !=============================================================================
   ! Search the tree structure to find all points within the specified region
   !=============================================================================
@@ -260,11 +277,11 @@ CONTAINS
     end if
     r_num = r_num+r_num2
     
-  end subroutine kd_search
+  END SUBROUTINE kd_search
 
 
   
-  subroutine  kd_search_inner(root, lons, lats, s_point, s_radius, r_points, r_distance, r_num)
+  SUBROUTINE  kd_search_inner(root, lons, lats, s_point, s_radius, r_points, r_distance, r_num)
   !=============================================================================
   ! The inner loop of kd-search, does the heavy lifting of traversing the tree
   !=============================================================================
@@ -397,7 +414,7 @@ CONTAINS
           end do
        end if
     end do
-  end subroutine kd_search_inner
+  END SUBROUTINE kd_search_inner
 
 
   PURE SUBROUTINE kd_selecti(k, indx, arr)
@@ -459,7 +476,7 @@ CONTAINS
   !   Performs a standard quicksort, with fallback to insertion sort for the smallest
   !   array segments. The array "arr" is an array of indices that are sorted using "key"
   !   as the sorting key value. Pivot points are chosen by a median of 3 using the
-  !   segment start, middle, and end... if anyone cares.
+  !   segment start, middle, and end.
   !=============================================================================
     integer, intent(inout) :: arr(:)        !! the array of indices to key to sort
 
