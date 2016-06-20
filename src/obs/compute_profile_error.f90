@@ -241,6 +241,12 @@ SUBROUTINE cmpTz(se,se0,seF,t,z,kd,spv)
     else 
       se(k) = maxerr
     endif
+    
+    !STEVE: check for NaN's, if we have one, assign average of se0 and seF as error
+    if(se(k) /= se(k)) then !NaN check
+      se(k) = (se0+se0+seF)/2.0 !STEVE: temporary fix (ISSUE)
+    endif
+
   enddo
   if (dodebug) print *, "se = ", se
 
