@@ -1,0 +1,16 @@
+######################################################################
+SRC=cmbDLstTh4nc_synth.c TmUtil.c
+OBJ=$(SRC:.c=.o)
+NETCDF=/opt/cray/netcdf/4.2.0/intel/120
+LBO=$(NETCDF)/lib/libnetcdf.a
+INC=-I$(NETCDF)/include
+CFLAG=
+LDFLAG=
+CC=cc
+TARGET=cmbDLstTh4nc_synth
+
+.c.o:
+	$(CC) $(CFLAG) $(INC) -c $<
+
+$(TARGET): $(OBJ) $(LBO)
+	$(CC) $(LDFLAG) -o $(TARGET) $(OBJ) $(LBO) -lm

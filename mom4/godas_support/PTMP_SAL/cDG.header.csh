@@ -1,9 +1,0 @@
-  set arcdir_t=/lustre/f1/unswept/Steve.Penny/OBS/synthetic/TMP_profs
-  set arcdir_s=/lustre/f1/unswept/Steve.Penny/OBS/synthetic/SAL_profs
-  set d1=1
-  set d2=5
-  set gridDir=/autofs/na1_home1/Steve.Penny/HYBRID/util
-  set scriptDir=/autofs/na1_home1/Steve.Penny/HYBRID/godas_support/PTMP_SAL
-  set yr=1999
-  set mo=01
-  set dy=04

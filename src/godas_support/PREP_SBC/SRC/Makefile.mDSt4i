@@ -1,0 +1,15 @@
+######################################################################
+SRC=mkDlySst4i.c
+OBJ=$(SRC:.c=.o)
+LBO=/home/Steve.Penny/godas4p1/gdsSolo/Time/TUtl.a $(NETCDF)/lib/libnetcdf.a
+INC=-I/home/Steve.Penny/godas4p1/gdsSolo/Time/ -I$(NETCDF)/include
+CFLAG=
+LDFLAG=
+CC=icc
+TARGET=mkDlySst4i
+
+$(TARGET): $(OBJ) $(LBO)
+	$(CC) $(LDFLAG) -o $(TARGET) $(OBJ) $(LBO)
+
+.c.o:
+	$(CC) $(CFLAG) $(INC) -c $<

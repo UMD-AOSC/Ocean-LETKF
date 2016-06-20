@@ -1,0 +1,52 @@
+#STEVE:
+For the conversion to potential temperature from in situ temperature,
+we want to use this function in the TEOS Gibbs-Sea Water (GSW) package:
+
+McDougall, T.J. and P.M. Barker, 2011: Getting started with TEOS-10 and the Gibbs Seawater (GSW) 
+      Oceanographic Toolbox, 28pp., SCOR/IAPSO WG127, ISBN 978-0-646-55621-5.
+      http://www.teos-10.org/software.htm
+
+function gsw_pt_from_t(sa,t,p,p_ref)
+!==========================================================================
+
+! Calculates potential temperature of seawater from in-situ temperature 
+!
+! sa     : Absolute Salinity                               [g/kg]
+! t      : in-situ temperature                             [deg C]
+! p      : sea pressure                                    [dbar]
+! p_ref  : reference sea pressure                          [dbar]
+!
+! gsw_pt_from_t : potential temperature                    [deg C] 
+
+It looks like we'll also need Sa from Sp (psu):
+
+!==========================================================================
+function gsw_sa_from_sp(sp,p,long,lat)
+!==========================================================================
+
+! Calculates Absolute Salinity, SA, from Practical Salinity, SP
+!
+! sp     : Practical Salinity                              [unitless]
+! p      : sea pressure                                    [dbar]
+! long   : longitude                                       [DEG E]     
+! lat    : latitude                                        [DEG N]
+!
+! gsw_sa_from_sp   : Absolute Salinity                     [g/kg]
+
+
+#STEVE:
+For the conversion of potential temperature TO in situ temperature,
+
+Perhaps they can be switched by switching the reference pressure?
+!==========================================================================
+function gsw_pt_from_t(sa,t,<p_ref>,<p>)
+!==========================================================================
+
+! Calculates potential temperature of seawater from in-situ temperature 
+!
+! sa     : Absolute Salinity                               [g/kg]
+! t      : in-situ temperature                             [deg C]
+! p      : sea pressure                                    [dbar]
+! p_ref  : reference sea pressure                          [dbar]
+!
+! gsw_pt_from_t : potential temperature                    [deg C]

@@ -1,0 +1,2520 @@
+MODULE common_mom4
+!=======================================================================
+!
+! [PURPOSE:] Common Information for MOM4
+!
+! [HISTORY:]
+!   10/15/2004 Takemasa Miyoshi  created
+!   01/23/2009 Takemasa Miyoshi  modified
+!   04/26/2011 Steve Penny, converted to OCEAN for use with MOM4
+!
+!=======================================================================
+!$USE OMP_LIB
+  USE common
+! use isa, ONLY: isnan, isnan4 !STEVE: for debugging (isnan, isinf)
+  IMPLICIT NONE
+  PUBLIC
+!-----------------------------------------------------------------------
+! General parameters
+!-----------------------------------------------------------------------
+  INTEGER,PARAMETER :: slen=256
+! MOM4 ncep2012 tripolar converted to spherical
+  INTEGER,PARAMETER :: nlon=720 !720
+  INTEGER,PARAMETER :: nlat=410 !360
+  INTEGER,PARAMETER :: nlev=40 !7  !40
+! MOM4 NCEP_om3_core3 test case, tripolar converted to spherical
+! INTEGER,PARAMETER :: nlon=360
+! INTEGER,PARAMETER :: nlat=200
+! INTEGER,PARAMETER :: nlev=50 !50 !STEVE: trying to reduce grid size to check memory issue
+! MOM4 box1 test case
+! INTEGER,PARAMETER :: nlon=24
+! INTEGER,PARAMETER :: nlat=35
+! INTEGER,PARAMETER :: nlev=18
+! MOM4 mk3p51 test case, Global Spherical grid
+! INTEGER,PARAMETER :: nlon=192
+! INTEGER,PARAMETER :: nlat=189
+! INTEGER,PARAMETER :: nlev=31
+! MOM4 iom1 test case, Indian Ocean
+! INTEGER,PARAMETER :: nlon=150
+! INTEGER,PARAMETER :: nlat=150
+! INTEGER,PARAMETER :: nlev=28
+! MOM4 tripolar om3_core1 or om3_core3 test cases.  (spherical lat/lon grids use the same dimensions)
+! INTEGER,PARAMETER :: nlon=360
+! INTEGER,PARAMETER :: nlat=200
+! INTEGER,PARAMETER :: nlev=50
+!
+  INTEGER,PARAMETER :: ilev_sfc=1
+!
+  INTEGER,PARAMETER :: nv3d=4 ! u,v,t,s              !(OCEAN)
+! INTEGER,PARAMETER :: nv3d=7 ! u,v,t,s,x,y,z        !(OCEAN) STEVE: add x,y,z for DRIFTERS
+  INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
+! INTEGER,PARAMETER :: nv2d=7 ! ssh/t/s, + sfc fluxes: taux,tauy,heat,freshwater
+  INTEGER,PARAMETER :: iv3d_u=1
+  INTEGER,PARAMETER :: iv3d_v=2
+  INTEGER,PARAMETER :: iv3d_t=3
+  INTEGER,PARAMETER :: iv3d_s=4                      !(OCEAN)
+  INTEGER,PARAMETER :: iv3d_x=5                      !(OCEAN) (DRIFTERS)
+  INTEGER,PARAMETER :: iv3d_y=6                      !(OCEAN) (DRIFTERS)
+  INTEGER,PARAMETER :: iv3d_z=7                      !(OCEAN) (DRIFTERS)
+  INTEGER,PARAMETER :: iv2d_ssh=1                    !(OCEAN)
+  INTEGER,PARAMETER :: iv2d_sst=2                    !(OCEAN)
+  INTEGER,PARAMETER :: iv2d_sss=3                    !(OCEAN)
+! INTEGER,PARAMETER :: iv2d_uflx=4                    !(OCEAN)
+! INTEGER,PARAMETER :: iv2d_vflx=5                    !(OCEAN)
+! INTEGER,PARAMETER :: iv2d_tflx=6                    !(OCEAN)
+! INTEGER,PARAMETER :: iv2d_sflx=7                    !(OCEAN)
+  INTEGER,PARAMETER :: nij0=nlon*nlat
+  INTEGER,PARAMETER :: nlevall=nlev*nv3d+nv2d
+  INTEGER,PARAMETER :: ngpv=nij0*nlevall
+  REAL(r_size),SAVE :: lon(nlon)
+  REAL(r_size),SAVE :: lat(nlat)
+  REAL(r_size),SAVE :: lev(nlev)                     !(OCEAN)
+  REAL(r_size),SAVE :: dx(nlon,nlat)
+  REAL(r_size),SAVE :: dy(nlon,nlat)
+  REAL(r_size),SAVE :: dy2(nlat)
+  REAL(r_size),SAVE :: fcori(nlat)
+  REAL(r_size),SAVE :: phi0(nlon,nlat)
+  REAL(r_size),SAVE :: kmt0(nlon,nlat)               !(OCEAN)
+  REAL(r_size),SAVE :: wet(nlon,nlat)                !(OCEAN)
+  REAL(r_size),SAVE :: area_t(nlon,nlat)             !(OCEAN)
+  CHARACTER(4),SAVE :: element(nv3d+nv2d)
+  INTEGER, DIMENSION(nlon,nlat), SAVE     :: kmt=-1  !(OCEAN) STEVE: the bottom topography for mom2
+  !STEVE: for Custom Localization
+  INTEGER :: nobids(nij0*nlev)                       !(OCEAN)
+  !STEVE: for verifying against input netcdf file
+  INTEGER :: nlon0=0, nlat0=0, nlev0=0                     !(OCEAN)
+  !STEVE: for filtering undef values from netcdf file
+  REAL(r_size), PARAMETER :: vmax = 1.0e18
+  !STEVE: For generalized grid
+  REAL(r_size) :: lon0, lonf, lat0, latf
+  REAL(r_size) :: wrapgap
+
+  !STEVE: for debugging
+  LOGICAL :: dodebug = .false.
+
+CONTAINS
+!-----------------------------------------------------------------------
+! Set the parameters
+!-----------------------------------------------------------------------
+SUBROUTINE set_common_mom4
+  IMPLICIT NONE
+  INCLUDE 'netcdf.inc'
+  INTEGER :: i,j
+  INTEGER :: ncid,istat,varid,dimid
+  CHARACTER(NF_MAX_NAME) :: dimname
+
+  WRITE(6,'(A)') 'Hello from set_common_mom4'
+  !
+  ! Elements
+  !
+  element(iv3d_u) = 'U   '
+  element(iv3d_v) = 'V   '
+  element(iv3d_t) = 'T   '
+  element(iv3d_s) = 'S   '             !(OCEAN)
+! element(iv3d_x) = 'X   '             !(OCEAN) (DRIFTERS)
+! element(iv3d_y) = 'Y   '             !(OCEAN) (DRIFTERS)
+! element(iv3d_z) = 'Z   '             !(OCEAN) (DRIFTERS)
+  element(nv3d+iv2d_ssh) = 'SSH '      !(OCEAN)
+  element(nv3d+iv2d_sst) = 'SST '      !(OCEAN)
+  element(nv3d+iv2d_sss) = 'SSS '      !(OCEAN)
+! element(nv3d+iv2d_uflx) = 'UFLX'     !(OCEAN)
+! element(nv3d+iv2d_vflx) = 'VFLX'     !(OCEAN)
+! element(nv3d+iv2d_tflx) = 'TFLX'     !(OCEAN)
+! element(nv3d+iv2d_sflx) = 'SFLX'     !(OCEAN)
+
+  !
+  ! Lon, Lat, f, orography
+  !
+!STEVE: this part adapted from ROMS, update from MOM4 netcdf files:
+!STEVE: GOAL: to utilize all netcdf grid data to completely define the grid and all grid-dependent operations
+  WRITE(6,'(A)') '  >> accessing file: grid_spec.nc'
+  istat = NF_OPEN('grid_spec.nc',NF_NOWRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR on grid_spec.nc'
+    STOP
+  END IF
+  istat = NF_INQ_VARID(ncid,'grid_x_T',varid)   ! Longitude for T-cell
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,lon)
+  WRITE(6,*) "lon(1) = ", lon(1)
+  WRITE(6,*) "lon(nlon) = ", lon(nlon)
+  istat = NF_INQ_VARID(ncid,'grid_y_T',varid)   ! Latitude for T-cell
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,lat)
+  WRITE(6,*) "lat(1) = ", lat(1)
+  WRITE(6,*) "lat(nlat) = ", lat(nlat)
+  istat = NF_INQ_VARID(ncid,'zt',varid)         ! depth of T-cell
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,lev)
+  WRITE(6,*) "lev(1) = ", lev(1)
+  WRITE(6,*) "lev(nlev) = ", lev(nlev)
+! istat = NF_INQ_VARID(ncid,'num_levels',varid) ! number of vertical levels
+! istat = NF_GET_VAR_DOUBLE(ncid,varid,phi0)
+! WRITE(6,*) "ncid = ", ncid
+! WRITE(6,*) "varid = ", varid
+! WRITE(6,*) "phi0(1,1) = ", phi0(1,1)
+! WRITE(6,*) "phi0(nlon,nlat) = ", phi0(nlon,nlat)
+  !
+  ! dx and dy
+  !
+  istat = NF_INQ_VARID(ncid,'ds_01_21_T',varid)     ! width of T_cell (meters)
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,dx)  
+  istat = NF_INQ_VARID(ncid,'ds_10_12_T',varid)     ! height of T_cell (meters)
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,dy)  
+  istat = NF_INQ_VARID(ncid,'area_T',varid)         ! area of T_cell
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,area_t)  
+  WRITE(6,*) "common_mom4:: grid_spec.nc MIN(dx) = ", MINVAL(dx)
+  WRITE(6,*) "common_mom4:: grid_spec.nc MAX(dx) = ", MAXVAL(dx)
+  WRITE(6,*) "common_mom4:: grid_spec.nc MIN(dy) = ", MINVAL(dy)
+  WRITE(6,*) "common_mom4:: grid_spec.nc MAX(dy) = ", MAXVAL(dy)
+  WRITE(6,*) "common_mom4:: grid_spec.nc MIN(area_t) = ", MINVAL(area_t)
+  WRITE(6,*) "common_mom4:: grid_spec.nc MAX(area_t) = ", MAXVAL(area_t)
+
+  !
+  ! kmt data
+  !
+  istat = NF_INQ_VARID(ncid,'num_levels',varid) ! number of vertical T-cells
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,kmt0)
+  WRITE(6,*) "kmt0(1,1) = ", kmt0(1,1)
+  WRITE(6,*) "kmt0(nlon,nlat) = ", kmt0(nlon,nlat)
+  kmt = NINT(kmt0)
+  istat = NF_INQ_VARID(ncid,'wet',varid)        ! land/sea flag (0=land) for T-cell
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,wet)
+  WRITE(6,*) "wet(1,1) = ", wet(1,1)
+  WRITE(6,*) "wet(nlon,nlat) = ", wet(nlon,nlat)
+
+  WRITE(6,*) "Using dx and dy from netcdf file grid_spec.nc"
+  WRITE(6,*) "dx(1,1) = ", dx(1,1)
+  WRITE(6,*) "dx(nlon,nlat) = ", dx(nlon,nlat)
+  WRITE(6,*) "dy(1,1) = ", dy(1,1)
+  WRITE(6,*) "dy(nlon,nlat) = ", dy(nlon,nlat)
+
+  ! verify grid dimensions from grid_spec.nc file
+  istat = NF_INQ_DIMID(ncid,'grid_x_T',dimid)   ! Longitude dimension for T-cell
+  istat = NF_INQ_DIM(ncid,dimid,dimname,nlon0)
+  istat = NF_INQ_DIMID(ncid,'grid_y_T',dimid)   ! Latitude dimension for T-cell
+  istat = NF_INQ_DIM(ncid,dimid,dimname,nlat0)
+  istat = NF_INQ_DIMID(ncid,'zt',dimid)   ! Depth dimension for T-cell
+  istat = NF_INQ_DIM(ncid,dimid,dimname,nlev0)
+  if (nlon0 .ne. nlon) then
+    WRITE(6,*) "ERROR::common_mom4:: nlon = ", nlon, ", but nlon0 (from netcdf file grid_spec.nc) = ", nlon0
+    STOP 1
+  elseif (nlat0 .ne. nlat) then
+    WRITE(6,*) "ERROR::common_mom4:: nlat = ", nlat, ", but nlat0 (from netcdf file grid_spec.nc) = ", nlat0
+    STOP 1
+  elseif (nlev0 .ne. nlev) then
+    WRITE(6,*) "ERROR::common_mom4:: nlev = ", nlev, ", but nlev0 (from netcdf file grid_spec.nc) = ", nlev0
+    STOP 1
+  endif
+
+  !
+  ! Corioris parameter
+  !
+!$OMP PARALLEL WORKSHARE
+  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
+!$OMP END PARALLEL WORKSHARE
+
+  ! Close the grid_spec.nc file:
+  istat = NF_CLOSE(ncid)
+
+  ! STEVE: for generalized grid:
+  lon0 = lon(1)
+  lonf = lon(nlon)
+  lat0 = lat(1)
+  latf = lat(nlat)
+  wrapgap = 360.0d0 - abs(lon0) - abs(lonf)
+
+  RETURN
+END SUBROUTINE set_common_mom4
+!-----------------------------------------------------------------------
+! File I/O
+!-----------------------------------------------------------------------
+
+!STEVE: add this:
+!-- Read a grid file in mom4 netcdf format ---------------------------------------------------
+
+!-----------------------------------------------------------------------
+! File I/O (netCDF) modified from ROMS
+!-----------------------------------------------------------------------
+!-- Read a grid file ---------------------------------------------------
+SUBROUTINE read_grd(file,v3d,v2d)
+  IMPLICIT NONE
+  INCLUDE 'netcdf.inc'
+  CHARACTER(*),INTENT(IN) :: file
+  REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
+  REAL(r_sngl) :: buf4(nlon,nlat,nlev)
+  CHARACTER(slen) :: tsfile,uvfile, sffile,drfile ! (TS) (UV) (SFC) (DRIFTERS)
+  INTEGER :: i,j,k
+  INTEGER :: ncid,istat,varid
+  !STEVE:
+  REAL(r_size) :: meanSSH !STEVE: for temporary SSH estimate based on heat content
+  REAL(r_size) :: videpth !STEVE: depth of vertically integrated heat content
+  !STEVE: for debugging:
+  CHARACTER(32) :: testfile
+  INTEGER :: iunit,iolen,n,irec
+! LOGICAL :: dodebug = .true.
+
+  tsfile = trim(file)//'.ocean_temp_salt.res.nc'
+  uvfile = trim(file)//'.ocean_velocity.res.nc'
+  sffile = trim(file)//'.ocean_sbc.res.nc'
+  drfile = trim(file)//'.drifters_out.txt' ! (DRIFTERS)
+! read (FLUXES)
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Open the T/S netcdf restart file
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  istat = NF_OPEN(tsfile,NF_NOWRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR in read_grd for ',tsfile
+    STOP
+  END IF
+  WRITE(6,*) "read_grd:: just opened file ", tsfile
+
+  !!! t
+  buf4=0.0
+  istat = NF_INQ_VARID(ncid,'temp',varid)
+  istat = NF_GET_VAR_REAL(ncid,varid,buf4)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR (read_grd:: temp)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+  WRITE(6,*) "read_grd:: just got data for variable temp"
+  DO k=1,nlev
+    DO j=1,nlat
+      DO i=1,nlon
+        v3d(i,j,k,iv3d_t) = REAL(buf4(i,j,k),r_size)
+      END DO
+    END DO
+  END DO
+  WRITE(6,*) "read_grd:: finished processing data for variable temp"
+
+  ! !STEVE: debug
+  if (dodebug) then
+    WRITE(6,*) "POST-TEMP"
+    WRITE(6,*) "read_grd:: tsfile = ", tsfile
+    do k=1,nlev
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_t) = ",MAXVAL(v3d(:,:,k,iv3d_t))
+    enddo
+  endif
+! !STEVE: end
+
+  !!! s
+  buf4=0.0
+  istat = NF_INQ_VARID(ncid,'salt',varid)
+  istat = NF_GET_VAR_REAL(ncid,varid,buf4)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR (salt)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+  WRITE(6,*) "read_grd:: just got data for variable salt"
+  DO k=1,nlev
+    DO j=1,nlat
+      DO i=1,nlon
+        v3d(i,j,k,iv3d_s) = REAL(buf4(i,j,k),r_size)
+      END DO
+    END DO
+  END DO
+  WRITE(6,*) "read_grd:: finished processing data for variable salt"
+
+! !STEVE: debug
+  if (dodebug) then
+    WRITE(6,*) "POST-SALT"
+    WRITE(6,*) "read_grd:: tsfile = ", tsfile
+    do k=1,nlev
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_s) = ", MAXVAL(v3d(:,:,k,iv3d_s))
+    enddo 
+  endif
+! !STEVE: end
+
+  istat = NF_CLOSE(ncid)
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Open the U/V netcdf restart file
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  istat = NF_OPEN(uvfile,NF_NOWRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR in read_grd for ',uvfile
+    STOP
+  END IF
+  WRITE(6,*) "read_grd:: just opened file ", uvfile
+
+  !!! u
+  buf4=0.0
+  istat = NF_INQ_VARID(ncid,'u',varid)
+  istat = NF_GET_VAR_REAL(ncid,varid,buf4)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR (u)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+  WRITE(6,*) "read_grd:: just got data for variable u"
+  DO k=1,nlev
+    DO j=1,nlat
+      DO i=1,nlon
+        v3d(i,j,k,iv3d_u) = REAL(buf4(i,j,k),r_size)
+      END DO
+    END DO
+  END DO
+  WRITE(6,*) "read_grd:: finished processing data for variable u"
+
+  ! !STEVE: debug
+  if (dodebug) then
+    WRITE(6,*) "POST-U"
+    WRITE(6,*) "read_grd:: uvfile = ", uvfile
+    do k=1,nlev
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_u) = ",MAXVAL(v3d(:,:,k,iv3d_u))
+    enddo
+  endif
+! !STEVE: end
+
+
+  !!! v
+  buf4=0.0
+  istat = NF_INQ_VARID(ncid,'v',varid)
+  istat = NF_GET_VAR_REAL(ncid,varid,buf4)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR (v)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+  WRITE(6,*) "read_grd:: just got data for variable v"
+  DO k=1,nlev
+    DO j=1,nlat
+      DO i=1,nlon
+        v3d(i,j,k,iv3d_v) = REAL(buf4(i,j,k),r_size)
+      END DO
+    END DO
+  END DO
+  WRITE(6,*) "read_grd:: finished processing data for variable v"
+
+! !STEVE: debug
+  if (dodebug) then
+    WRITE(6,*) "POST-V"
+    WRITE(6,*) "read_grd:: uvfile = ", uvfile
+    do k=1,nlev
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_v) = ", MAXVAL(v3d(:,:,k,iv3d_v))
+    enddo 
+  endif
+! !STEVE: end
+
+  istat = NF_CLOSE(ncid)
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Set the SST and SSS data for the SFC
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (.false.) then
+    v2d(:,:,iv2d_sst) = v3d(:,:,ilev_sfc,iv3d_t)
+    v2d(:,:,iv2d_sss) = v3d(:,:,ilev_sfc,iv3d_s)
+  else
+    istat = NF_OPEN(sffile,NF_NOWRITE,ncid)
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF OPEN ERROR in read_grd for ',sffile
+      STOP
+    END IF
+    WRITE(6,*) "read_grd:: just opened file ", sffile
+
+    !!! SST
+    buf4=0.0
+    istat = NF_INQ_VARID(ncid,'t_surf',varid)
+    istat = NF_GET_VAR_REAL(ncid,varid,buf4(:,:,ilev_sfc))
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF READ ERROR (read_grd:: t_surf)'
+      WRITE(6,*) "istat = ", istat
+      STOP
+    END IF
+    WRITE(6,*) "read_grd:: just got data for variable sfc temp"
+    DO j=1,nlat
+      DO i=1,nlon
+        if (kmt(i,j) .ge. 1) v2d(i,j,iv2d_sst) = REAL(buf4(i,j,ilev_sfc),r_size) - t0c !kelvin
+      END DO
+    END DO
+    WRITE(6,*) "read_grd:: finished processing data for variable SST"
+
+    ! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-SST"
+      WRITE(6,*) "read_grd:: sffile = ", sffile
+      WRITE(6,*) "max val for level v3d(:,:,iv2d_sst) = ",MAXVAL(v2d(:,:,iv2d_sst))
+    endif
+! !STEVE: end
+
+    !!! SSS
+    buf4=0.0
+    istat = NF_INQ_VARID(ncid,'s_surf',varid)
+    istat = NF_GET_VAR_REAL(ncid,varid,buf4(:,:,ilev_sfc))
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF READ ERROR (read_grd:: s_surf)'
+      WRITE(6,*) "istat = ", istat
+      STOP
+    END IF
+    WRITE(6,*) "read_grd:: just got data for variable sfc salt"
+    DO j=1,nlat
+      DO i=1,nlon
+        v2d(i,j,iv2d_sss) = REAL(buf4(i,j,ilev_sfc),r_size)
+      END DO
+    END DO
+    WRITE(6,*) "read_grd:: finished processing data for variable SSS"
+
+! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-SSS"
+      WRITE(6,*) "read_grd:: sffile = ", sffile
+      WRITE(6,*) "max val for level v3d(:,:,iv2d_sss) = ", MAXVAL(v2d(:,:,iv2d_sss))
+    endif
+! !STEVE: end
+
+    istat = NF_CLOSE(ncid) 
+  endif
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Open the ALTIMETRY netcdf diagnostic file (SSH)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (.false.) then
+    !STEVE: for now, use vertically integrated heat content
+    videpth = 300
+    v2d(:,:,iv2d_ssh) = v3d(:,:,1,iv3d_t)*lev(1)
+    do k=2,nlev
+      if (lev(k) > videpth) EXIT
+      v2d(:,:,iv2d_ssh) = v2d(:,:,iv2d_ssh) + v3d(:,:,k,iv3d_t)*(lev(k)-lev(k-1)) 
+    enddo
+  
+    ! Divide out averages
+    meanSSH = SUM(v2d(:,:,iv2d_ssh))/(nlon*nlat)
+    where(v2d(:,:,iv2d_ssh) > 0) &
+      v2d(:,:,iv2d_ssh) = v2d(:,:,iv2d_ssh)-meanSSH
+  else
+    istat = NF_OPEN(sffile,NF_NOWRITE,ncid)
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF OPEN ERROR in read_grd for ',sffile
+      STOP
+    END IF
+    WRITE(6,*) "read_grd:: just opened file ", sffile
+
+    !!! SSH
+    buf4=0.0
+    istat = NF_INQ_VARID(ncid,'sea_lev',varid)
+    istat = NF_GET_VAR_REAL(ncid,varid,buf4(:,:,ilev_sfc))
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF READ ERROR (read_grd:: temp)'
+      WRITE(6,*) "istat = ", istat
+      STOP
+    END IF
+    !WRITE(6,*) "read_grd:: just got data for variable temp"
+    DO j=1,nlat
+      DO i=1,nlon
+        !STEVE: Hopefully reading in meters here... (data might be in cm)
+        v2d(i,j,iv2d_ssh) = REAL(buf4(i,j,ilev_sfc),r_size)
+      END DO
+    END DO
+    WRITE(6,*) "read_grd:: finished processing data for variable SSH"
+
+! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-SSH"
+      WRITE(6,*) "read_grd:: sffile = ", sffile
+      WRITE(6,*) "max val for level v3d(:,:,iv2d_ssh) = ", MAXVAL(v2d(:,:,iv2d_ssh))
+    endif
+! !STEVE: end
+
+    istat = NF_CLOSE(ncid)
+  endif
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Open the DRIFTERS netcdf restart file
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ! For additional variables:
+  ! E.g. surface height, drifters
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Open the XYZ drifters positions file
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Open the surface fluxes netcdf file
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! !STEVE: debug test
+  if (.false.) then
+    testfile = "test_read.grd"
+!   CALL write_bingrd(trim(testfile),v3d,v2d)
+
+    iunit=55
+    INQUIRE(IOLENGTH=iolen) iolen
+    OPEN(iunit,FILE=testfile,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
+
+    irec=1
+    DO n=1,nv3d
+      DO k=1,nlev
+        WRITE(iunit,REC=irec) v3d(:,:,k,n)
+        irec = irec + 1
+      END DO
+    END DO
+
+    DO n=1,nv2d
+      WRITE(iunit,REC=irec) v2d(:,:,n)
+      irec = irec + 1
+    END DO
+    CLOSE(iunit)
+
+    WRITE(6,*) "Reading from file: ", file
+    WRITE(6,*) "STOP 3"
+    STOP 3
+  endif
+
+  RETURN
+END SUBROUTINE read_grd
+
+SUBROUTINE read_grd4(file,v3d,v2d)
+  IMPLICIT NONE
+  INCLUDE 'netcdf.inc'
+  CHARACTER(*),INTENT(IN) :: file
+  REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
+  CHARACTER(slen) :: tsfile,uvfile, sffile,drfile ! (TS) (UV) (SFC) (DRIFTERS)
+  INTEGER :: ncid,istat,varid
+  !STEVE:
+  INTEGER :: i,j,k
+  REAL(r_size) :: meanSSH !STEVE: for temporary SSH estimate based on heat content
+  REAL(r_size) :: videpth !STEVE: depth of vertically integrated heat content
+  !STEVE: for debugging:
+  CHARACTER(32) :: testfile
+  INTEGER :: iunit,iolen,n,irec
+! LOGICAL :: dodebug = .true.
+
+  tsfile = trim(file)//'.ocean_temp_salt.res.nc'
+  uvfile = trim(file)//'.ocean_velocity.res.nc'
+  sffile = trim(file)//'.ocean_sbc.res.nc'
+  drfile = trim(file)//'.drifters_out.txt' ! (DRIFTERS)
+
+  istat = NF_OPEN(tsfile,NF_NOWRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR in read_grd4 for ', tsfile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  !!! t
+  istat = NF_INQ_VARID(ncid,'temp',varid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR in NF_INQ_VARID (read_grd4:: temp)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+  istat = NF_GET_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d_t))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR in NF_GET_VAR_REAL (read_grd4:: temp)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+! !STEVE: debug
+  if (dodebug) then
+    WRITE(6,*) "POST-TEMP"
+    WRITE(6,*) "read_grd4:: tsfile = ", tsfile
+    do k=1,nlev
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_t) = ", MAXVAL(v3d(:,:,k,iv3d_t))
+    enddo 
+  endif
+! !STEVE: end
+
+  !!! s
+  istat = NF_INQ_VARID(ncid,'salt',varid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR in NF_INQ_VARID (read_grd4:: salt)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+  istat = NF_GET_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d_s))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR in NF_GET_VAR_REAL (read_grd4:: salt)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+! !STEVE: debug
+  if (dodebug) then
+    WRITE(6,*) "POST-SALT"
+    WRITE(6,*) "read_grd4:: tsfile = ", tsfile
+    do k=1,nlev
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_s) = ", MAXVAL(v3d(:,:,k,iv3d_s))
+    enddo 
+  endif
+! !STEVE: end
+
+  istat = NF_CLOSE(ncid)
+
+  istat = NF_OPEN(uvfile,NF_NOWRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR in read_grd4 for ', uvfile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  !!! u
+  istat = NF_INQ_VARID(ncid,'u',varid)
+  istat = NF_GET_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d_u))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR (u)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+! v3d(nlon,:,:,iv3d_u) = 0.0 !STEVE: why was this?
+
+! !STEVE: debug
+  if (dodebug) then
+    WRITE(6,*) "POST-U"
+    WRITE(6,*) "read_grd4:: uvfile = ", uvfile
+    do k=1,nlev
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_u) = ", MAXVAL(v3d(:,:,k,iv3d_u))
+    enddo 
+  endif
+! !STEVE: end
+
+  !!! v
+  istat = NF_INQ_VARID(ncid,'v',varid)
+  istat = NF_GET_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d_v))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF READ ERROR (v)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+! v3d(:,nlat,:,iv3d_v) = 0.0 !STEVE: why was this?
+
+! !STEVE: debug
+  if (dodebug) then
+    WRITE(6,*) "POST-V"
+    WRITE(6,*) "read_grd4:: uvfile = ", uvfile
+    do k=1,nlev
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_v) = ", MAXVAL(v3d(:,:,k,iv3d_v))
+    enddo 
+  endif
+! !STEVE: end
+
+  istat = NF_CLOSE(ncid)
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Set the SST and SSS data for the SFC
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (.false.) then
+    v2d(:,:,iv2d_sst) = v3d(:,:,ilev_sfc,iv3d_t)
+    v2d(:,:,iv2d_sss) = v3d(:,:,ilev_sfc,iv3d_s)
+  else
+    istat = NF_OPEN(sffile,NF_NOWRITE,ncid)
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF OPEN ERROR in read_grd4 for ',sffile
+      STOP
+    END IF
+    WRITE(6,*) "read_grd4:: just opened file ", sffile
+
+    !!! SST
+    istat = NF_INQ_VARID(ncid,'t_surf',varid)
+    istat = NF_GET_VAR_REAL(ncid,varid,v2d(:,:,iv2d_sst))
+    WHERE (kmt(:,:) .ge. 1) v2d(:,:,iv2d_sst) = v2d(:,:,iv2d_sst) - t0c ! kelvin to deg C
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF READ ERROR (read_grd4:: t_surf)'
+      WRITE(6,*) "istat = ", istat
+      STOP
+    END IF
+
+! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-SST"
+      WRITE(6,*) "read_grd4:: sffile = ", sffile
+      WRITE(6,*) "max val for level v3d(:,:,iv2d_sst) = ", MAXVAL(v2d(:,:,iv2d_sst))
+    endif
+! !STEVE: end
+
+    !!! SSS
+    istat = NF_INQ_VARID(ncid,'s_surf',varid)
+    istat = NF_GET_VAR_REAL(ncid,varid,v2d(:,:,iv2d_sss))
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF READ ERROR (read_grd4:: s_surf)'
+      WRITE(6,*) "istat = ", istat
+      STOP
+    END IF
+    !WRITE(6,*) "read_grd4:: just got data for variable temp"
+
+! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-SSS"
+      WRITE(6,*) "read_grd4:: sffile = ", sffile
+      WRITE(6,*) "max val for level v3d(:,:,iv2d_sss) = ", MAXVAL(v2d(:,:,iv2d_sss))
+    endif
+! !STEVE: end
+
+    istat = NF_CLOSE(ncid)
+  endif
+  
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Open the ALTIMETRY netcdf diagnostic file (SSH)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (.false.) then
+    !STEVE: for now, use vertically integrated heat content
+    videpth = 300
+    v2d(:,:,iv2d_ssh) = v3d(:,:,ilev_sfc,iv3d_t)*lev(ilev_sfc)
+    do k=2,nlev
+      if (lev(k) > videpth) EXIT
+      v2d(:,:,iv2d_ssh) = v2d(:,:,iv2d_ssh) + v3d(:,:,k,iv3d_t)*(lev(k)-lev(k-1))
+    enddo
+
+    ! Divide out averages
+    meanSSH = SUM(v2d(:,:,iv2d_ssh))/(nlon*nlat)
+    where(v2d(:,:,iv2d_ssh) > 0) &
+      v2d(:,:,iv2d_ssh) = v2d(:,:,iv2d_ssh)-meanSSH
+  else
+    istat = NF_OPEN(sffile,NF_NOWRITE,ncid)
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF OPEN ERROR in read_grd4 for ',sffile
+      STOP
+    END IF
+    WRITE(6,*) "read_grd4:: just read file ", sffile
+
+    !!! SSH
+    istat = NF_INQ_VARID(ncid,'sea_lev',varid)
+    istat = NF_GET_VAR_REAL(ncid,varid,v2d(:,:,iv2d_ssh))
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,'(A)') 'netCDF READ ERROR (read_grd4:: temp)'
+      WRITE(6,*) "istat = ", istat
+      STOP
+    END IF
+    !WRITE(6,*) "read_grd4:: just got data for variable temp"
+
+! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-SSH"
+      WRITE(6,*) "read_grd4:: sffile = ", sffile
+      WRITE(6,*) "max val for level v3d(:,:,iv2d_ssh) = ", MAXVAL(v2d(:,:,iv2d_ssh))
+    endif
+! !STEVE: end
+
+    istat = NF_CLOSE(ncid)
+  endif
+
+  !STEVE: clean up undefined values:
+  WHERE (ABS(v3d) .ge. vmax) v3d = 0.0
+  WHERE (ABS(v2d) .ge. vmax) v2d = 0.0
+
+! !STEVE: debug test
+  if (.false.) then
+    testfile = "test_read4.grd"
+!   CALL write_bingrd4(trim(testfile),v3d,v2d)
+
+    iunit=55
+    INQUIRE(IOLENGTH=iolen) iolen
+    OPEN(iunit,FILE=testfile,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
+
+    WRITE(6,*) "Writing to", testfile
+    irec=1
+    DO n=1,nv3d
+      DO k=1,nlev
+        WRITE(6,*) "n, k, irec = ", n, k, irec
+        WRITE(6,*) "max v3d(n) = ", MAXVAL(v3d(:,:,k,n))
+        WRITE(iunit,REC=irec) v3d(:,:,k,n)
+        irec = irec + 1
+      END DO
+    END DO
+
+    DO n=1,nv2d
+      WRITE(iunit,REC=irec) v2d(:,:,n)
+      irec = irec + 1
+    END DO
+    CLOSE(iunit)
+
+    WRITE(6,*) "Initially read from file: ", file
+    WRITE(6,*) "STOP 2"
+    STOP 2
+  endif
+! !STEVE: debug end
+
+  RETURN
+
+END SUBROUTINE read_grd4
+
+!-- Write a grid file -------------------------------------------------
+SUBROUTINE write_grd(file,v3d,v2d)
+  IMPLICIT NONE
+  INCLUDE 'netcdf.inc'
+  CHARACTER(*),INTENT(IN) :: file
+  REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
+  REAL(r_sngl) :: buf4(nlon,nlat,nlev)
+  CHARACTER(slen) :: tsfile,uvfile, sffile,drfile ! (TS) (UV) (SFC) (DRIFTERS)
+  INTEGER :: i,j,k
+  INTEGER :: ncid,istat,varid
+
+  tsfile = trim(file)//'.ocean_temp_salt.res.nc'
+  uvfile = trim(file)//'.ocean_velocity.res.nc'
+  sffile = trim(file)//'.ocean_sbc.res.nc'
+  drfile = trim(file)//'.drifters_inp.nc' ! (DRIFTERS)
+
+  istat = NF_OPEN(tsfile,NF_WRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR in write_grd for ', tsfile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  !!! t
+  istat = NF_INQ_VARID(ncid,'temp',varid)
+  buf4=0.0
+  DO k=1,nlev
+    DO j=1,nlat
+      DO i=1,nlon
+        if (kmt(i,j) .ge. k) buf4(i,j,k) = REAL(v3d(i,j,k,iv3d_t),r_sngl)
+      END DO
+    END DO
+  END DO
+  istat = NF_PUT_VAR_REAL(ncid,varid,buf4)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd:: temp)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+  !!! s
+  istat = NF_INQ_VARID(ncid,'salt',varid)
+  buf4=0.0
+  DO k=1,nlev
+    DO j=1,nlat
+      DO i=1,nlon
+        if (kmt(i,j) .ge. k) buf4(i,j,k) = REAL(v3d(i,j,k,iv3d_s),r_sngl)
+      END DO
+    END DO
+  END DO
+  istat = NF_PUT_VAR_REAL(ncid,varid,buf4)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (salt)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  istat = NF_CLOSE(ncid)
+
+  istat = NF_OPEN(uvfile,NF_WRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR in write_grd for ', uvfile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  !!! u
+  istat = NF_INQ_VARID(ncid,'u',varid)
+  buf4=0.0
+  DO k=1,nlev
+    DO j=1,nlat
+      DO i=1,nlon
+        if (kmt(i,j) .ge. k) buf4(i,j,k) = REAL(v3d(i,j,k,iv3d_u),r_sngl)
+      END DO
+    END DO
+  END DO
+  istat = NF_PUT_VAR_REAL(ncid,varid,buf4)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd:: u)'
+    WRITE(6,*) "istat = ", istat 
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    WRITE(6,*) "buf4= ", buf4
+    STOP
+  END IF
+  !!! v
+  istat = NF_INQ_VARID(ncid,'v',varid)
+  buf4=0.0
+  DO k=1,nlev
+    DO j=1,nlat
+      DO i=1,nlon
+        if (kmt(i,j) .ge. k) buf4(i,j,k) = REAL(v3d(i,j,k,iv3d_v),r_sngl)
+      END DO
+    END DO
+  END DO
+  istat = NF_PUT_VAR_REAL(ncid,varid,buf4)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (v)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  istat = NF_CLOSE(ncid)
+
+  istat = NF_OPEN(sffile,NF_WRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR in write_grd for ', sffile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  !!! SST
+  istat = NF_INQ_VARID(ncid,'t_surf',varid)
+  buf4=0.0
+  DO j=1,nlat
+    DO i=1,nlon
+      if (kmt(i,j) .ge. 1) buf4(i,j,ilev_sfc) = REAL(v2d(i,j,iv2d_sst),r_sngl) + t0c ! deg C to kelvin
+    END DO
+  END DO
+  istat = NF_PUT_VAR_REAL(ncid,varid,buf4(:,:,ilev_sfc))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd:: sst)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    WRITE(6,*) "max buf4= ", MAXVAL(buf4)
+    WRITE(6,*) "min buf4= ", MINVAL(buf4)
+    STOP 2
+  END IF
+
+  !!! SSS
+  istat = NF_INQ_VARID(ncid,'s_surf',varid)
+  buf4=0.0
+  DO j=1,nlat
+    DO i=1,nlon
+      if (kmt(i,j) .ge. 1) buf4(i,j,ilev_sfc) = REAL(v2d(i,j,iv2d_sss),r_sngl)
+    END DO
+  END DO
+  istat = NF_PUT_VAR_REAL(ncid,varid,buf4(:,:,ilev_sfc))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd:: sss)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    WRITE(6,*) "buf4= ", buf4
+    STOP 2
+  END IF
+
+  !!! SSH
+  istat = NF_INQ_VARID(ncid,'sea_lev',varid)
+  buf4=0.0
+  DO j=1,nlat
+    DO i=1,nlon
+      if (kmt(i,j) .ge. 1) buf4(i,j,ilev_sfc) = REAL(v2d(i,j,iv2d_ssh),r_sngl)
+    END DO
+  END DO
+  istat = NF_PUT_VAR_REAL(ncid,varid,buf4(:,:,ilev_sfc))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd:: ssh)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    WRITE(6,*) "buf4= ", buf4
+    STOP
+  END IF
+
+  istat = NF_CLOSE(ncid)
+
+  !STEVE: add drifters here...
+  ! Create new drifters netcdf drfile ('drifters_inp.nc')
+  ! Output drifter positions in format that can be read by mom4p1
+  INTEGER :: nd, np
+  INTEGER :: nd_dimid, np_dimid, dimids(2)
+  INTEGER :: pos_varid, ids_varid
+  REAL, DIMENSION(:,:), ALLOCATABLE :: positions
+  INTEGER, DIMENSION(:), ALLOCATABLE :: ids
+
+  ! Create the netCDF file. The nf90_clobber parameter tells netCDF to
+  ! overwrite this file, if it already exists.
+  call check( nf_create(drfile, NF_CLOBBER, ncid) )
+
+  ! Define the dimensions. NetCDF will hand back an ID for each. 
+  call check( nf_def_dim(ncid, "nd", nd, nd_dimid) )
+  call check( nf_def_dim(ncid, "np", np, np_dimid) )
+
+  ! The dimids array is used to pass the IDs of the dimensions of
+  ! the variables. Note that in fortran arrays are stored in
+  ! column-major format.
+  dimids =  (/ nd_dimid, np_dimid /)
+
+  ! Define the variable.
+  call check( nf_def_var(ncid, "positions", NF_DOUBLE, dimids, pos_varid) )
+
+  ! Assign units attributes to coordinate var data. This attaches a
+  ! text attribute to each of the coordinate variables, containing the
+  ! units.
+  call check( nf_put_att(ncid, pos_varid, "names", "lon lat depth") )
+  call check( nf_put_att(ncid, pos_varid, "units", "deg_E deg_N meters") )
+
+  ! Define the variable. The type of the variable in this case is
+  ! NF90_INT (4-byte integer).
+  call check( nf_def_var(ncid, "ids", NF_INT, np_dimid, ids_varid) )
+
+  ! Add global attributes with NF_GLOBAL
+  call check( nf_put_att(ncid, NF_GLOBAL, "velocity_names", "u v w") )
+  call check( nf_put_att(ncid, NF_GLOBAL, "field_names", "lon lat depth temp salt") )
+  call check( nf_put_att(ncid, NF_GLOBAL, "field_units", "deg_E deg_N meters Celsius PSU") )
+  call check( nf_put_att(ncid, NF_GLOBAL, "time_units", "seconds") )
+  call check( nf_put_att(ncid, NF_GLOBAL, "title", "input data for drifters") )
+
+  ! End define mode. This tells netCDF we are done defining metadata.
+  call check( nf_enddef(ncid) )
+
+  ! Write the data to the file.
+  call check( nf_put_var(ncid, pos_varid, positions) )
+  call check( nf_put_var(ncid, ids_varid, ids) )
+
+  ! Close the file. This frees up any internal netCDF resources
+  ! associated with the file, and flushes any buffers.
+  call check( nf_close(ncid) )
+
+  RETURN
+END SUBROUTINE write_grd
+
+subroutine check(status)
+  integer, intent (in) :: status
+  if(status /= nf_noerr) then 
+    print *, trim(nf_strerror(status))
+    stop "Stopped"
+  end if
+end subroutine check
+
+SUBROUTINE write_grd4(file,v3d_in,v2d_in)
+  IMPLICIT NONE
+  INCLUDE 'netcdf.inc'
+  CHARACTER(*),INTENT(IN) :: file
+  REAL(r_sngl),INTENT(IN) :: v3d_in(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl),INTENT(IN) :: v2d_in(nlon,nlat,nv2d)
+  REAL(r_sngl) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl) :: v2d(nlon,nlat,nv2d)
+  CHARACTER(slen) :: tsfile,uvfile, sffile,drfile ! (TS) (UV) (SFC) (DRIFTERS)
+  INTEGER :: ncid,istat,varid
+  INTEGER :: m,k,j,i !STEVE: for debugging
+  REAL(r_sngl) :: t3d(nlon,nlat,nlev,nv3d)
+  LOGICAL, PARAMETER :: do_physlimit=.true.
+
+  tsfile = trim(file)//'.ocean_temp_salt.res.nc'
+  uvfile = trim(file)//'.ocean_velocity.res.nc'
+  sffile = trim(file)//'.ocean_sbc.res.nc'
+  drfile = trim(file)//'.drifters_inp.nc' ! (DRIFTERS)
+
+  v3d = v3d_in
+  v2d = v2d_in
+
+  ! STEVE: for safety, clean up the variables for output:
+  if (do_physlimit) then
+  do k=1,nlev
+    do j=1,nlat
+      do i=1,nlon
+!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_t) .ne. 0.0 ) then
+!         WRITE(6,*) "WARNING: data on land point in analysis output:"
+!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
+!         v3d(i,j,k,iv3d_t) = 0.0 !NF_FILL_FLOAT
+!       endif
+
+!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_s) .ne. 0.0 ) then
+!         WRITE(6,*) "WARNING: data on land point in analysis output:"
+!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
+!         v3d(i,j,k,iv3d_s) = 0.0 !NF_FILL_FLOAT
+!       endif
+
+!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_u) .ne. 0.0 ) then
+!         WRITE(6,*) "WARNING: data on land point in analysis output:"
+!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
+!         v3d(i,j,k,iv3d_u) = 0.0 !NF_FILL_FLOAT
+!       endif
+
+!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_v) .ne. 0.0 ) then
+!         WRITE(6,*) "WARNING: data on land point in analysis output:"
+!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
+!         v3d(i,j,k,iv3d_v) = 0.0 !NF_FILL_FLOAT
+!       endif
+
+!       if (k .eq. 1 .and. kmt(i,j) .eq. 0) then 
+!         if (v2d(i,j,iv2d_sst) .ne. 0.0 ) v2d(i,j,iv2d_sst) = 0.0 !NF_FILL_FLOAT
+!         if (v2d(i,j,iv2d_sss) .ne. 0.0 ) v2d(i,j,iv2d_sss) = 0.0 !NF_FILL_FLOAT
+!         if (v2d(i,j,iv2d_ssh) .ne. 0.0 ) v2d(i,j,iv2d_ssh) = 0.0 !NF_FILL_FLOAT
+!       endif
+
+        if (v3d(i,j,k,iv3d_t) < -4) then
+          WRITE(6,*) "WARNING: Bad temp value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
+          v3d(i,j,k,iv3d_t) = -4.0
+        endif
+
+        if (k .eq. 1 .and. v2d(i,j,iv2d_sst) < -4) v2d(i,j,iv2d_sst) = -4.0
+
+        if (v3d(i,j,k,iv3d_t) > 40.0) then
+          WRITE(6,*) "WARNING: Bad temp value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
+          v3d(i,j,k,iv3d_t) = 40.0
+        endif
+
+        if (k .eq. 1 .and. v2d(i,j,iv2d_sst) > 40.0) v2d(i,j,iv2d_sst) = 40.0
+
+        if (v3d(i,j,k,iv3d_s) < 0 ) then
+          WRITE(6,*) "WARNING: Bad salt value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
+          v3d(i,j,k,iv3d_s) = 0.0
+        endif
+
+        if (k .eq. 1 .and. v2d(i,j,iv2d_sss) < 0) v2d(i,j,iv2d_sss) = 0.0
+
+        if (v3d(i,j,k,iv3d_s) > 50.0) then
+          WRITE(6,*) "WARNING: Bad salt value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
+          v3d(i,j,k,iv3d_s) = 50.0
+        endif
+
+        if (k .eq. 1 .and. v2d(i,j,iv2d_sss) > 50.0) v2d(i,j,iv2d_sss) = 50.0
+
+      enddo
+    enddo
+  enddo
+  endif
+  
+  !STEVE: open temp/salt file
+  istat = NF_OPEN(tsfile,NF_WRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR for file ', tsfile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  !!! t
+  !STEVE: for debugging
+  if (.false.) then
+  do m=1,nv3d
+    do k=1,nlev
+      do j=1,nlat
+        do i=1,nlon
+!       if ( isnan( REAL(v3d(i,j,k,m),r_size) ) )then
+!         WRITE(6,*) "common_mom4.f90::write_grd4:: ERROR: found NaN..."
+!         WRITE(6,*) "v3d(i,j,k,m) contains NaN. i,j,k,m = ", i,j,k,m
+!         STOP 1
+!       endif
+        enddo
+      enddo
+    enddo
+  enddo
+  endif
+
+  istat = NF_INQ_VARID(ncid,'temp',varid)
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_grd4:: ERROR: NF_INQ_VARID failed"
+  END IF
+  !STEVE: debug DEBUG
+  !STEVE: switch out the data to see if this reads properly
+  !t3d(:,:,:,iv3d_t) = 1.0
+  !istat = NF_PUT_VAR_REAL(ncid,varid,t3d(:,:,:,iv3d_t))
+  istat = NF_PUT_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d_t))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd4:: temp)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    WRITE(6,*) "iv3d_t = ", iv3d_t
+    WRITE(6,*) "MAXVAL(v3d(:,:,:,iv3d_t)) = ", MAXVAL(v3d(:,:,:,iv3d_t))
+    WRITE(6,*) "MINVAL(v3d(:,:,:,iv3d_t)) = ", MINVAL(v3d(:,:,:,iv3d_t))
+    WRITE(6,*) "v3d(:,:,:,iv3d_t) = ", v3d(:,:,:,iv3d_t)
+    STOP
+  END IF
+
+  !!! s
+  istat = NF_INQ_VARID(ncid,'salt',varid)
+  istat = NF_PUT_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d_s))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (salt)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  istat = NF_CLOSE(ncid)
+
+  !!! uv file
+  istat = NF_OPEN(uvfile,NF_WRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR for file ', uvfile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  !!! u
+  istat = NF_INQ_VARID(ncid,'u',varid)
+  istat = NF_PUT_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d_u))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd4:: u)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    WRITE(6,*) "iv3d_u = ", iv3d_u
+    WRITE(6,*) "MAXVAL(v3d(:,:,:,iv3d_t)) = ", MAXVAL(v3d(:,:,:,iv3d_t))
+    WRITE(6,*) "MINVAL(v3d(:,:,:,iv3d_t)) = ", MINVAL(v3d(:,:,:,iv3d_t))
+    WRITE(6,*) "v3d(:,:,:,iv3d_u) = ", v3d(:,:,:,iv3d_u)
+    STOP
+  END IF
+
+  !!! v
+  istat = NF_INQ_VARID(ncid,'v',varid)
+  istat = NF_PUT_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d_v))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (v)'
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  istat = NF_CLOSE(ncid)
+
+  !!! sfc file
+  istat = NF_OPEN(sffile,NF_WRITE,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR in write_grd for ', sffile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+  
+  !!! SST
+  istat = NF_INQ_VARID(ncid,'t_surf',varid)
+  WHERE (kmt(:,:) .ge. 1) v2d(:,:,iv2d_sst) = v2d(:,:,iv2d_sst) + t0c
+  istat = NF_PUT_VAR_REAL(ncid,varid,v2d(:,:,iv2d_sst))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd4:: sst)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    STOP
+  END IF
+
+  !!! SSS
+  istat = NF_INQ_VARID(ncid,'s_surf',varid)
+  v2d = v2d + t0c
+  istat = NF_PUT_VAR_REAL(ncid,varid,v2d(:,:,iv2d_sss))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd4:: sss)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    STOP
+  END IF
+
+  !!! SSH
+  istat = NF_INQ_VARID(ncid,'sea_lev',varid)
+  istat = NF_PUT_VAR_REAL(ncid,varid,v2d(:,:,iv2d_ssh))
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_grd4:: ssh)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    STOP
+  END IF
+
+  istat = NF_CLOSE(ncid)
+
+  !STEVE: add drifters here...
+
+  RETURN
+END SUBROUTINE write_grd4
+
+! Write a MOM4 XXX_increment.nc file for IAU
+SUBROUTINE write_inc4(type,v3d,v2d)
+  IMPLICIT NONE
+  INCLUDE 'netcdf.inc'
+  CHARACTER(*),INTENT(IN) :: type
+  CHARACTER(128) :: file
+  ! These should contain (Analysis - Background)
+  REAL(r_sngl),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl),INTENT(IN) :: v2d(nlon,nlat,nv2d)
+  CHARACTER(slen) :: outfile
+  INTEGER :: ncid,istat,varid
+  INTEGER :: m,k,j,i !STEVE: for debugging
+  REAL(r_sngl) :: t3d(nlon,nlat,nlev,nv3d)
+  INTEGER :: iv3d=0, iv2d=0
+  ! For netcdf create:
+  integer :: err,dimidx,dimidy,dimidz,dimidt,dd(4),varidx,varidy,varidz,varidt,myvar
+  integer :: startA(1),start3D(4),countA(1),count3D(4),start2D(3),count2D(3)
+
+  SELECT CASE(trim(type))
+  CASE('temp')
+    file = 'temp'
+    iv3d = iv3d_t
+  CASE('salt')
+    file = 'salt'
+    iv3d = iv3d_s
+  CASE('u')
+    file = 'u'
+    iv3d = iv3d_u
+  CASE('v')
+    file = 'v'
+    iv3d = iv3d_v
+  CASE('ssh')
+    ! STEVE: need this since mom4p1/Bluelink already coded it as 'eta'
+    file = 'eta'
+    iv2d = iv2d_ssh
+  CASE('eta')
+    file = 'eta'
+    iv2d = iv2d_ssh
+  CASE DEFAULT
+    WRITE(6,*) "write_inc4:: unsupported type: ", type
+    stop 1
+  END SELECT
+
+  outfile = trim(file)//'_increment.nc'
+
+  !istat = NF_OPEN(outfile,NF_WRITE,ncid)
+  istat = NF_CREATE(outfile,NF_CLOBBER,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR for file ', outfile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  ! For NF_CREATE:
+  ! Define the dimensions
+  err=NF_DEF_DIM(ncid,'xaxis_1',nlon,dimidx)
+  err=NF_DEF_DIM(ncid,'yaxis_1',nlat,dimidy)
+  err=NF_DEF_DIM(ncid,'zaxis_1',nlev,dimidz)
+  err=NF_DEF_DIM(ncid,'Time',NF_UNLIMITED,dimidt)
+
+  !
+  ! Define the variables (include 2 variables giving the dim. values)
+  !
+  dd(1)=dimidx
+  err=NF_DEF_VAR(ncid,'xaxis_1',NF_REAL,1,dd,varidx)
+  dd(1)=dimidy
+  err=NF_DEF_VAR(ncid,'yaxis_1',NF_REAL,1,dd,varidy)
+  dd(1)=dimidz
+  err=NF_DEF_VAR(ncid,'zaxis_1',NF_REAL,1,dd,varidz)
+  dd(1)=dimidt
+  err=NF_DEF_VAR(ncid,'Time',NF_REAL,1,dd,varidt)
+
+  dd(1)=dimidx
+  dd(2)=dimidy
+  dd(3)=dimidz
+  dd(4)=dimidt
+  err=NF_DEF_VAR(ncid,trim(file),NF_REAL,4,dd,myvar)
+
+  !
+  ! Define the Attributes:
+  !
+
+  ! x dimension attributes
+  istat = NF_PUT_ATT_TEXT (ncid, varidx, 'units', 12, 'degrees_east')
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (x axis) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidx, 'cartesian_axis', 1, 'X')
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (x cartesian axis) failed"
+    stop 1
+  END IF
+
+  ! y dimension attributes
+  istat = NF_PUT_ATT_TEXT (ncid, varidy, 'units', 13, 'degrees_north')
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (y axis) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidy, 'cartesian_axis', 1, 'Y')
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (y cartesian axis) failed"
+    stop 1
+  END IF
+
+  if (iv3d > 0) then
+    ! z dimension attributes
+    istat = NF_PUT_ATT_TEXT (ncid, varidz, 'units', 6, 'meters')
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (z axis) failed"
+      stop 1
+    END IF
+    istat = NF_PUT_ATT_TEXT (ncid, varidz, 'cartesian_axis', 1, 'Z')
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (z cartesian axis) failed"
+      stop 1
+    END IF
+  endif
+
+  ! Time dimension attributes (required)
+  ! TIME:cartesian_axis = "T" through ncatted.
+  istat = NF_PUT_ATT_TEXT (ncid, varidt, 'cartesian_axis', 1, 'T')
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (time cartesian axis) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidt, 'units', 37, 'seconds since 1900-01-01 00:00:00 UTC')
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (time units) failed"
+    stop 1
+  END IF
+! istat = NF_PUT_ATT_TEXT (ncid, varidt, 'calendar', 9, 'GREGORIAN')
+  istat = NF_PUT_ATT_TEXT (ncid, varidt, 'calendar', 6, 'julian')
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (time calendar) failed"
+    stop 1
+  END IF
+
+! print*,'x dim ID ',dimidx
+! print*,'y dim ID ',dimidy
+! print*,'z dim ID ',dimidz
+! print*,'t dim ID ',dimidt
+! print*,'x var ID ',varidx
+! print*,'y var ID ',varidy
+! print*,'z var ID ',varidz
+! print*,'t var ID ',varidt
+! print*,'main ID  ',myvar
+
+  ! Change mode of netCDF operation
+  err=NF_ENDDEF(ncid)
+
+  ! Output the values of the variables (include dimension variables)
+  ! x dimension values
+  startA(1)=1
+  countA(1)=nlon
+  err=NF_PUT_VARA_REAL(ncid,varidx,startA,countA,lon)
+
+  ! y dimension values
+  startA(1)=1
+  countA(1)=nlat
+  err=NF_PUT_VARA_REAL(ncid,varidy,startA,countA,lat)
+
+  if (iv3d > 0) then
+    ! z dimension values
+    startA(1)=1
+    countA(1)=nlev
+    err=NF_PUT_VARA_REAL(ncid,varidz,startA,countA,lev)
+
+    ! Main variables values
+    start3D(1)=1
+    start3D(2)=1
+    start3D(3)=1
+    start3D(4)=1
+    count3D(1)=nlon
+    count3D(2)=nlat
+    count3D(3)=nlev
+    count3D(4)=1
+  else
+    ! Main variables values
+    start2D(1)=1
+    start2D(2)=1
+    start2D(3)=1
+    count2D(1)=nlon
+    count2D(2)=nlat
+    count2D(3)=1
+  endif
+
+! ! t dimension values
+! startA(1)=1
+! countA(1)=1
+! err=NF_PUT_VARA_REAL(ncid,varidt,startA,countA,1)
+
+  !!! t
+  !STEVE: for debugging
+  if (.false. .and. iv3d > 0) then
+  do m=1,nv3d
+    do k=1,nlev
+      do j=1,nlat
+        do i=1,nlon
+        !if ( isnan( REAL(v3d(i,j,k,m),r_size) ) )then
+        !  WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: found NaN..."
+        !  WRITE(6,*) "v3d(i,j,k,m) contains NaN. i,j,k,m = ", i,j,k,m
+        !  STOP(1)
+        !endif
+          if ( v3d(i,j,k,m) > 1 ) then
+            WRITE(6,*) "i,j,k,m, v3d = ", i,j,k,m, v3d(i,j,k,m)
+          endif
+        enddo
+      enddo
+    enddo
+  enddo
+  endif
+
+  istat = NF_INQ_VARID(ncid,trim(file),varid)
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_INQ_VARID failed"
+    stop 1
+  END IF
+
+  ! Either output 3d or 2d data
+  if (iv3d > 0) then 
+    !istat = NF_PUT_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d))
+    istat=NF_PUT_VARA_REAL(ncid,myvar,start3D,count3D,v3d(:,:,:,iv3d))
+  elseif (iv2d > 0) then
+    !istat = NF_PUT_VAR_REAL(ncid,varid,v2d(:,:,iv2d))
+    istat=NF_PUT_VARA_REAL(ncid,myvar,start2D,count2D,v2d(:,:,iv2d))
+  endif
+
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_inc4:: temp)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    if (iv3d > 0) then 
+      WRITE(6,*) "iv3d = ", iv3d
+      WRITE(6,*) "MAXVAL(v3d(:,:,:,iv3d)) = ", MAXVAL(v3d(:,:,:,iv3d))
+      WRITE(6,*) "MINVAL(v3d(:,:,:,iv3d)) = ", MINVAL(v3d(:,:,:,iv3d))
+      WRITE(6,*) "v3d(:,:,:,iv3d) = ", v3d(:,:,:,iv3d)
+    elseif (iv2d > 0) then
+      WRITE(6,*) "iv2d = ", iv2d
+      WRITE(6,*) "MAXVAL(v2d(:,:,iv2d)) = ", MAXVAL(v2d(:,:,iv2d))
+      WRITE(6,*) "MINVAL(v2d(:,:,iv2d)) = ", MINVAL(v2d(:,:,iv2d))
+      WRITE(6,*) "v2d(:,:,iv2d) = ", v2d(:,:,iv2d)
+    endif
+    STOP
+  END IF
+
+  ! Close the file
+  istat = NF_CLOSE(ncid)
+
+  RETURN
+END SUBROUTINE write_inc4
+
+! Write a MOM4 XXX_increment.nc file for IAU
+SUBROUTINE write_inc4_sf(type,v3d,v2d)
+  IMPLICIT NONE
+  INCLUDE 'netcdf.inc'
+  CHARACTER(*),INTENT(IN) :: type
+  CHARACTER(128) :: file
+  ! These should contain (Analysis - Background)
+  REAL(r_sngl),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl),INTENT(IN) :: v2d(nlon,nlat,nv2d)
+  CHARACTER(slen) :: outfile
+  INTEGER :: ncid,istat,varid
+  INTEGER :: m,k,j,i !STEVE: for debugging
+  REAL(r_sngl) :: t3d(nlon,nlat,nlev,nv3d)
+  INTEGER :: iv3d=0, iv2d=0
+  ! For netcdf create:
+  integer :: err,dimidx,dimidy,dimidz,dimidt,dd(4),varidx,varidy,varidz,varidt,myvar
+  integer :: startA(1),start3D(4),countA(1),count3D(4),start2D(3),count2D(3)
+
+  SELECT CASE(trim(type))
+  CASE('temp')
+    file = 'temp'
+    iv3d = iv3d_t
+  CASE('salt')
+    file = 'salt'
+    iv3d = iv3d_s
+  CASE('u')
+    file = 'u'
+    iv3d = iv3d_u
+  CASE('v')
+    file = 'v'
+    iv3d = iv3d_v
+  CASE('ssh')
+    ! STEVE: need this since mom4p1/Bluelink already coded it as 'eta'
+    file = 'eta'
+    iv2d = iv2d_ssh
+  CASE('eta')
+    file = 'eta'
+    iv2d = iv2d_ssh
+  CASE DEFAULT
+    WRITE(6,*) "write_inc4:: unsupported type: ", type
+    stop 1
+  END SELECT
+
+  outfile = trim(file)//'_increment.nc'
+
+  !istat = NF_OPEN(outfile,NF_WRITE,ncid)
+  istat = NF_CREATE(outfile,NF_CLOBBER,ncid)
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF OPEN ERROR for file ', outfile
+    WRITE(6,*) "istat = ", istat
+    STOP
+  END IF
+
+  ! For NF_CREATE:
+  ! Define the dimensions
+  err=NF_DEF_DIM(ncid,'GRID_X_T',nlon,dimidx)
+  err=NF_DEF_DIM(ncid,'GRID_Y_T',nlat,dimidy)
+  err=NF_DEF_DIM(ncid,'ZT',nlev,dimidz)
+  err=NF_DEF_DIM(ncid,'TIME',NF_UNLIMITED,dimidt)
+
+  !
+  ! Define the variables (include 2 variables giving the dim. values)
+  !
+  dd(1)=dimidx
+  err=NF_DEF_VAR(ncid,'GRID_X_T',NF_REAL,1,dd,varidx)
+  dd(1)=dimidy
+  err=NF_DEF_VAR(ncid,'GRID_Y_T',NF_REAL,1,dd,varidy)
+  dd(1)=dimidz
+  err=NF_DEF_VAR(ncid,'ZT',NF_REAL,1,dd,varidz)
+  dd(1)=dimidt
+  err=NF_DEF_VAR(ncid,'TIME',NF_REAL,1,dd,varidt)
+
+  dd(1)=dimidx
+  dd(2)=dimidy
+  dd(3)=dimidz
+  dd(4)=dimidt
+  err=NF_DEF_VAR(ncid,trim(file),NF_REAL,4,dd,myvar)
+
+  !
+  ! Define the Attributes:
+  !
+
+  ! x dimension attributes
+  istat = NF_PUT_ATT_TEXT (ncid, varidx, 'units', 12, 'degrees_east')
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (x axis) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidx, 'cartesian_axis', 1, 'X')
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (x cartesian axis) failed"
+    stop 1
+  END IF
+
+  ! y dimension attributes
+  istat = NF_PUT_ATT_TEXT (ncid, varidy, 'units', 13, 'degrees_north')
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (y axis) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidy, 'cartesian_axis', 1, 'Y')
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (y cartesian axis) failed"
+    stop 1
+  END IF
+
+  if (iv3d > 0) then
+    ! z dimension attributes
+    istat = NF_PUT_ATT_TEXT (ncid, varidz, 'units', 6, 'meters')
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (z axis) failed"
+      stop 1
+    END IF
+    istat = NF_PUT_ATT_TEXT (ncid, varidz, 'cartesian_axis', 1, 'Z')
+    IF(istat /= NF_NOERR) THEN
+      WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (z cartesian axis) failed"
+      stop 1
+    END IF
+  endif
+
+  ! Time dimension attributes (required)
+  ! TIME:cartesian_axis = "T" through ncatted.
+  istat = NF_PUT_ATT_TEXT (ncid, varidt, 'cartesian_axis', 1, 'T')
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (time cartesian axis) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidt, 'units', 37, 'seconds since 1900-01-01 00:00:00 UTC')
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (time units) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidt, 'calendar_type', 9, 'GREGORIAN')
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (time calendar) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidt, 'time_origin', 20, '01-JAN-1900 00:00:00')
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (time origin) failed"
+    stop 1
+  END IF
+  istat = NF_PUT_ATT_TEXT (ncid, varidt, 'modulo', 1, ' ')
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_PUT_ATT_TEXT (time modulo) failed"
+    stop 1
+  END IF
+
+! print*,'x dim ID ',dimidx
+! print*,'y dim ID ',dimidy
+! print*,'z dim ID ',dimidz
+! print*,'t dim ID ',dimidt
+! print*,'x var ID ',varidx
+! print*,'y var ID ',varidy
+! print*,'z var ID ',varidz
+! print*,'t var ID ',varidt
+! print*,'main ID  ',myvar
+
+  ! Change mode of netCDF operation
+  err=NF_ENDDEF(ncid)
+
+  ! Output the values of the variables (include dimension variables)
+  ! x dimension values
+  startA(1)=1
+  countA(1)=nlon
+  err=NF_PUT_VARA_REAL(ncid,varidx,startA,countA,lon)
+
+  ! y dimension values
+  startA(1)=1
+  countA(1)=nlat
+  err=NF_PUT_VARA_REAL(ncid,varidy,startA,countA,lat)
+
+  if (iv3d > 0) then
+    ! z dimension values
+    startA(1)=1
+    countA(1)=nlev
+    err=NF_PUT_VARA_REAL(ncid,varidz,startA,countA,lev)
+
+    ! Main variables values
+    start3D(1)=1
+    start3D(2)=1
+    start3D(3)=1
+    start3D(4)=1
+    count3D(1)=nlon
+    count3D(2)=nlat
+    count3D(3)=nlev
+    count3D(4)=1
+  else
+    ! Main variables values
+    start2D(1)=1
+    start2D(2)=1
+    start2D(3)=1
+    count2D(1)=nlon
+    count2D(2)=nlat
+    count2D(3)=1
+  endif
+
+! ! t dimension values
+! startA(1)=1
+! countA(1)=1
+! err=NF_PUT_VARA_REAL(ncid,varidt,startA,countA,1)
+
+  !!! t
+  !STEVE: for debugging
+  if (.false. .and. iv3d > 0) then
+  do m=1,nv3d
+    do k=1,nlev
+      do j=1,nlat
+        do i=1,nlon
+        !if ( isnan( REAL(v3d(i,j,k,m),r_size) ) )then
+        !  WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: found NaN..."
+        !  WRITE(6,*) "v3d(i,j,k,m) contains NaN. i,j,k,m = ", i,j,k,m
+        !  STOP(1)
+        !endif
+          if ( v3d(i,j,k,m) > 1 ) then
+            WRITE(6,*) "i,j,k,m, v3d = ", i,j,k,m, v3d(i,j,k,m)
+          endif
+        enddo
+      enddo
+    enddo
+  enddo
+  endif
+
+  istat = NF_INQ_VARID(ncid,trim(file),varid)
+  IF(istat /= NF_NOERR) THEN
+    !STEVE: debugging
+    WRITE(6,*) "common_mom4.f90::write_inc4:: ERROR: NF_INQ_VARID failed"
+    stop 1
+  END IF
+
+  ! Either output 3d or 2d data
+  if (iv3d > 0) then 
+    !istat = NF_PUT_VAR_REAL(ncid,varid,v3d(:,:,:,iv3d))
+    istat=NF_PUT_VARA_REAL(ncid,myvar,start3D,count3D,v3d(:,:,:,iv3d))
+  elseif (iv2d > 0) then
+    !istat = NF_PUT_VAR_REAL(ncid,varid,v2d(:,:,iv2d))
+    istat=NF_PUT_VARA_REAL(ncid,myvar,start2D,count2D,v2d(:,:,iv2d))
+  endif
+
+  IF(istat /= NF_NOERR) THEN
+    WRITE(6,'(A)') 'netCDF WRITE ERROR (write_inc4:: temp)'
+    WRITE(6,*) "istat = ", istat
+    WRITE(6,*) "ncid = ", ncid
+    WRITE(6,*) "varid = ", varid
+    if (iv3d > 0) then 
+      WRITE(6,*) "iv3d = ", iv3d
+      WRITE(6,*) "MAXVAL(v3d(:,:,:,iv3d)) = ", MAXVAL(v3d(:,:,:,iv3d))
+      WRITE(6,*) "MINVAL(v3d(:,:,:,iv3d)) = ", MINVAL(v3d(:,:,:,iv3d))
+      WRITE(6,*) "v3d(:,:,:,iv3d) = ", v3d(:,:,:,iv3d)
+    elseif (iv2d > 0) then
+      WRITE(6,*) "iv2d = ", iv2d
+      WRITE(6,*) "MAXVAL(v2d(:,:,iv2d)) = ", MAXVAL(v2d(:,:,iv2d))
+      WRITE(6,*) "MINVAL(v2d(:,:,iv2d)) = ", MINVAL(v2d(:,:,iv2d))
+      WRITE(6,*) "v2d(:,:,iv2d) = ", v2d(:,:,iv2d)
+    endif
+    STOP
+  END IF
+
+  ! Close the file
+  istat = NF_CLOSE(ncid)
+
+  RETURN
+END SUBROUTINE write_inc4_sf
+
+
+!-- Read a grid file ---------------------------------------------------
+SUBROUTINE read_bingrd(filename,v3d,v2d)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
+  REAL(r_sngl) :: buf4(nlon,nlat)
+  INTEGER :: iunit,iolen
+  INTEGER :: k,n,irec
+
+  iunit=11
+  INQUIRE(IOLENGTH=iolen) iolen
+  OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
+
+  irec=1
+  DO n=1,nv3d
+    DO k=1,nlev
+      READ(iunit,REC=irec) buf4
+      irec = irec + 1
+      v3d(:,:,k,n) = REAL(buf4,r_size)
+    END DO
+  END DO
+
+  DO n=1,nv2d
+    READ(iunit,REC=irec) buf4
+    irec = irec + 1
+    v2d(:,:,n) = REAL(buf4,r_size)
+  END DO
+
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE read_bingrd
+
+SUBROUTINE read_bingrd4(filename,v3d,v2d)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
+  INTEGER :: iunit,iolen
+  INTEGER :: i,j,k,n,irec
+
+  iunit=11
+  INQUIRE(IOLENGTH=iolen) iolen
+  OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
+
+  irec=1
+  DO n=1,nv3d
+    DO k=1,nlev
+      READ(iunit,REC=irec) ((v3d(i,j,k,n),i=1,nlon),j=1,nlat)
+      irec = irec + 1
+    END DO
+  END DO
+
+  DO n=1,nv2d
+    READ(iunit,REC=irec) ((v2d(i,j,n),i=1,nlon),j=1,nlat)
+    irec = irec + 1
+  END DO
+
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE read_bingrd4
+
+!-- Write a grid file -------------------------------------------------
+SUBROUTINE write_bingrd(filename,v3d,v2d)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
+  REAL(r_sngl) :: buf4(nlon,nlat)
+  INTEGER :: iunit,iolen
+  INTEGER :: k,n,irec
+
+  iunit=55
+  INQUIRE(IOLENGTH=iolen) iolen
+  OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
+
+  irec=1
+  DO n=1,nv3d
+    DO k=1,nlev
+      buf4 = 0.0
+      buf4 = REAL(v3d(:,:,k,n),r_sngl)
+      WRITE(iunit,REC=irec) buf4
+      irec = irec + 1
+    END DO
+  END DO
+
+  DO n=1,nv2d
+    buf4 = 0.0
+    buf4 = REAL(v2d(:,:,n),r_sngl)
+    WRITE(iunit,REC=irec) buf4
+    irec = irec + 1
+  END DO
+
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE write_bingrd
+
+SUBROUTINE write_bingrd4(filename,v3d,v2d)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(r_sngl),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl),INTENT(IN) :: v2d(nlon,nlat,nv2d)
+  INTEGER :: iunit,iolen
+  INTEGER :: i,j,k,n,irec
+
+  iunit=55
+  INQUIRE(IOLENGTH=iolen) iolen
+  OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
+
+  irec=1
+  DO n=1,nv3d
+    DO k=1,nlev
+      WRITE(iunit,REC=irec) ((v3d(i,j,k,n),i=1,nlon),j=1,nlat)
+      irec = irec + 1
+    END DO
+  END DO
+
+  DO n=1,nv2d
+    WRITE(iunit,REC=irec) ((v2d(i,j,n),i=1,nlon),j=1,nlat)
+    irec = irec + 1
+  END DO
+
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE write_bingrd4
+!-----------------------------------------------------------------------
+! Monitor
+!-----------------------------------------------------------------------
+SUBROUTINE monit_grd(v3d,v2d)
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
+  INTEGER :: k,n
+
+  DO k=1,nlev
+    WRITE(6,'(I2,A)') k,'th level'
+    DO n=1,nv3d
+      WRITE(6,'(A,2ES10.2)') element(n),MAXVAL(v3d(:,:,k,n)),MINVAL(v3d(:,:,k,n))
+    END DO
+  END DO
+
+  DO n=1,nv2d
+    WRITE(6,'(A,2ES10.2)') element(nv3d+n),MAXVAL(v2d(:,:,n)),MINVAL(v2d(:,:,n))
+  END DO
+
+  RETURN
+END SUBROUTINE monit_grd
+!-----------------------------------------------------------------------
+! Ensemble manipulations
+!-----------------------------------------------------------------------
+SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: member
+  INTEGER,INTENT(IN) :: nij
+  REAL(r_size),INTENT(IN) :: v3d(nij,nlev,member,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij,member,nv2d)
+  REAL(r_size),INTENT(OUT) :: v3dm(nij,nlev,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2dm(nij,nv2d)
+  INTEGER :: i,k,m,n
+
+  DO n=1,nv3d
+    DO k=1,nlev
+      DO i=1,nij
+        v3dm(i,k,n) = v3d(i,k,1,n)
+        DO m=2,member
+          v3dm(i,k,n) = v3dm(i,k,n) + v3d(i,k,m,n)
+        END DO
+        v3dm(i,k,n) = v3dm(i,k,n) / REAL(member,r_size)
+      END DO
+    END DO
+  END DO
+
+  DO n=1,nv2d
+    DO i=1,nij
+      v2dm(i,n) = v2d(i,1,n)
+      DO m=2,member
+        v2dm(i,n) = v2dm(i,n) + v2d(i,m,n)
+      END DO
+      v2dm(i,n) = v2dm(i,n) / REAL(member,r_size)
+    END DO
+  END DO
+
+  RETURN
+END SUBROUTINE ensmean_grd
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!STEVE: additional subroutines for OCEAN
+!STEVE: all of these are still direct copies form mom2 version
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+SUBROUTINE minkowski_flick(v3d0,v2d0,v3d,v2d)
+  ! The new output v3d has been grown around the ocean perimeter by one grid point.
+  ! This is a simple version of the general minkowski sum.
+  REAL(r_size), DIMENSION(nlon,nlat,nlev,nv3d), INTENT(IN) :: v3d0
+  REAL(r_size), DIMENSION(nlon,nlat,nv2d), INTENT(IN) :: v2d0
+  REAL(r_size), DIMENSION(nlon,nlat,nlev,nv3d), INTENT(OUT) :: v3d
+  REAL(r_size), DIMENSION(nlon,nlat,nv2d), INTENT(OUT) :: v2d !STEVE: not updating v2d for now
+  REAL(r_size), DIMENSION(nlon+2,nlat+2) :: buf
+  REAL(r_size), DIMENSION(nlon+2,nlat+2,nlev+2) :: buf3d
+  REAL(r_size), DIMENSION(nlon+2,nlat+2,3) :: buf2d
+  REAL(r_size), DIMENSION(nlon,nlat,nlev) :: vcnt
+  REAL(r_size), DIMENSION(nlon,nlat,nlev,9) :: mask !stores boundary location
+  INTEGER, DIMENSION(nlon,nlat,nlev) :: kmt3d
+  INTEGER, DIMENSION(nlon,nlat) :: kmt2d
+  INTEGER :: nkmterr = 0
+  INTEGER :: i,j,k,n
+! LOGICAL, PARAMETER :: dodebug=.true.
+  LOGICAL, PARAMETER :: do3d=.true.
+
+  if (do3d) then
+  WRITE(6,*) "In minkowski flick."
+
+  ! Create a 3D land sea map from kmt
+  kmt3d=0
+  kmt2d=0
+  do k=1,nlev
+    WHERE(k <= kmt) kmt3d(:,:,k) = 1
+  enddo
+  WHERE(kmt > 0) kmt2d = 1
+
+  ! Do (3D)
+  ! For each variable
+  v3d=0
+  WRITE(6,*) "Doing 3D part of minkowski flick."
+  do n=1,nv3d ! Mostly needed for temperature and salinity (3,4)
+    WRITE(6,*) "Doing variable: ", n
+    mask=0
+    vcnt=0
+    ! Reset buffer
+    buf3d=0
+
+    ! flutter grid up, down left, right and diagonal.
+    ! (Use v3d and v2d to store the boundary data during computation, then add it to v3d0 and v2d0 to get new grd)
+
+    !STEVE: stick the data in the middle of the buffer
+    buf3d(2:nlon+1,2:nlat+1,2:nlev+1) = v3d0(:,:,:,n)
+
+    ! Follow keypad order for: 1..9
+    do i=0,2
+      do j=0,2
+        do k=0,2
+          where(kmt3d .lt. 1 .and. buf3d(1+i:nlon+i,1+j:nlat+j,1+k:nlev+k) > 0.0 )
+            v3d(:,:,:,n) = v3d(:,:,:,n) + buf3d(1+i:nlon+i,1+j:nlat+j,1+k:nlev+k) ! sum all the values on this gridpoint that have water in them
+            vcnt = vcnt + 1
+          end where
+        enddo
+      enddo
+    enddo
+
+    ! If it intersects land (kmt<lev), then it's a boundary point (on the land side).
+    ! Average the flutter values to get an approximate extrapolation value.
+    where(vcnt > 0.0) ! (be careful not to divide by zero...)
+      v3d(:,:,:,n) = v3d(:,:,:,n) / vcnt
+    end where
+  enddo
+
+! Add back on to the pre-existing values
+  v3d = v3d0 + v3d
+
+  ! Do (2D)
+  ! For each variable
+  WRITE(6,*) "Doing 2D part of minkowski flick."
+  v2d=0
+  do n=1,nv2d
+    mask=0
+    vcnt=0
+    ! Reset buffer
+    buf2d=0
+
+    ! flutter grid up, down left, right and diagonal.
+    ! (Use v3d and v2d to store the boundary data during computation, then add it to v3d0 and v2d0 to get new grd)
+
+    !STEVE: stick the data in the middle of the buffer
+    buf2d(2:nlon+1,2:nlat+1,2) = v2d0(:,:,n)
+
+    ! Follow keypad order for: 1..9
+    do i=0,2
+      do j=0,2
+        do k=0,2
+          where(kmt2d .lt. 1 .and. buf2d(1+i:nlon+i,1+j:nlat+j,1+k) > 0.0 )
+            v2d(:,:,n) = v2d(:,:,n) + buf2d(1+i:nlon+i,1+j:nlat+j,1+k) ! sum all the values on this gridpoint that have water in them
+            vcnt(:,:,ilev_sfc) = vcnt(:,:,ilev_sfc) + 1
+          end where
+        enddo
+      enddo
+    enddo
+
+    ! If it intersects land (kmt<lev), then it's a boundary point (on the land side).
+    ! Average the flutter values to get an approximate extrapolation value.
+    where(vcnt(:,:,ilev_sfc) > 0.0) ! (be careful not to divide by zero...)
+      v2d(:,:,n) = v2d(:,:,n) / vcnt(:,:,ilev_sfc)
+    end where
+  enddo
+
+! Add back on to the pre-existing values
+  v2d = v2d0 + v2d
+
+  !Write to test
+  if (dodebug) then
+    CALL write_bingrd('test_mink_v3d.grd',v3d,v2d)
+    CALL write_bingrd('test_mink_v3d0.grd',v3d0,v2d0)
+  endif
+  return
+  endif
+END SUBROUTINE minkowski_flick
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+SUBROUTINE grd_to_cor(v3d1,v2d1,v3d2,v2d2,days)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: days !STEVE: the number of days the model experiment will run for
+  REAL(r_size), DIMENSION(nlon,nlat,nlev,nv3d), INTENT(IN) :: v3d1,v3d2 !analysis=1,guess=2
+  REAL(r_size), DIMENSION(nlon,nlat,nv2d), INTENT(IN) :: v2d1,v2d2
+  REAL(r_sngl), DIMENSION(nlon,nlat,nlev,nv3d) :: v3d, v3d3
+  REAL(r_sngl), DIMENSION(nlon,nlat,nv2d) :: v2d, v2d3
+  REAL(r_size), DIMENSION(nlon,nlat,nlev,nv3d) :: blank3d1,blank3d2,bdypt3d
+  REAL(r_size), DIMENSION(nlon,nlat,nv2d) :: blank2d1,blank2d2,bdypt2d
+  INTEGER, DIMENSION(nlon,nlat,nlev) :: bdypt !(used to identify ocean points that are adjacent to land)
+  REAL(r_size) :: deltat !STEVE: divisor for model time steps
+  REAL :: ainc_thresh
+  INTEGER :: iunit,iolen
+  INTEGER :: i,j,k,n,irec
+  INTEGER :: nkmterr=0
+! LOGICAL :: dodebug = .true.
+  INTEGER, DIMENSION(3) :: errloc
+  ! For analysis increment quality control:
+  REAL(r_size) :: ainc_max_temp, ainc_min_temp, ainc_max_salt, ainc_min_salt
+
+  if (days .eq. 0) then
+    WRITE(6,*) "Generating zero correctors file..."
+
+    ! Write out the appropriate correctors for mom2
+    v3d = 0.0
+    v2d = 0.0
+    CALL write_inc4('temp',v3d,v2d)
+    CALL write_inc4('salt',v3d,v2d)
+    CALL write_inc4('u',v3d,v2d)
+    CALL write_inc4('v',v3d,v2d)
+    CALL write_inc4('ssh',v3d,v2d)
+    return
+  endif
+
+  if (kmt(1,1) < 0) then
+    WRITE(6,*) "common_mom2.f90::grd_to_cor::"
+    WRITE(6,*) "Error: the kmt.dta file has not been read into variable kmt"
+    stop 1
+  endif
+
+  !STEVE: check background against kmt file
+  if (.false. .and. dodebug) then
+    nkmterr = 0
+    do k=1,nlev
+      do j=1,nlat
+        do i=1,nlon
+          !STEVE: match this with the update_kmt subroutine above so that the error is corrected within letkf.
+          !if ( (kmt(i,j) >= k .and. v3d2(i,j,k,n) .eq. 0.0) .or. (kmt(i,j) < 1 .and. v3d2(i,j,k,n) > 0.0) ) then
+          if ( kmt(i,j) < 1 .and. v3d2(i,j,k,n) > 0.000001 ) then
+            nkmterr = nkmterr+1
+            WRITE(6,*) "i,j,k,n = ", i,j,k,n
+            WRITE(6,*) "kmt(i,j) = ", kmt(i,j)
+            WRITE(6,*) "v3d2(i,j,k,:) = ", v3d2(i,j,k,:)
+            WRITE(6,*) "MAXVAL(v3d2(i,j,k,:)) = ", MAXVAL(v3d2(i,j,k,:))
+            WRITE(6,*) "-------------------------------------"
+            !STEVE: add extra checks to see if it is really a coastal value
+          endif
+        enddo
+      enddo
+    enddo
+    if (nkmterr > 0) then
+      WRITE(6,*) "grd_to_cor:: nkmterr = ", nkmterr
+      WRITE(6,*) "ERROR: STOP..."
+      stop 1
+    endif
+  endif
+
+  ! Get analysis increment:
+  ! ADJUST OUTPUT TEMP AND SALT for model timestep:
+  ! assuming model timestep of 1 hour:
+  deltat = 1.0d0 !( 60.0d0 * 60.0d0 * 24.0d0 * REAL(days,r_size) )
+  v3d = 0.0
+  v2d = 0.0
+  do n=1,nv3d
+   !WRITE(6,*) "n = ",n
+   do k=1,nlev
+    WHERE (kmt >= k) v3d(:,:,k,n) = (v3d1(:,:,k,n) - v3d2(:,:,k,n)) / deltat
+    WHERE (kmt < 1) v3d(:,:,k,n) = 0.0 !STEVE: shouldn't be necessary
+    !WRITE(6,*) "k = ", k
+    !WRITE(6,*) "maxval = ", maxval(v3d(:,:,k,n)) !*deltat
+    !WRITE(6,*) "minval = ", minval(v3d(:,:,k,n)) !*deltat
+   enddo
+  enddo
+  do n=1,nv2d
+    WHERE (kmt > 0) v2d(:,:,n) = (v2d1(:,:,n) - v2d2(:,:,n)) / deltat
+    WHERE (kmt < 1) v2d(:,:,n) = 0.0 !STEVE: shouldn't be necessary
+  enddo
+
+  !check for large corrections on the borders with land. This is an artifact of letkf with land constraints (investigate further)
+  if (.true.) then ! Identify boundary points
+    bdypt = 0
+    do k=1,nlev
+      do j=1,nlat
+        do i=1,nlon
+          if (kmt(i,j) .ge. k) then
+            if (i > 1 .and. j > 1 .and. kmt(i-1,j-1) .lt. k ) bdypt(i,j,k) = 1
+            if (i > 1 .and. kmt(i-1,j) .lt. k ) bdypt(i,j,k) = 1
+            if (j > 1 .and. kmt(i,j-1) .lt. k ) bdypt(i,j,k) = 1
+            if (i < nlon .and. j < 1 .and. kmt(i+1,j+1) .lt. k ) bdypt(i,j,k) = 1
+            if (i < nlon .and. kmt(i+1,j) .lt. k ) bdypt(i,j,k) = 1
+            if (j < nlat .and. kmt(i,j+1) .lt. k ) bdypt(i,j,k) = 1
+          endif
+        enddo
+      enddo
+    enddo
+
+    if (.false.) then !adjust boundary points to gues/background
+!     ainc_thresh = 5.0 ! deg C
+!     WRITE(6,*) "Correcting boundary points to 0.0 with threshold = ", ainc_thresh
+!     WHERE(bdypt > 0 .and. abs(v3d1(:,:,:,3) - v3d2(:,:,:,3)) > ainc_thresh)
+!       do n=1,nv3d
+!         v3d(:,:,:,n) = 0.0
+!       enddo
+!     ENDWHERE
+!     WHERE(bdypt(:,:,1) > 0 .and. abs(v3d1(:,:,1,3) - v3d2(:,:,1,3)) > ainc_thresh)
+!       do n=1,nv2d
+!         v2d(:,:,n) = 0.0
+!       enddo
+!     ENDWHERE
+    endif
+
+    bdypt3d(:,:,:,1) = bdypt
+    bdypt3d(:,:,:,2) = bdypt
+    bdypt3d(:,:,:,3) = bdypt
+    bdypt3d(:,:,:,4) = bdypt
+    bdypt2d(:,:,1) = bdypt(:,:,1)
+    CALL write_bingrd('bdypt.grd',bdypt3d,bdypt2d)
+  endif
+
+  !check for blank analysis gridpoints
+  if (.true.) then
+    blank3d1 = 0
+    blank3d2 = 0
+    blank2d1 = 0
+    blank2d2 = 0
+    do k=1,nlev
+      do j=1,nlat
+        do i=1,nlon
+          if ( kmt(i,j) > 0 .and. &
+             & v3d1(i,j,k,3) == 0.0 .and. v3d2(i,j,k,3) /= 0.0 ) then
+            WRITE(6,*) "MAJOR WARNING: analysis point is empty where gues point is nonzero."
+            if (.true. .and. bdypt(i,j,k) > 0) then
+              WRITE(6,*) "Boundary point,"
+              WRITE(6,*) "Adjusting analysis to gues value..."
+              v3d(i,j,k,:) = 0.0 !STEVE: updating with gues/background data since it's missing analysis here.
+            endif
+            blank3d1(i,j,k,:) = 1
+            blank2d1(i,j,:) = 1
+            WRITE(6,*) "i,j,k = ", i,j,k
+            WRITE(6,*) "lon = ", lon(i)
+            WRITE(6,*) "lat = ", lat(j)
+            WRITE(6,*) "kmt(i,j) = ", kmt(i,j)
+            if (i>1 .and. j>1) WRITE(6,*) "kmt(i-1,j-1) = ", kmt(i-1,j-1)
+            if (i>1) WRITE(6,*) "kmt(i-1,j) = ", kmt(i-1,j)
+            if (j>1) WRITE(6,*) "kmt(i,j-1) = ", kmt(i,j-1)
+            if (i<nlon .and. j<nlat) WRITE(6,*) "kmt(i+1,j+1) = ", kmt(i+1,j+1)
+            if (i<nlon) WRITE(6,*) "kmt(i+1,j) = ", kmt(i+1,j)
+            if (j<nlat) WRITE(6,*) "kmt(i,j+1) = ", kmt(i,j+1)
+            WRITE(6,*) "anal: v3d1(i,j,k,3) = ", v3d1(i,j,k,3)
+            WRITE(6,*) "back: v3d2(i,j,k,3) = ", v3d2(i,j,k,3)
+          elseif ( kmt(i,j) > 0 .and. &
+                 & v3d2(i,j,k,3) == 0.0 .and. v3d1(i,j,k,3) /= 0.0 ) then
+            WRITE(6,*) "MAJOR WARNING: gues point is empty where analysis point is nonzero."
+            if (.true. .and. bdypt(i,j,k) > 0) then
+              WRITE(6,*) "Boundary point,"
+              WRITE(6,*) "Adjusting analysis to gues value..."
+              v3d(i,j,k,:) = 0.0 !STEVE: updating with gues/background data since it's equal to 0.0 here (indicates land)
+            endif
+            blank3d2(i,j,k,:) = 1
+            blank2d2(i,j,:) = 1
+            WRITE(6,*) "i,j,k = ", i,j,k
+            WRITE(6,*) "lon = ", lon(i)
+            WRITE(6,*) "lat = ", lat(j)
+            WRITE(6,*) "kmt(i,j) = ", kmt(i,j)
+            if (i>1 .and. j>1) WRITE(6,*) "kmt(i-1,j-1) = ", kmt(i-1,j-1)
+            if (i>1) WRITE(6,*) "kmt(i-1,j) = ", kmt(i-1,j)
+            if (j>1) WRITE(6,*) "kmt(i,j-1) = ", kmt(i,j-1)
+            if (i<nlon .and. j<nlat) WRITE(6,*) "kmt(i+1,j+1) = ", kmt(i+1,j+1)
+            if (i<nlon) WRITE(6,*) "kmt(i+1,j) = ", kmt(i+1,j)
+            if (j<nlat) WRITE(6,*) "kmt(i,j+1) = ", kmt(i,j+1)
+            WRITE(6,*) "anal: v3d1(i,j,k,3) = ", v3d1(i,j,k,3)
+            WRITE(6,*) "back: v3d2(i,k,k,3) = ", v3d2(i,j,k,3)
+          endif
+        enddo
+      enddo
+    enddo
+    CALL write_bingrd('blank_anal.grd',blank3d1,blank2d1)
+    CALL write_bingrd('blank_gues.grd',blank3d2,blank2d2)
+  endif
+
+  ! APPLY AINC LIMITS
+  ! STEVE: new feature, 12/31/10
+  ! The analysis increments are occasionally very large due to the adaptive inflation,
+  ! therefore a hard limit can be imposed here when creating the correction file.
+  ainc_max_temp = days/deltat !deg C
+  ainc_min_temp = -ainc_max_temp
+  ainc_max_salt = (days/2)/deltat !psu
+  ainc_min_salt = -ainc_max_salt
+  !STEVE: may need to add limits to increments on U and V velocities
+
+  ! Where temp ainc > ainc_max_temp, ainc = ainc_max_temp
+  WHERE (v3d(:,:,:,3) > ainc_max_temp) v3d(:,:,:,3) = ainc_max_temp
+  WHERE (v3d(:,:,:,3) < ainc_min_temp) v3d(:,:,:,3) = ainc_min_temp
+
+  ! Where salt ainc > ainc_max_salt, ainc = ainc_max_salt
+  WHERE (v3d(:,:,:,4) > ainc_max_salt) v3d(:,:,:,4) = ainc_max_salt
+  WHERE (v3d(:,:,:,4) < ainc_min_salt) v3d(:,:,:,4) = ainc_min_salt
+
+  !STEVE: ERROR CHECKS:
+  if (dodebug) then
+!!  WRITE(6,*) "Mean sfc background temp:    ", sum(v3d2(:,:,1,3))/(nlon*nlat)
+!!  WRITE(6,*) "Mean sfc analysis_f temp:    ", sum(v3d3(:,:,1,3))/(nlon*nlat)
+!  WRITE(6,*) "Mean sfc analysis temp:      ", sum(v3d1(:,:,1,3))/(nlon*nlat)
+!  WRITE(6,*) "Mean sfc analysis increment: ", sum(v3d(:,:,1,3))/(nlon*nlat) *deltat
+!  WRITE(6,*) " "
+!  WRITE(6,*) "Mean sfc background salt:    ", sum(v3d2(:,:,1,4))/(nlon*nlat)
+!!  WRITE(6,*) "Mean sfc analysis_f salt:    ", sum(v3d3(:,:,1,4))/(nlon*nlat)
+!  WRITE(6,*) "Mean sfc analysis salt:      ", sum(v3d1(:,:,1,4))/(nlon*nlat)
+!  WRITE(6,*) "Mean sfc analysis increment: ", sum(v3d(:,:,1,4))/(nlon*nlat) *deltat
+!  WRITE(6,*) " "
+!  WRITE(6,*) "Mean sfc background U:       ", sum(v3d2(:,:,1,1))/(nlon*nlat)
+!!  WRITE(6,*) "Mean sfc analysis_f U:       ", sum(v3d3(:,:,1,1))/(nlon*nlat)
+!  WRITE(6,*) "Mean sfc analysis U:         ", sum(v3d1(:,:,1,1))/(nlon*nlat)
+!  WRITE(6,*) "Mean sfc analysis increment: ", sum(v3d(:,:,1,1))/(nlon*nlat) *deltat
+!  WRITE(6,*) " "
+!  WRITE(6,*) "Mean sfc background V:       ", sum(v3d2(:,:,1,2))/(nlon*nlat)
+!!  WRITE(6,*) "Mean sfc analysis_f V:       ", sum(v3d3(:,:,1,2))/(nlon*nlat)
+!  WRITE(6,*) "Mean sfc analysis V:         ", sum(v3d1(:,:,1,2))/(nlon*nlat)
+!  WRITE(6,*) "Mean sfc analysis increment: ", sum(v3d(:,:,1,2))/(nlon*nlat) *deltat
+  WRITE(6,*) " "
+  WRITE(6,*) "At 220,65:"
+! WRITE(6,*) "sfc background temp:    ", (v3d2(220,65,1,3))
+! WRITE(6,*) "sfc analysis temp:      ", (v3d1(220,65,1,3))
+! WRITE(6,*) "sfc analysis increment: ", (v3d(220,65,1,3))*deltat
+  WRITE(6,*) " "
+! WRITE(6,*) "sfc background salt:    ", (v3d2(220,65,1,4))
+! WRITE(6,*) "sfc analysis salt:      ", (v3d1(220,65,1,4))
+! WRITE(6,*) "sfc analysis increment: ", (v3d(220,65,1,4))*deltat
+  WRITE(6,*) " "
+! WRITE(6,*) "sfc background U:       ", (v3d2(220,65,1,1))
+! WRITE(6,*) "sfc analysis U:         ", (v3d1(220,65,1,1))
+! WRITE(6,*) "sfc analysis increment: ", (v3d(220,65,1,1))*deltat
+  WRITE(6,*) " "
+! WRITE(6,*) "sfc background V:       ", (v3d2(220,65,1,2))
+! WRITE(6,*) "sfc analysis V:         ", (v3d1(220,65,1,2))
+! WRITE(6,*) "sfc analysis increment: ", (v3d(220,65,1,2))*deltat
+  WRITE(6,*) " "
+  endif
+
+  ainc_thresh = huge(1.0) !STEVE: matching this with 'gross_error' from common_obs_mom2 to test, should have same effect but don't...
+  errloc = MAXLOC(ABS(v3d(:,:,:,3)))
+  if (MAXVAL(ABS(v3d(:,:,:,3)))*deltat > ainc_thresh ) then
+    WRITE(6,*) "common_mom2.f90::grd_to_cor:: "
+    !STEVE: I want to keep running to see what happens...
+    if (.true. .and. MAXVAL(ABS(v3d(:,:,:,3)))*deltat > ainc_thresh*2 ) then
+      WRITE(6,*) "ERROR: max temp analysis increment = ", MAXVAL(ABS(v3d(:,:,:,3)))*deltat
+      WRITE(6,*) "at location: MAXLOC(ABS(v3d(:,:,:,3))) = ", MAXLOC(ABS(v3d(:,:,:,3)))
+      WRITE(6,*) "kmt(errloc) = ", kmt(errloc(1),errloc(2))
+      WRITE(6,*) "bdypt(errloc) = ", bdypt(errloc(1),errloc(2),errloc(3))
+      WRITE(6,*) "lon = ", lon(errloc(1))
+      WRITE(6,*) "lat = ", lat(errloc(2))
+      WRITE(6,*) "LETKF maximum analysis increment for temperature is over twice the warning threshold."
+      WRITE(6,*) "ERROR:: STOP..."
+      stop 1
+    else
+      !STEVE: I just wanted two levels of checks, 1 for a warning, and 1 for an error...
+      WRITE(6,*) "WARNING: max temp analysis increment = ", MAXVAL(ABS(v3d(:,:,:,3)))*deltat
+      WRITE(6,*) "at location: MAXLOC(ABS(v3d(:,:,:,3))) = ", MAXLOC(ABS(v3d(:,:,:,3)))
+      errloc = MAXLOC(ABS(v3d(:,:,:,3)))
+      WRITE(6,*) "kmt(errloc) = ", kmt(errloc(1),errloc(2))
+      WRITE(6,*) "lon = ", lon(errloc(1))
+      WRITE(6,*) "lat = ", lat(errloc(2))
+      !STEVE: added for testing...
+      WRITE(6,*) "ERROR:: STOP..."
+      stop 1
+    endif
+  endif
+
+  if (sum(abs(v3d(:,:,:,3))) < 0.0001/deltat ) then
+    WRITE(6,*) "grd_to_cor :: No update produced for mom4 temp_increment.nc temperature..."
+    WRITE(6,*) "WARNING!WARNING!WARNING!WARNING!WARNING!WARNING!WARNING!WARNING!WARNING!WARNING!WARNING!"
+    !stop 1
+  endif
+
+  ! Write out the appropriate correctors for mom4p1
+  CALL write_inc4('temp',v3d,v2d)
+  CALL write_inc4('salt',v3d,v2d)
+  CALL write_inc4('u',v3d,v2d)
+  CALL write_inc4('v',v3d,v2d)
+  CALL write_inc4('ssh',v3d,v2d)
+
+END SUBROUTINE grd_to_cor
+
+!----------------------------------------------------
+subroutine write_correctors4(filename,temp,salt,ucur,vcur)
+  character(*), INTENT(IN) :: filename
+  REAL(r_sngl), dimension(nlon,nlat,nlev), INTENT(IN) :: temp, salt
+  REAL(r_sngl), dimension(nlon,nlat,nlev), INTENT(IN) :: ucur, vcur
+  integer :: numots ! number of time steps
+  !integer, parameter :: ibm_rec=(nlon+2)*nlat*4 !STEVE: because mom2 requires the cyclic overlap longitudes
+  integer, parameter :: ibm_rec = nlon*nlat*4 !STEVE: because mom2 requires the cyclic overlap longitudes
+  integer :: fid = 79, irec, k
+  WRITE(6,*) "write_correctors4: writing...", filename
+
+  open(unit=fid,file=filename,status='new', &
+       form='unformatted',access='direct',recl=ibm_rec)
+
+  irec = 0
+  do k=1,nlev
+    irec = k
+    ! mom2 correctors don't include the cyclic overlap longitudes
+    write(fid,rec=irec) temp(:,:,k)
+  enddo
+
+  do k=1,nlev
+    irec = k + nlev
+    write(fid,rec=irec) salt(:,:,k)
+  enddo
+
+  do k=1,nlev
+    irec = k + 2*nlev
+    write(fid,rec=irec) ucur(:,:,k)
+  enddo
+
+  do k=1,nlev
+    irec = k + 3*nlev
+    write(fid,rec=irec) vcur(:,:,k)
+  enddo
+
+end subroutine write_correctors4
+!----------------------------------------------------
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+SUBROUTINE set_kmt(file)
+  CHARACTER(*), INTENT(IN) :: file
+  REAL(r_size), DIMENSION(nlon,nlat,nlev,nv3d) :: v3d
+  REAL(r_size), DIMENSION(nlon,nlat,nv2d) :: v2d
+  INTEGER :: i,j,k,n
+
+  CALL read_bingrd(file,v3d,v2d)
+
+  kmt = 0
+  do k=nlev,1,-1
+    do j=1,nlat
+      do i=1,nlon
+        if ( kmt(i,j) < 1 .and. v3d(i,j,k,3) > 0.0 ) then !STEVE: wanted MAX(v3d(i,j,k,:)), but salinity is 35 on land due to unit conversion
+          kmt(i,j) = k
+        endif
+      enddo
+    enddo
+  enddo
+
+
+END SUBROUTINE set_kmt
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+SUBROUTINE update_kmt(v3d,v2d)
+  REAL(r_size), DIMENSION(nlon,nlat,nlev,nv3d) :: v3d
+  REAL(r_size), DIMENSION(nlon,nlat,nv2d) :: v2d
+  INTEGER :: nkmterr = 0
+  INTEGER :: i,j,k,n
+
+  do k=nlev,1,-1
+    do j=1,nlat
+      do i=1,nlon
+          if ( kmt(i,j) < 1 .and. v3d(i,j,k,3) > 0.0 ) then !STEVE: wanted MAX(v3d(i,j,k,:)), but salinity is 35 on land due to unit conversion
+            nkmterr = nkmterr+1
+            kmt(i,j) = k
+          endif
+      enddo
+    enddo
+  enddo
+  WRITE(6,*) "common_mom2::update_kmt: KMT entries updated: ", nkmterr
+
+  return
+END SUBROUTINE update_kmt
+
+
+END MODULE common_mom4

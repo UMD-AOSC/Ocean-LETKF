@@ -1,0 +1,34 @@
+######################################################################
+LBO=~/lib/hydro.a ~/lib/TUtl.a
+NETCDF=/opt/cray/netcdf/4.2.0/intel/120
+LBN=$(NETCDF)/lib/libnetcdf.a
+INC=-I~/include -I$(NETCDF)/include
+CFLAG=-O3
+FFLAG=-O3 -FR
+LDFLAG=
+CC=cc
+FC=ftn
+EXEC = cmbWksAlt4 rdWkA4 spltWkAlt4 runSWA4
+
+.c.o:
+	$(CC) $(CFLAG) $(INC) -c $<
+
+.f.o:
+	$(FC) $(FFLAG) -c $<
+
+all : $(EXEC)
+
+cmbWksAlt4 : cmbWksAlt4.o $(LBO)
+	$(CC) $(LDFLAG) -o cmbWksAlt4 cmbWksAlt4.o $(LBO) $(LBN) -lm
+
+rdWkA4 : rdWkA4.o $(LBO)
+	$(CC) $(LDFLAG) -o rdWkA4 rdWkA4.o $(LBO) $(LBN) -lm
+
+runSWA4 : runSWA4.o $(LBO)
+	$(CC) $(LDFLAG) -o runSWA4 runSWA4.o $(LBO) $(LBN) -lm
+
+spltWkAlt4 : spltWkAlt4.o $(LBO)
+	$(CC) $(LDFLAG) -o spltWkAlt4 spltWkAlt4.o $(LBO) $(LBN) -lm
+
+clean :
+	rm *.o $(EXEC)

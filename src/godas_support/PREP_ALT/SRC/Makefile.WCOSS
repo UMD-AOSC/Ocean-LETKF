@@ -1,0 +1,33 @@
+######################################################################
+LBO=/gpfs/gd2/emc/climate/save/David.Behringer/lib/hydro.a /gpfs/gd2/emc/climate/save/David.Behringer/lib/TUtl.a
+LBN=-L/usrx/local/NetCDF/3.6.3/lib -lnetcdf
+INC=-I/usrx/local/NetCDF/3.6.3/include -I/gpfs/gd2/emc/climate/save/David.Behringer/include
+CFLAG=-O3
+FFLAG=-O3 -free
+LDFLAG=
+CC=icc
+FC=ifort
+EXEC = cmbWksAlt4 rdWkA4 spltWkAlt4 runSWA4
+
+.c.o:
+	$(CC) $(CFLAG) $(INC) -c $<
+
+.f.o:
+	$(FC) $(FFLAG) -c $<
+
+all : $(EXEC)
+
+cmbWksAlt4 : cmbWksAlt4.o $(LBO)
+	$(CC) $(LDFLAG) -o cmbWksAlt4 cmbWksAlt4.o $(LBO) $(LBN) -lm
+
+rdWkA4 : rdWkA4.o $(LBO)
+	$(CC) $(LDFLAG) -o rdWkA4 rdWkA4.o $(LBO) $(LBN) -lm
+
+spltWkAlt4 : spltWkAlt4.o $(LBO)
+	$(CC) $(LDFLAG) -o spltWkAlt4 spltWkAlt4.o $(LBO) $(LBN) -lm
+
+runSWA4 : runSWA4.o $(LBO)
+	$(CC) $(LDFLAG) -o runSWA4 runSWA4.o $(LBO) $(LBN) -lm
+
+clean :
+	rm *.o $(EXEC)

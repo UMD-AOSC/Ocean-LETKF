@@ -1,4 +1,0 @@
-FC=ftn
-CC=icc
-LD=ftn
-LDFLAGS=-O3 -parallel -what -L/opt/cray/netcdf/4.2.0/intel/120/lib -lnetcdf -lnetcdff -L/opt/xt-libsci/11.1.00/INTEL/120/interlagos/lib -lsci_intel -lsci_intel_mp
