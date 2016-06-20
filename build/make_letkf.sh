@@ -15,24 +15,28 @@ source $CONFIGDIR/$MACHINE.modules.sh
 model=mom4 #mom4, mom6, hycom, roms
 
 # Experiment name
-name=test_2dlonlat_$model
+name=${MACHINE}_${model}.2dlonlat
 #name=test_$model
 #name=TESTc3
-
-# Build directory
-BDIR=$CDIR/letkf_build/$name.build
-mkdir -p $BDIR
-cd $BDIR
 
 # Executable for letkf
 PGM=letkf.$name.x
 
+# Build directory
+BDIR=$CDIR/build_letkf/$name.build
+mkdir -p $BDIR
+cd $BDIR
+
+#===============================================================================
+
 OMP=
 #BLAS=1 #0: no blas 1: using blas
-sh $CDIR/ulnkcommon.sh
-sh $CDIR/lnkcommon.sh $model $CDIR/../
-rm -f *.mod
-rm -f *.o
+rm -f $BDIR/*.f90
+rm -f $BDIR/*.f
+rm -f $BDIR/*.o
+rm -f $BDIR/*.mod
+rm -f $BDIR/*.dat
+sh $CDIR/lnkcommon.sh $model $CDIR/..
 
 cat netlib.f > netlib2.f
 if test $BLAS -eq 1
@@ -67,14 +71,10 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.o letkf_tools.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE -o ${PGM} *.o $MPI_LIB $NETCDF_LIB $LBLAS
 
-#STEVE: keep a record of the build:
-mkdir -p CONFIG_$PGM
-cp *.f90 CONFIG_$PGM/
-
+#STEVE: keep a record of the build by keeping the *.f90 files
 rm -f *.mod
 rm -f *.o
 rm -f netlib2.f
-sh $CDIR/ulnkcommon.sh
 
 echo "STEVE: min temp is set to -4 ºC and max salt is set to 50.0 psu in params_model.f90"
 echo "STEVE: don't forget - in phys2ijk, obs above model level 1 are set to model level 1"

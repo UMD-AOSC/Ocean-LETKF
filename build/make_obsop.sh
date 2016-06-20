@@ -41,7 +41,7 @@ source $CONFIGDIR/$MACHINE.modules_ldtn.sh
 model=mom4
 
 # Experiment name:
-name=test_2dlonlat_$model
+name=${MACHINE}_${model}.2dlonlat
 #name=test_$model
 #name=TESTc3
 PGM=obsop.$name
@@ -51,10 +51,14 @@ BDIR=$CDIR/obsop_build/$name.build
 mkdir -p $BDIR
 cd $BDIR
 
-sh $CDIR/ulnkcommon.sh
+#===============================================================================
+rm -f $BDIR/*.f90
+rm -f $BDIR/*.f
+rm -f $BDIR/*.o
+rm -f $BDIR/*.mod
+rm -f $BDIR/*.dat
+
 sh $CDIR/lnkcommon_obsop.sh $model $CDIR/../
-rm -f *.mod
-rm -f *.o
 
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90
@@ -81,7 +85,6 @@ $F90 $OMP $F90_OPT obsop_sst.f90   -o ${PGM}.sst.x   *.o $NETCDF_LIB
 
 rm -f *.mod
 rm -f *.o
-sh $CDIR/ulnkcommon.sh
 #--
 #--
 

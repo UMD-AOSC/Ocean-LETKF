@@ -73,6 +73,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   USE params_obs,   ONLY: nobs
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_model, ONLY: iv2d_mld
+  USE params_model, ONLY: iv3d_t !STEVE: for debugging
   USE params_letkf, ONLY: DO_MLD, DO_NO_VERT_LOC
   USE vars_model,   ONLY: lev
 
