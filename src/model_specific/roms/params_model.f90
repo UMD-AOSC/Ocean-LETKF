@@ -28,42 +28,48 @@ PUBLIC
   INTEGER,PARAMETER :: nv3d=4 ! u,v,t,s
   INTEGER,PARAMETER :: nv2d=4 ! z,ubar,vbar,Hsbl
   INTEGER,PARAMETER :: nv4d=0 ! x,y,z                !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
+  ! 3d
   INTEGER,PARAMETER :: iv3d_u=1
   INTEGER,PARAMETER :: iv3d_v=2
   INTEGER,PARAMETER :: iv3d_t=3
   INTEGER,PARAMETER :: iv3d_s=4
+  ! 2d
   INTEGER,PARAMETER :: iv2d_z=1
   INTEGER,PARAMETER :: iv2d_ubar=2
   INTEGER,PARAMETER :: iv2d_vbar=3
   INTEGER,PARAMETER :: iv2d_hbl=4
+
+  INTEGER,PARAMETER :: iv2d_ssh=5              !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
+  INTEGER,PARAMETER :: iv2d_sst=6              !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
+  INTEGER,PARAMETER :: iv2d_sss=7              !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models
+  INTEGER,PARAMETER :: iv2d_eta=8              !(OCEAN) ! eta sea surface perturbation from mom4's ocean_barotropic.res.nc restart file
+  INTEGER,PARAMETER :: iv2d_mld=9              !(OCEAN) ! mixed layer depth
+  INTEGER,PARAMETER :: iv4d_x=1                !(OCEAN) (DRIFTERS)
+  INTEGER,PARAMETER :: iv4d_y=2                !(OCEAN) (DRIFTERS)
+  INTEGER,PARAMETER :: iv4d_z=3                !(OCEAN) (DRIFTERS)
+
 
   ! Initialize via subroutine below:
   INTEGER,SAVE :: nij0           ! Number of gridpoints handled by myrank processor
   INTEGER,SAVE :: nlevall        ! Total number of variables and levels (3d + 2d)
   INTEGER,SAVE :: ngpv           ! Total number of gridpoints, including nij0*nlevall
 
-  INTEGER,PARAMETER :: iv3d_u=1
-  INTEGER,PARAMETER :: iv3d_v=2
-  INTEGER,PARAMETER :: iv3d_t=3
-  INTEGER,PARAMETER :: iv3d_s=4                !(OCEAN)
-                                               !          From ocean_sbc.res.nc:
-  INTEGER,PARAMETER :: iv2d_ssh=1              !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
-  INTEGER,PARAMETER :: iv2d_sst=2              !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
-  INTEGER,PARAMETER :: iv2d_sss=3              !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models
-  INTEGER,PARAMETER :: iv2d_eta=4              !(OCEAN) ! eta sea surface perturbation from mom4's ocean_barotropic.res.nc restart file
-  INTEGER,PARAMETER :: iv2d_mld=5              !(OCEAN) ! mixed layer depth
-  INTEGER,PARAMETER :: iv4d_x=1                !(OCEAN) (DRIFTERS)
-  INTEGER,PARAMETER :: iv4d_y=2                !(OCEAN) (DRIFTERS)
-  INTEGER,PARAMETER :: iv4d_z=3                !(OCEAN) (DRIFTERS)
-
   !
   ! Elements
   !
   CHARACTER(4) :: element(nv3d+nv2d+nv4d)
+  !
+  ! Elements
+  !
 ! element(iv3d_u) = 'U   '
 ! element(iv3d_v) = 'V   '
 ! element(iv3d_t) = 'T   '
-! element(iv3d_s) = 'S   '               !(OCEAN)
+! element(iv3d_s) = 'S   '
+! element(nv3d+iv2d_z) = 'ZETA'
+! element(nv3d+iv2d_ubar) = 'UBAR'
+! element(nv3d+iv2d_vbar) = 'VBAR'
+! element(nv3d+iv2d_hbl) = 'HBL '
+
 ! element(nv3d+iv2d_ssh) = 'SSH '        !(OCEAN)
 ! element(nv3d+iv2d_sst) = 'SST '        !(OCEAN)
 ! element(nv3d+iv2d_sss) = 'SSS '        !(OCEAN)
@@ -87,7 +93,7 @@ PUBLIC
   CHARACTER(32) :: hs_basefile = 'ocean_TS.nc'
 
   ! For grid_spec.nc data file:
-  CHARACTER(12) :: gridfile = 'grid_spec.nc'
+  CHARACTER(12) :: gridfile = 'grd.nc'
 
   ! Bounds checking (for output by common_mom4.f90::write_restart)
   LOGICAL :: do_physlimit=.true.

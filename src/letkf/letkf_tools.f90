@@ -194,7 +194,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     if (ex) then
       if (myrank == 0) then
         WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',inflinfile
-        CALL read_bingrd4(inflinfile,work3dg,work2dg)
+        CALL read_grd4(inflinfile,work3dg,work2dg)
       endif
       CALL scatter_grd_mpi(0,work3dg,work2dg,work3d,work2d)
     else
@@ -468,7 +468,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     CALL gather_grd_mpi(0,work3d,work2d,work3dg,work2dg)
     if (myrank == 0) then
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing.. ',infloutfile
-      CALL write_bingrd4(infloutfile,work3dg,work2dg)
+      CALL write_grd4(infloutfile,work3dg,work2dg)
     endif
     DEALLOCATE(work3dg,work2dg,work3d,work2d)
   endif adaptive_inflation

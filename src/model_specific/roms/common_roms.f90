@@ -1,4 +1,4 @@
-MODULE common_roms
+MODULE common_oceanmodel
 !=======================================================================
 !
 ! [PURPOSE:] Common Information for ROMS
@@ -18,41 +18,38 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Set the parameters
 !-----------------------------------------------------------------------
-SUBROUTINE set_common_roms
+SUBROUTINE set_common_oceanmodel
+  USE params_model, ONLY: gridfile, initialize_params_model
+  USE vars_model,   ONLY: phi0, initialize_vars_model
+  USE vars_model,   ONLY: lon2d, lat2d, fcori2d
+  USE vars_model,   ONLY: mskrho, msku, mskv, mskpsi
+
   IMPLICIT NONE
+
   INCLUDE 'netcdf.inc'
   INTEGER :: ncid,istat,varid
+  INTEGER :: i,j,k
 
-  WRITE(6,'(A)') 'Hello from set_common_roms'
-
-  !
-  ! Elements
-  !
-  element(iv3d_u) = 'U   '
-  element(iv3d_v) = 'V   '
-  element(iv3d_t) = 'T   '
-  element(iv3d_s) = 'SALT'
-  element(nv3d+iv2d_z) = 'ZETA'
-  element(nv3d+iv2d_ubar) = 'UBAR'
-  element(nv3d+iv2d_vbar) = 'VBAR'
-  element(nv3d+iv2d_hbl) = 'HBL '
+  WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
+  CALL initialize_params_model ! (checks to make sure it is initialized)
+  CALL initialize_vars_model   ! (checks to make sure it is initialized)
 
   !
   ! Lon, Lat, f, orography
   !
-  WRITE(6,'(A)') '  >> accessing file: grd.nc'
-  istat = NF_OPEN('grd.nc',NF_NOWRITE,ncid)
+  WRITE(6,'(A)') '  >> accessing file: ', gridfile
+  istat = NF_OPEN(gridfile,NF_NOWRITE,ncid)
   if (istat /= NF_NOERR) then
     WRITE(6,'(A)') 'netCDF OPEN ERROR'
     STOP
   endif
 
   istat = NF_INQ_VARID(ncid,'lon_rho',varid)
-  istat = NF_GET_VAR_DOUBLE(ncid,varid,lon)
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,lon2d)
   istat = NF_INQ_VARID(ncid,'lat_rho',varid)
-  istat = NF_GET_VAR_DOUBLE(ncid,varid,lat)
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,lat2d)
   istat = NF_INQ_VARID(ncid,'f',varid)
-  istat = NF_GET_VAR_DOUBLE(ncid,varid,fcori)
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,fcori2d)
   istat = NF_INQ_VARID(ncid,'h',varid)
   istat = NF_GET_VAR_DOUBLE(ncid,varid,phi0)
   istat = NF_INQ_VARID(ncid,'mask_rho',varid)
@@ -65,14 +62,49 @@ SUBROUTINE set_common_roms
   istat = NF_GET_VAR_DOUBLE(ncid,varid,mskpsi)
   istat = NF_CLOSE(ncid)
 
-END SUBROUTINE set_common_roms
+!STEVE: (ISSUE) need 'kmt' field giving 'wet' versus 'dry' points
+! WHERE() kmt = 
+
+END SUBROUTINE set_common_oceanmodel
+
 
 !-----------------------------------------------------------------------
 ! File I/O (netCDF)
 !-----------------------------------------------------------------------
-!-- Read a grid file ---------------------------------------------------
-SUBROUTINE read_grd(filename,v3d,v2d)
+SUBROUTINE read_diag(infile,v3d,v2d)
+!===============================================================================
+! Read in a set of (hourly or daily) diagnostic files (for now, we're using the restarts)
+!===============================================================================
+  USE netcdf
+  USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: infile
+  REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
+! REAL(r_sngl), ALLOCATABLE :: v3d0(:,:,:,:)
+! REAL(r_sngl), ALLOCATABLE :: v2d0(:,:,:)
+  REAL(r_size), ALLOCATABLE :: v3d0(:,:,:,:)
+  REAL(r_size), ALLOCATABLE :: v2d0(:,:,:)
+
+  ALLOCATE(v3d0(nlon,nlat,nlev,nv3d), v2d0(nlon,nlat,nv2d))
+  CALL read_restart(infile,v3d0,v2d0) !,1)
+  v3d = REAL(v3d0,r_size)
+  v2d = REAL(v2d0,r_size)
+
+END SUBROUTINE read_diag
+
+
+!-----------------------------------------------------------------------
+! Read a model restart file
+!-----------------------------------------------------------------------
+SUBROUTINE read_restart(filename,v3d,v2d)
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: iv3d_t, iv3d_s, iv3d_u, iv3d_v
+  USE params_model, ONLY: iv2d_z, iv2d_ubar, iv2d_vbar, iv2d_hbl
+  USE params_model, ONLY: nv3d, nv2d
+
+  IMPLICIT NONE
+
   INCLUDE 'netcdf.inc'
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -219,9 +251,13 @@ SUBROUTINE read_grd(filename,v3d,v2d)
   istat = NF_CLOSE(ncid)
 
   RETURN
-END SUBROUTINE read_grd
+END SUBROUTINE read_restart
 
 SUBROUTINE read_grd4(filename,v3d,v2d)
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: iv3d_t, iv3d_s, iv3d_u, iv3d_v
+  USE params_model, ONLY: iv2d_z, iv2d_ubar, iv2d_vbar, iv2d_hbl
+  USE params_model, ONLY: nv3d, nv2d
   IMPLICIT NONE
   INCLUDE 'netcdf.inc'
   CHARACTER(*),INTENT(IN) :: filename
@@ -302,6 +338,10 @@ END SUBROUTINE read_grd4
 
 !-- Write a grid file -------------------------------------------------
 SUBROUTINE write_grd(filename,v3d,v2d)
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: iv3d_t, iv3d_s, iv3d_u, iv3d_v
+  USE params_model, ONLY: iv2d_z, iv2d_ubar, iv2d_vbar, iv2d_hbl
+  USE params_model, ONLY: nv3d, nv2d
   IMPLICIT NONE
   INCLUDE 'netcdf.inc'
   CHARACTER(*),INTENT(IN) :: filename
@@ -428,6 +468,10 @@ END SUBROUTINE write_grd
 
 
 SUBROUTINE write_grd4(filename,v3d,v2d)
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: iv3d_t, iv3d_s, iv3d_u, iv3d_v
+  USE params_model, ONLY: iv2d_z, iv2d_ubar, iv2d_vbar, iv2d_hbl
+  USE params_model, ONLY: nv3d, nv2d
   IMPLICIT NONE
   INCLUDE 'netcdf.inc'
   CHARACTER(*),INTENT(IN) :: filename
@@ -504,6 +548,7 @@ END SUBROUTINE write_grd4
 ! Depth
 !-----------------------------------------------------------------------
 SUBROUTINE calc_depth(zeta,bottom,depth)
+  USE params_model, ONLY: nlev
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: zeta
   REAL(r_size),INTENT(IN) :: bottom
@@ -557,27 +602,29 @@ END SUBROUTINE calc_depth
 ! Monitor
 !-----------------------------------------------------------------------
 SUBROUTINE monit_grd(v3d,v2d)
+  USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   INTEGER :: k,n
 
-  DO k=1,nlev
-    WRITE(6,'(I2,A)') k,'th level'
-    DO n=1,nv3d
-      WRITE(6,'(A,2ES10.2)') element(n),MAXVAL(v3d(:,:,k,n)),MINVAL(v3d(:,:,k,n))
-    END DO
-  END DO
+! DO k=1,nlev
+!   WRITE(6,'(I2,A)') k,'th level'
+!   DO n=1,nv3d
+!     WRITE(6,'(A,2ES10.2)') element(n),MAXVAL(v3d(:,:,k,n)),MINVAL(v3d(:,:,k,n))
+!   END DO
+! END DO
 
-  DO n=1,nv2d
-    WRITE(6,'(A,2ES10.2)') element(nv3d+n),MAXVAL(v2d(:,:,n)),MINVAL(v2d(:,:,n))
-  END DO
+! DO n=1,nv2d
+!   WRITE(6,'(A,2ES10.2)') element(nv3d+n),MAXVAL(v2d(:,:,n)),MINVAL(v2d(:,:,n))
+! END DO
 
 END SUBROUTINE monit_grd
 !-----------------------------------------------------------------------
 ! Ensemble manipulations
 !-----------------------------------------------------------------------
 SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
+  USE params_model, ONLY: nlev, nv3d, nv2d
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: member
   INTEGER,INTENT(IN) :: nij
@@ -613,4 +660,4 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
 
 END SUBROUTINE ensmean_grd
 
-END MODULE common_roms
+END MODULE common_oceanmodel

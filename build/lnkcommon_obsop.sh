@@ -18,11 +18,11 @@ MODELDIR=$root/src/model_specific/$model
 cp $MODELDIR/common_$model.f90 ./
 cp $MODELDIR/common_mpi_$model.f90 ./
 cp $MODELDIR/common_obs_$model.f90 ./
+cp $MODELDIR/params_model.f90 ./
+cp $MODELDIR/vars_model.f90 ./
 
 LETKFDIR=$root/src/letkf
 cp $LETKFDIR/params_letkf.f90 ./
-cp $LETKFDIR/params_model.f90 ./
-cp $LETKFDIR/vars_model.f90 ./
 cp $LETKFDIR/letkf_obs.f90 ./
 cp $LETKFDIR/letkf_local.f90 ./
 cp $LETKFDIR/letkf_tools.f90 ./

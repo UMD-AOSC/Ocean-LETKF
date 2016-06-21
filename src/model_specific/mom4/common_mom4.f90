@@ -695,7 +695,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
 ! !STEVE: debug test
   if (.false.) then
     testfile = "test_read4.grd"
-!   CALL write_bingrd4(trim(testfile),v3d,v2d)
+!   CALL write_grd4(trim(testfile),v3d,v2d)
 
     iunit=55
     INQUIRE(IOLENGTH=iolen) iolen
@@ -985,7 +985,7 @@ SUBROUTINE read_bingrd(filename,v3d,v2d)
 END SUBROUTINE read_bingrd
 
 
-SUBROUTINE read_bingrd4(filename,v3d,v2d)
+SUBROUTINE read_grd4(filename,v3d,v2d)
 !===============================================================================
 ! Read in an letkf grd-format binary file in single precision
 !===============================================================================
@@ -1020,10 +1020,10 @@ SUBROUTINE read_bingrd4(filename,v3d,v2d)
 
   CLOSE(iunit)
 
-END SUBROUTINE read_bingrd4
+END SUBROUTINE read_grd4
 
 
-SUBROUTINE write_bingrd4(filename,v3d,v2d)
+SUBROUTINE write_grd4(filename,v3d,v2d)
 !===============================================================================
 ! Write out an letkf grd-format binary file in single precision
 !===============================================================================
@@ -1038,30 +1038,30 @@ SUBROUTINE write_bingrd4(filename,v3d,v2d)
   INTEGER :: i,j,k,n,irec
   LOGICAL :: dodebug=.false.
 
-  if (dodebug) print *, "write_bingrd4:: open filename = ",filename
+  if (dodebug) print *, "write_grd4:: open filename = ",filename
   iunit=55
   INQUIRE(IOLENGTH=iolen) iolen
-  if (dodebug) print *, "write_bingrd4:: nij0,iolength = ", nij0,iolen
+  if (dodebug) print *, "write_grd4:: nij0,iolength = ", nij0,iolen
   OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
 
   irec=1
   do n=1,nv3d
     do k=1,nlev
-      if (dodebug) print *, "write_bingrd4:: n,k,irec = ",n,k,irec
+      if (dodebug) print *, "write_grd4:: n,k,irec = ",n,k,irec
       WRITE(iunit,REC=irec) ((v3d(i,j,k,n),i=1,nlon),j=1,nlat)
       irec = irec + 1
     enddo
   enddo
 
   do n=1,nv2d
-    if (dodebug) print *, "write_bingrd4:: n,irec = ",n,irec
+    if (dodebug) print *, "write_grd4:: n,irec = ",n,irec
     WRITE(iunit,REC=irec) ((v2d(i,j,n),i=1,nlon),j=1,nlat)
     irec = irec + 1
   enddo
 
   CLOSE(iunit)
 
-END SUBROUTINE write_bingrd4
+END SUBROUTINE write_grd4
 
 !STEVE: move this somewhere more general (ISSUE)
 SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)

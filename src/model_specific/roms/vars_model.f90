@@ -16,10 +16,10 @@ PUBLIC
 ! REAL(r_size),SAVE :: phi0(nlon,nlat)
 ! CHARACTER(4),SAVE :: element(nv3d+nv2d)
 ! !LPP has added mask variablels 0 = "land", 1 = "water"
-! REAL(r_size),SAVE :: mskrho(nlon,nlat) ;
-! REAL(r_size),SAVE :: msku(nlon,nlat-1) ;
-! REAL(r_size),SAVE :: mskv(nlon-1,nlat) ;
-! REAL(r_size),SAVE :: mskpsi(nlon-1,nlat-1) ;
+  REAL(r_size),SAVE :: mskrho(nlon,nlat) ;
+  REAL(r_size),SAVE :: msku(nlon,nlat-1) ;
+  REAL(r_size),SAVE :: mskv(nlon-1,nlat) ;
+  REAL(r_size),SAVE :: mskpsi(nlon-1,nlat-1) ;
   
 
 !-----------------------------------------------------------------------------
@@ -29,6 +29,7 @@ PUBLIC
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE   :: lev !(nlev)                     !(OCEAN)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lon2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
 
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dx !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dy !(nlon,nlat)
@@ -36,6 +37,7 @@ PUBLIC
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
 
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE   :: fcori !(nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: fcori2d !(nlat)
   INTEGER,ALLOCATABLE,DIMENSION(:,:),SAVE      :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
   ! For AMOC computation
@@ -48,15 +50,17 @@ PUBLIC
   REAL(r_size),DIMENSION(nlev),SAVE      :: lev !(nlev)                     !(OCEAN)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lon2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
+  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
 
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dx !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dy !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
 
-  REAL(r_size),DIMENSION(nlat),SAVE      :: fcori !(nlat)
-  INTEGER,DIMENSION(nlon,nlat),SAVE      :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
+  REAL(r_size),DIMENSION(nlat),SAVE            :: fcori !(nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: fcori2d !(nlat)
+  INTEGER,DIMENSION(nlon,nlat),SAVE            :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
+  REAL(r_size),DIMENSION(nlon,nlat),SAVE       :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
   ! For AMOC computation
   REAL(r_size),DIMENSION(nlev),SAVE :: zb !(nlev)
   REAL(r_size),DIMENSION(nlev),SAVE :: dz !(nlev)
