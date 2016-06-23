@@ -1,0 +1,1 @@
+/lustre/f1/Steve.Penny/swa12_grd.nc

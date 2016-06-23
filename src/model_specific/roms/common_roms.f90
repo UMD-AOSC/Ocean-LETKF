@@ -20,9 +20,11 @@ CONTAINS
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_oceanmodel
   USE params_model, ONLY: gridfile, initialize_params_model
+  USE params_model, ONLY: nlev
   USE vars_model,   ONLY: phi0, initialize_vars_model
   USE vars_model,   ONLY: lon2d, lat2d, fcori2d
   USE vars_model,   ONLY: mskrho, msku, mskv, mskpsi
+  USE vars_model,   ONLY: kmt, kmt0
 
   IMPLICIT NONE
 
@@ -44,12 +46,14 @@ SUBROUTINE set_common_oceanmodel
     STOP
   endif
 
+  !STEVE: mostly only the lon2d and lat2d fields are used. 
+  !       The mask_rho is used to create the land/sea mask
   istat = NF_INQ_VARID(ncid,'lon_rho',varid)
   istat = NF_GET_VAR_DOUBLE(ncid,varid,lon2d)
   istat = NF_INQ_VARID(ncid,'lat_rho',varid)
   istat = NF_GET_VAR_DOUBLE(ncid,varid,lat2d)
   istat = NF_INQ_VARID(ncid,'f',varid)
-  istat = NF_GET_VAR_DOUBLE(ncid,varid,fcori2d)
+  istat = NF_GET_VAR_DOUBLE(ncid,varid,fcori2d) !STEVE: at the moment, this isn't used anywhere
   istat = NF_INQ_VARID(ncid,'h',varid)
   istat = NF_GET_VAR_DOUBLE(ncid,varid,phi0)
   istat = NF_INQ_VARID(ncid,'mask_rho',varid)
@@ -62,8 +66,10 @@ SUBROUTINE set_common_oceanmodel
   istat = NF_GET_VAR_DOUBLE(ncid,varid,mskpsi)
   istat = NF_CLOSE(ncid)
 
-!STEVE: (ISSUE) need 'kmt' field giving 'wet' versus 'dry' points
-! WHERE() kmt = 
+  !STEVE: need 'kmt' field giving 'wet' versus 'dry' points
+  kmt = 0
+  WHERE(mskrho .gt. 0) kmt = nlev
+  kmt0 = REAL(kmt,r_size) ! scattered to multiple processes in common_mpi_roms
 
 END SUBROUTINE set_common_oceanmodel
 

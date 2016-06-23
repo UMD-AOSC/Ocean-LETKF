@@ -12,105 +12,13 @@ MODULE common_oceanmodel
 !=======================================================================
   USE common
   USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS
+  USE params_model !, ONLY: nlon, nlat, nlev, nv3d, nv2d, iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv3d_h
   IMPLICIT NONE
   PUBLIC
-!-----------------------------------------------------------------------
-! General parameters
-!-----------------------------------------------------------------------
-! GFDL MOM6:
-  INTEGER,PARAMETER :: nlon=1440
-  INTEGER,PARAMETER :: nlat=1080
-  INTEGER,PARAMETER :: nlev=75
-! MOM4 ncep2012 tripolar
-! INTEGER,PARAMETER :: nlon=720 
-! INTEGER,PARAMETER :: nlat=410 
-! INTEGER,PARAMETER :: nlev=40 
-!
-  INTEGER,PARAMETER :: ilev_sfc=1
-!
-  INTEGER,PARAMETER :: nv3d=4 ! u,v,t,s              !(OCEAN)
-! INTEGER,PARAMETER :: nv3d=5 ! u,v,t,s,h            !(OCEAN)(MOM6)
-  INTEGER,PARAMETER :: nv4d=3 ! x,y,z                !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
-! INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
-! INTEGER,PARAMETER :: nv2d=7 ! ssh/t/s, + sfc fluxes: taux,tauy,heat,freshwater
-  INTEGER,PARAMETER :: nv2d=1 !3!4 ! ssh,sst,sss,eta      !(OCEAN) !(ALTIMETRY)
-  INTEGER,PARAMETER :: iv3d_u=1
-  INTEGER,PARAMETER :: iv3d_v=2
-  INTEGER,PARAMETER :: iv3d_t=3
-  INTEGER,PARAMETER :: iv3d_s=4                      !(OCEAN)
-! INTEGER,PARAMETER :: iv3d_h=5                      !(OCEAN)(MOM6)
-                                                     !          From ocean_sbc.res.nc:
-  INTEGER,PARAMETER :: iv2d_ssh=1                    !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
-  INTEGER,PARAMETER :: iv2d_sst=2                    !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
-  INTEGER,PARAMETER :: iv2d_sss=3                    !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models
-  INTEGER,PARAMETER :: iv2d_eta=4                    !(OCEAN) ! eta sea surface perturbation from mom6's ocean_barotropic.res.nc restart file
-  INTEGER,PARAMETER :: iv4d_x=1                      !(OCEAN) (DRIFTERS)
-  INTEGER,PARAMETER :: iv4d_y=2                      !(OCEAN) (DRIFTERS)
-  INTEGER,PARAMETER :: iv4d_z=3                      !(OCEAN) (DRIFTERS)
-  INTEGER,PARAMETER :: nij0=nlon*nlat
-  INTEGER,PARAMETER :: nlevall=nlev*nv3d+nv2d
-  INTEGER,PARAMETER :: ngpv=nij0*nlevall
-  REAL(r_size),SAVE :: lon(nlon)
-  REAL(r_size),SAVE :: lat(nlat)
-  REAL(r_size),SAVE :: lev(nlev)                     !(OCEAN)
-  REAL(r_size),SAVE :: dx(nlon,nlat)
-  REAL(r_size),SAVE :: dy(nlon,nlat)
-  REAL(r_size),SAVE :: dy2(nlat)
-  REAL(r_size),SAVE :: fcori(nlat)
-  REAL(r_size),SAVE :: phi0(nlon,nlat)
-  REAL(r_size),SAVE :: height(nlon,nlat,nlev)        !(OCEAN)(MOM6)
-  REAL(r_size),SAVE :: kmt0(nlon,nlat)               !(OCEAN)
-  REAL(r_sngl),SAVE :: depth(nlon,nlat)              !(OCEAN)(MOM6) !STEVE: are floats in netcdf single precision? I think so.
-  REAL(r_sngl),SAVE :: wet(nlon,nlat)                !(OCEAN)(MOM6)
-  REAL(r_size),SAVE :: area_t(nlon,nlat)             !(OCEAN)
-  CHARACTER(4),SAVE :: element(nv3d+nv2d+nv4d)
-  INTEGER, DIMENSION(nlon,nlat), SAVE     :: kmt=-1  !(OCEAN) STEVE: the bottom topography for mom6
-  !STEVE: for Custom Localization
-  INTEGER :: nobids(nij0*nlev)                       !(OCEAN)
-  !STEVE: for verifying against input netcdf file
-  INTEGER :: nlon0=0, nlat0=0, nlev0=0               !(OCEAN)
-  !STEVE: for filtering undef values from netcdf file
-  REAL(r_size), PARAMETER :: vmax = 1.0e18
-  !STEVE: For generalized grid
-  REAL(r_size) :: lon0, lonf, lat0, latf
-  REAL(r_size) :: wrapgap
-  CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
-  REAL(r_size), DIMENSION(nlon,nlat) :: SSHclm_m
-! REAL(r_sngl) :: buf4_2d(nlon,nlat)
-  ! For grid_spec.nc data file:
-  CHARACTER(slen) :: gridfile  = 'MOM.res.nc'
-  CHARACTER(slen) :: gridfile1 = 'MOM.res_1.nc'
-  CHARACTER(slen) :: gridfile2 = 'ocean_topog.nc'
-  CHARACTER(slen) :: gridfile3 = 'ocean_hgrid.nc'
-! CHARACTER(29) :: diagfile = 'ocean_hourly_YYYY_MM_DD_HH.nc'
-
-! For AMOC computation
-  REAL(r_size) :: zb(nlev)
-  REAL(r_size) :: dz(nlev)
-
-! INTEGER, PARAMETER :: nslot = 6
-  INTEGER :: islot
-  LOGICAL :: coeff_file_exists
-  INTEGER, SAVE :: nslon=-1,nslat=-1
-  INTEGER :: nmlon=nlon,nmlat=nlat
-  REAL(r_size), DIMENSION(:), ALLOCATABLE :: slon, slat, mlon, mlat
-  REAL(r_size), DIMENSION(:), ALLOCATABLE :: xc,yc
-  REAL(r_size), DIMENSION(:,:), ALLOCATABLE :: sfc_data
-  INTEGER, DIMENSION(:), ALLOCATABLE :: xi,yi
-
-  !STEVE: for debugging
-  LOGICAL, PARAMETER :: dodebug = .false.
-
-  !For input/output model files:
-  CHARACTER(slen) :: tsbase = 'MOM.res.nc' !(and u, and h)
-  CHARACTER(slen) :: uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
-  CHARACTER(slen) :: hbase
-  CHARACTER(slen) :: drbase
-
-  ! For temporary dx and dy computations:
-  REAL(r_size) :: dlon, dlat, d1, d2, d3
 
 CONTAINS
+
+
 !-----------------------------------------------------------------------
 ! Set the parameters
 !-----------------------------------------------------------------------
@@ -124,25 +32,7 @@ SUBROUTINE set_common_oceanmodel
   LOGICAL :: ex
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
-  !
-  ! Elements
-  !
-  element(iv3d_u) = 'U   '
-  element(iv3d_v) = 'V   '
-  element(iv3d_t) = 'T   '
-  element(iv3d_s) = 'S   '             !(OCEAN)
-! element(iv3d_h) = 'h   '             !(OCEAN)(MOM6)
-  element(nv3d+iv2d_ssh) = 'SSH '      !(OCEAN)
-  element(nv3d+iv2d_sst) = 'SST '      !(OCEAN)
-  element(nv3d+iv2d_sss) = 'SSS '      !(OCEAN)
-  if (DO_ALTIMETRY) then
-    element(nv3d+iv2d_eta) = 'eta '      !(OCEAN)
-  endif
-  if (DO_DRIFTERS) then
-    element(nv3d+nv2d+iv4d_x) = 'X   '             !(OCEAN) (DRIFTERS)
-    element(nv3d+nv2d+iv4d_y) = 'Y   '             !(OCEAN) (DRIFTERS)
-    element(nv3d+nv2d+iv4d_z) = 'Z   '             !(OCEAN) (DRIFTERS)
-  endif
+
   if (DO_ALTIMETRY) then
     INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
     IF(ex) THEN
@@ -314,8 +204,8 @@ SUBROUTINE set_common_oceanmodel
   latf = lat(nlat)
   wrapgap = 360.0d0 - abs(lon0) - abs(lonf)
 
-  RETURN
 END SUBROUTINE set_common_oceanmodel
+
 
 !-----------------------------------------------------------------------
 ! File I/O
@@ -347,6 +237,7 @@ SUBROUTINE read_etaclm(SSHclm_file,SSHclm_m)
   call check( NF90_CLOSE(ncid) )
 
 END SUBROUTINE read_etaclm
+
 
 !STEVE: add this:
 !-- Read a diagnostic file in mom6 netcdf format ---------------------------------------------------
@@ -617,6 +508,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   
 END SUBROUTINE read_diag
 
+
 !-----------------------------------------------------------------------
 !-- Read a restart file at the analysis time  --------------------------
 SUBROUTINE read_restart(infile,v3d,v2d,prec)
@@ -874,7 +766,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   if (.false.) then
     testfile = "test_read4.grd"
-!   CALL write_bingrd4(trim(testfile),v3d,v2d)
+!   CALL write_grd4(trim(testfile),v3d,v2d)
 
     iunit=55
     INQUIRE(IOLENGTH=iolen) iolen
@@ -905,8 +797,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 
 ! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
 !
-  RETURN
 END SUBROUTINE read_restart
+
 
 !-----------------------------------------------------------------------
 ! Write a set of MOM6 restart files to initialize the next model run
@@ -1084,12 +976,12 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
 
   call check( NF90_CLOSE(ncid) )
 
-  RETURN
 END SUBROUTINE write_restart
+
 
 !-----------------------------------------------------------------------
 !-- Read a grid file ---------------------------------------------------
-SUBROUTINE read_bingrd(filename,v3d,v2d)
+SUBROUTINE read_grd(filename,v3d,v2d)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -1123,13 +1015,13 @@ SUBROUTINE read_bingrd(filename,v3d,v2d)
 
 ! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
 
-  RETURN
-END SUBROUTINE read_bingrd
+END SUBROUTINE read_grd
+
 
 !-----------------------------------------------------------------------
 ! Read a grid file with single precision
 !-----------------------------------------------------------------------
-SUBROUTINE read_bingrd4(filename,v3d,v2d)
+SUBROUTINE read_grd4(filename,v3d,v2d)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -1161,12 +1053,12 @@ SUBROUTINE read_bingrd4(filename,v3d,v2d)
 ! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
 
   RETURN
-END SUBROUTINE read_bingrd4
+END SUBROUTINE read_grd4
 
 !-----------------------------------------------------------------------
 !-- Write a grid file -------------------------------------------------
 !-----------------------------------------------------------------------
-SUBROUTINE write_bingrd(filename,v3d,v2d)
+SUBROUTINE write_grd(filename,v3d,v2d)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
@@ -1178,10 +1070,10 @@ SUBROUTINE write_bingrd(filename,v3d,v2d)
 
   ALLOCATE(buf4(nlon,nlat))
 
-  if (dodebug) print *, "write_bingrd:: open filename = ",filename
+  if (dodebug) print *, "write_grd:: open filename = ",filename
   iunit=55
   INQUIRE(IOLENGTH=iolen) iolen
-  if (dodebug) print *, "write_bingrd:: nij0,iolength = ", nij0,iolen
+  if (dodebug) print *, "write_grd:: nij0,iolength = ", nij0,iolen
   OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
 
   irec=1
@@ -1189,7 +1081,7 @@ SUBROUTINE write_bingrd(filename,v3d,v2d)
     DO k=1,nlev
       buf4 = 0.0
       buf4 = REAL(v3d(:,:,k,n),r_sngl)
-      if (dodebug) print *, "write_bingrd:: n,k,irec = ",n,k,irec
+      if (dodebug) print *, "write_grd:: n,k,irec = ",n,k,irec
       WRITE(iunit,REC=irec) buf4
       irec = irec + 1
     END DO
@@ -1198,7 +1090,7 @@ SUBROUTINE write_bingrd(filename,v3d,v2d)
   DO n=1,nv2d
     buf4 = 0.0
     buf4 = REAL(v2d(:,:,n),r_sngl)
-    if (dodebug) print *, "write_bingrd:: n,irec = ",n,irec
+    if (dodebug) print *, "write_grd:: n,irec = ",n,irec
     WRITE(iunit,REC=irec) buf4
     irec = irec + 1
   END DO
@@ -1207,13 +1099,13 @@ SUBROUTINE write_bingrd(filename,v3d,v2d)
 
   DEALLOCATE(buf4)
 
-  RETURN
-END SUBROUTINE write_bingrd
+END SUBROUTINE write_grd
+
 
 !-----------------------------------------------------------------------
 ! Write a grid file in single precision
 !-----------------------------------------------------------------------
-SUBROUTINE write_bingrd4(filename,v3d,v2d)
+SUBROUTINE write_grd4(filename,v3d,v2d)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_sngl),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
@@ -1222,31 +1114,30 @@ SUBROUTINE write_bingrd4(filename,v3d,v2d)
   INTEGER :: i,j,k,n,irec
   LOGICAL, PARAMETER :: dodebug=.false.
 
-  if (dodebug) print *, "write_bingrd4:: open filename = ",filename
+  if (dodebug) print *, "write_grd4:: open filename = ",filename
   iunit=55
   INQUIRE(IOLENGTH=iolen) iolen
-  if (dodebug) print *, "write_bingrd4:: nij0,iolength = ", nij0,iolen
+  if (dodebug) print *, "write_grd4:: nij0,iolength = ", nij0,iolen
   OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
 
   irec=1
   DO n=1,nv3d
     DO k=1,nlev
-      if (dodebug) print *, "write_bingrd4:: n,k,irec = ",n,k,irec
+      if (dodebug) print *, "write_grd4:: n,k,irec = ",n,k,irec
       WRITE(iunit,REC=irec) ((v3d(i,j,k,n),i=1,nlon),j=1,nlat)
       irec = irec + 1
     END DO
   END DO
 
   DO n=1,nv2d
-    if (dodebug) print *, "write_bingrd4:: n,irec = ",n,irec
+    if (dodebug) print *, "write_grd4:: n,irec = ",n,irec
     WRITE(iunit,REC=irec) ((v2d(i,j,n),i=1,nlon),j=1,nlat)
     irec = irec + 1
   END DO
 
   CLOSE(iunit)
 
-  RETURN
-END SUBROUTINE write_bingrd4
+END SUBROUTINE write_grd4
 
 
 

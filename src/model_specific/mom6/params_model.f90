@@ -10,18 +10,20 @@ PUBLIC
 
   ! MOM4 ncep2012 tripolar converted to spherical
 #ifdef DYNAMIC
-  INTEGER :: nlon=720
-  INTEGER :: nlat=410
-  INTEGER :: nlev=40
+  ! GFDL MOM6:
+  INTEGER :: nlon=1440
+  INTEGER :: nlat=1080
+  INTEGER :: nlev=75
 #else
-  INTEGER,PARAMETER :: nlon=720
-  INTEGER,PARAMETER :: nlat=410
-  INTEGER,PARAMETER :: nlev=40
+  ! GFDL MOM6:
+  INTEGER,PARAMETER :: nlon=1440
+  INTEGER,PARAMETER :: nlat=1080
+  INTEGER,PARAMETER :: nlev=75
 #endif
 
   INTEGER,PARAMETER :: ilev_sfc=1
 !
-  INTEGER,PARAMETER :: nv3d=4 ! u,v,t,s              !(OCEAN)
+  INTEGER,PARAMETER :: nv3d=5 ! u,v,t,s,h            !(OCEAN)
 ! INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
 ! INTEGER,PARAMETER :: nv2d=7 ! ssh/t/s, + sfc fluxes: taux,tauy,heat,freshwater
   INTEGER,PARAMETER :: nv2d=5 ! ssh,sst,sss,eta,mld  !(OCEAN) !(ALTIMETRY)
@@ -36,6 +38,7 @@ PUBLIC
   INTEGER,PARAMETER :: iv3d_v=2
   INTEGER,PARAMETER :: iv3d_t=3
   INTEGER,PARAMETER :: iv3d_s=4                !(OCEAN)
+  INTEGER,PARAMETER :: iv3d_h=5                !(OCEAN) (MOM6)
                                                !          From ocean_sbc.res.nc:
   INTEGER,PARAMETER :: iv2d_ssh=1              !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
   INTEGER,PARAMETER :: iv2d_sst=2              !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
@@ -70,11 +73,22 @@ PUBLIC
 ! endif
 
   CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
-  CHARACTER(32) :: ts_basefile = 'ocean_temp_salt.res.nc'
-  CHARACTER(32) :: uv_basefile = 'ocean_velocity.res.nc'
-  CHARACTER(32) :: sf_basefile = 'ocean_sbc.res.nc'
-  CHARACTER(32) :: sh_basefile = 'ocean_barotropic.res.nc'
-  CHARACTER(32) :: hs_basefile = 'ocean_TS.nc'
+! CHARACTER(32) :: ts_basefile = 'ocean_temp_salt.res.nc'
+! CHARACTER(32) :: uv_basefile = 'ocean_velocity.res.nc'
+! CHARACTER(32) :: sf_basefile = 'ocean_sbc.res.nc'
+! CHARACTER(32) :: sh_basefile = 'ocean_barotropic.res.nc'
+! CHARACTER(32) :: hs_basefile = 'ocean_TS.nc'
+
+  CHARACTER(slen) :: gridfile  = 'MOM.res.nc'
+  CHARACTER(slen) :: gridfile1 = 'MOM.res_1.nc'
+  CHARACTER(slen) :: gridfile2 = 'ocean_topog.nc'
+  CHARACTER(slen) :: gridfile3 = 'ocean_hgrid.nc'
+
+  !For input/output model files:
+  CHARACTER(slen) :: tsbase = 'MOM.res.nc' !(and u, and h)
+  CHARACTER(slen) :: uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
+  CHARACTER(slen) :: hbase
+  CHARACTER(slen) :: drbase
 
   ! For grid_spec.nc data file:
   CHARACTER(12) :: gridfile = 'grid_spec.nc'

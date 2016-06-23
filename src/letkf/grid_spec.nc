@@ -1,1 +1,0 @@
-/ncrc/home1/Steve.Penny/HYBRID/tmp_sst/INIT/INPUT/grid_spec.nc

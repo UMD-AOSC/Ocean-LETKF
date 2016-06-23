@@ -56,6 +56,137 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rlev,v3d,v2d,yobs)
 END SUBROUTINE Trans_XtoY
 
 
+!(UPDATE) with lon2d/lat2d search for observation (LON2D/LAT2D)
+SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
+!===============================================================================
+! Coordinate conversion
+!===============================================================================
+  USE vars_model,   ONLY: lon, lat, lev, lon0, lonf, lon2d, lat2d, lev2d
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: iv2d_eta, iv2d_sst, iv2d_sss, iv2d_ssh
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: elem
+  REAL(r_size),INTENT(IN) :: rlon
+  REAL(r_size),INTENT(IN) :: rlat
+  REAL(r_size),INTENT(IN) :: rlev ! pressure levels
+  REAL(r_size),INTENT(OUT) :: ri
+  REAL(r_size),INTENT(OUT) :: rj
+  REAL(r_size),INTENT(OUT) :: rk
+  REAL(r_size) :: aj,ak,ai, rrlon
+! REAL(r_size) :: lnps(nlon,nlat)
+  REAL(r_size) :: plev(nlev)
+  INTEGER :: i,j,k
+  LOGICAL :: dodebug = .false.
+  ! To speed up 2d lon/lat search:
+  INTEGER, PARAMETER :: ird = 10 ! gridpoint radius
+  INTEGER, PARAMETER :: jrd = 10 ! gridpoint radius
+  REAL(r_size) :: tripolar_lat = 65.0 ! cutoff for tripolar grid
+  LOGICAL :: ijset=.false.
+  REAL(r_size) :: lonA,lonB,latA,latB
+  INTEGER :: i0,j0,i1,j1
+!STEVE: probably want to replace this with a kd-tree lookup for general search (KDTREE)
+
+  !STEVE: initialize to something that will throw errors if it's not changed within
+  ri = -1
+  rj = -1
+  rk = -1
+  rrlon=rlon
+
+  if (rlon > tripolar_lat) then
+
+    !---------------------------------------------------------------------------
+    ! Get a guess of the starting longitude
+    !---------------------------------------------------------------------------
+    do i=1,nlon
+      if (rrlon < lon(i)) EXIT
+    enddo
+    i0 = max(1,   i-ird)
+    i1 = min(nlon,i+ird)
+
+    !---------------------------------------------------------------------------
+    ! Get a guess of the starting latitude
+    !---------------------------------------------------------------------------
+    do j=1,nlat
+      if (rlat < lat(j)) EXIT
+    enddo
+    j0 = max(1,  j-jrd)
+    j1 = min(nlat,j+jrd)
+
+    lonA = lon(i-1)
+    lonB = lon(i)
+    latA = lat(j-1)
+    latB = lat(j)
+
+  endif
+
+  if (i < 2 .OR. nlon < i) RETURN
+  if (j < 2 .OR. nlat < j) RETURN
+
+  ! Interpolate lons
+  ai = (rrlon - lonA) / (lonB - lonA)
+  ri = REAL(i-1,r_size) + ai
+
+  ! Interpolate lats
+  aj = (rlat - latA) / (latB - latA)
+  rj = REAL(j-1,r_size) + aj
+
+  if (dodebug .and. (ri > nlon .or. ri < 1)) then
+    WRITE(6,*) "In common_obs_mom4.f90::phys2ijk,"
+    WRITE(6,*) "rlon = ", rlon
+    WRITE(6,*) "rrlon = ", rrlon
+    WRITE(6,*) "ai = ", ai
+    WRITE(6,*) "ri = ", ri
+    WRITE(6,*) "lon0 = ", lon0
+    WRITE(6,*) "lonf = ", lonf
+    WRITE(6,*) "i = ", i
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! rlev -> rk
+  !-----------------------------------------------------------------------------
+  if (NINT(elem) == id_ssh_obs) then     ! surface observation !(OCEAN)
+    rk = 0.0d0
+  elseif (NINT(elem) == id_eta_obs) then ! surface observation !(OCEAN)
+    rk = 0.0d0
+  elseif (NINT(elem) == id_sst_obs) then ! surface observation !(OCEAN)
+    rk = 0.0d0
+  elseif (NINT(elem) == id_sss_obs) then ! surface observation !(OCEAN)
+    rk = 0.0d0
+  else
+
+    !
+    ! do vertical interpolation
+    !
+
+    !
+    ! find rk
+    !
+    do k=1,nlev
+      if (rlev < lev(k)) EXIT
+      if (k .eq. nlev .and. rlev .eq. lev(nlev)) EXIT !STEVE: added this case for simulated obs that reach the lowest model levels.
+                                                     !       Otherwise, k iterates to nlev+1 before exiting loop.
+    enddo
+
+    if (k .eq. 1) then
+!     print *, "k = 1, rlev = ", rlev
+!     print *, "STEVE: STOPPING ON PURPOSE in common_obs_mom4.f90..."
+!     print *, "We can't have k=1"
+!     stop 1
+      !STEVE: interpolate from SFC (0) to model level 1
+      !print *, "NOTICE: observation is above model SFC level => i,j,k = ",i,j,k 
+      !ak = (rlev - 0) / (lev(k) - 0)
+      rk = 1 !ak
+    else
+      !STEVE: now apply the interpolation at the identified model level:
+      ak = (rlev - lev(k-1)) / (lev(k) - lev(k-1))
+      rk = REAL(k-1,r_size) + ak
+    endif
+
+  endif
+
+END SUBROUTINE phys2ijk
+
+
 !-----------------------------------------------------------------------
 ! Interpolation
 !-----------------------------------------------------------------------
@@ -365,6 +496,175 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
 
   RETURN
 END SUBROUTINE monit_dep
+
+
+SUBROUTINE center_obs_coords(rlon,oerr,nn)
+!===============================================================================
+! Center all observations within the longitudes defined by the model grid
+!===============================================================================
+  USE vars_model,   ONLY: lon0, lonf, wrapgap
+  IMPLICIT NONE
+  REAL(r_size),INTENT(INOUT) :: rlon(nn)
+  REAL(r_size),INTENT(INOUT) :: oerr(nn)
+  INTEGER, INTENT(IN) :: nn
+  INTEGER :: n
+  LOGICAL :: dodebug = .false.
+  LOGICAL :: dodebug1 = .false.
+
+
+  WRITE(6,*) "ROMS does not require recentering, returning..."
+  RETURN
+
+  !STEVE: This routine can be used to recenter the longitude coorindates of the observations,
+  !       in case the model is set up on a grid that does not match the observations.
+
+  if (dodebug) then
+    WRITE(6,*) "center_obs_coords::"
+    WRITE(6,*) "wrapgap = ", wrapgap
+  endif
+
+  do n=1,nn
+
+    if (rlon(n) >= lonf) then
+      if (dodebug1) WRITE(6,*) "(a)"
+
+      if (dodebug) then
+        WRITE(6,*) "letkf_obs.f90:: Wrapping large lon obs to model grid: n = ", n
+        WRITE(6,*) "pre : rlon(n) = ", rlon(n)
+        WRITE(6,*) "360 - rlon(n) = ", 360.0 - rlon(n)
+        WRITE(6,*) "abs(rlon(n) - lonf) = ", abs(rlon(n) - lonf)
+      endif
+
+      ! Update the coordinate
+      if ( abs(rlon(n) - lonf) < wrapgap ) then
+        if (dodebug1) WRITE(6,*) "(b)"
+          ! First, handle observations that are just outside of the model grid
+          !STEVE: shift it if it's just outside grid
+
+        if (abs(rlon(n) - lonf) < wrapgap/2) then
+            rlon(n) = lonf
+        else
+            rlon(n) = lon0
+        endif
+
+        ! Increase error to compensate
+        oerr(n) = oerr(n)*2
+      else
+        if (dodebug1) WRITE(6,*) "(c)"
+        ! Otherwise, wrap the observation coordinate to be inside of the defined model grid coordinates
+        !Wrap the coordinate
+        if (dodebug) then
+          WRITE(6,*) "lon0    = ", lon0
+          WRITE(6,*) "lonf    = ", lonf
+          WRITE(6,*) "rlon(n) = ", rlon(n)
+          WRITE(6,*) "wrapgap = ", wrapgap
+        endif
+        rlon(n) = REAL(lon0 + abs(rlon(n) - lonf) - wrapgap,r_size)
+        if (dodebug) then
+          WRITE(6,*) "After update:"
+          WRITE(6,*) "rlon(n) = REAL(lon0 + abs(rlon(n) - lonf) - wrapgap,r_size)"
+          WRITE(6,*) "rlon(n) = ", rlon(n)
+        endif
+      endif
+
+      if (dodebug) WRITE(6,*) "post : rlon(n) = ", rlon(n)
+
+    elseif (rlon(n) < lon0) then
+      if (dodebug1) WRITE(6,*) "(d)"
+
+      if (dodebug) then
+          WRITE(6,*) "letkf_obs.f90:: Wrapping small lon obs to model grid: n = ", n
+          WRITE(6,*) "pre  : rlon(n) = ", rlon(n)
+          WRITE(6,*) "360 - rlon(n) = ", 360.0 - rlon(n)
+      endif
+
+      ! Update the coordinate
+      if (abs(lon0 - rlon(n)) < wrapgap ) then
+        if (dodebug1) WRITE(6,*) "(e)"
+        !STEVE: shift it if it's just outside grid
+        if (abs(lon0 - rlon(n)) < wrapgap/2) then
+            rlon(n) = lon0
+        else
+            rlon(n) = lonf
+        endif
+        ! Increase error to compensate                                 
+        oerr(n) = oerr(n)*2
+      else
+        if (dodebug1) WRITE(6,*) "(f)"
+        !Wrap the coordinate
+        rlon(n) = REAL(lonf - abs(lon0 - rlon(n)) + wrapgap,r_size)
+      endif
+
+      if (dodebug) WRITE(6,*) "post : rlon(n) = ", rlon(n)
+
+    endif
+  enddo
+
+  WRITE(6,*) "center_obs_coords:: finished recentering observations."
+
+  if (MAXVAL(rlon) > lonf) then
+    WRITE(6,*) "read_obs:: Error: MAX(observation lon, i.e. rlon) > lonf"
+    WRITE(6,*) "MAXVAL(rlon) = ", MAXVAL(rlon)
+    WRITE(6,*) "lonf = ", lonf
+!   WRITE(6,*) "lon(nlon) = ", lon(nlon)
+    STOP(22)
+  endif
+  if (MINVAL(rlon) < lon0) then
+    WRITE(6,*) "read_obs:: Error: MIN(observation lon, i.e. rlon) < lon0"
+    WRITE(6,*) "MINVAL(rlon) = ", MINVAL(rlon)
+    WRITE(6,*) "lon0 = ", lon0
+!   WRITE(6,*) "lon(1) = ", lon(1)
+    STOP(23)
+  endif
+
+END SUBROUTINE center_obs_coords
+
+
+SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
+!===============================================================================
+! Write out observations with appended H(xb) for each ob
+!===============================================================================
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  INTEGER,INTENT(IN) :: nn
+  REAL(r_size),INTENT(IN) :: elem(nn) ! element number
+  REAL(r_size),INTENT(IN) :: rlon(nn)
+  REAL(r_size),INTENT(IN) :: rlat(nn)
+  REAL(r_size),INTENT(IN) :: rlev(nn)
+  REAL(r_size),INTENT(IN) :: odat(nn)
+  REAL(r_size),INTENT(IN) :: oerr(nn)
+  REAL(r_size),INTENT(IN) :: ohx(nn)
+  REAL(r_size),OPTIONAL,INTENT(IN) :: obhr(nn)
+  INTEGER,INTENT(IN) :: oqc(nn)
+  REAL(r_sngl),ALLOCATABLE :: wk(:)
+  INTEGER :: n,iunit
+  LOGICAL, PARAMETER :: dodebug=.false.
+
+  ALLOCATE(wk(obs2nrec))
+  iunit=92
+  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  do n=1,nn
+    wk(1) = REAL(elem(n),r_sngl)   ! ID for observation type
+    wk(2) = REAL(rlon(n),r_sngl)   ! Ob lon
+    wk(3) = REAL(rlat(n),r_sngl)   ! Ob lat
+    wk(4) = REAL(rlev(n),r_sngl)   ! Ob level
+    wk(5) = REAL(odat(n),r_sngl)   ! Observed data quantity
+    wk(6) = REAL(oerr(n),r_sngl)   ! Estimated observation error
+    wk(7) = REAL(ohx(n),r_sngl)    ! Model forecast transformed to observation space: H(xb)
+    wk(8) = REAL(oqc(n),r_sngl)    ! Quality control ID (1==keep, 0==discard) for use in assimilation
+    if (obs2nrec>8) then
+      wk(9) = REAL(obhr(n),r_sngl) ! Time in (noninteger) hours, assuming the data is organized by day
+      if (dodebug) PRINT '(I6,2F7.2,F10.2,6F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
+    else
+      if (dodebug) PRINT '(I6,2F7.2,F10.2,6F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8)
+    endif
+    WRITE(iunit) wk
+  enddo
+
+  CLOSE(iunit)
+
+END SUBROUTINE write_obs2
+
 
 
 END MODULE common_obs_oceanmodel
