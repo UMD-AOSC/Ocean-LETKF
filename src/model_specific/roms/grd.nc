@@ -1,1 +1,1 @@
-/lustre/f1/Steve.Penny/swa12_grd.nc
+/lustre/f1/unswept/Steve.Penny/swa12_grd.nc

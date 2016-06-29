@@ -1,6 +1,6 @@
 MODULE params_model
 
-USE common, ONLY: r_size
+USE common, ONLY: r_size, slen
 
 IMPLICIT NONE
 
@@ -39,7 +39,8 @@ PUBLIC
   INTEGER,PARAMETER :: iv3d_t=3
   INTEGER,PARAMETER :: iv3d_s=4                !(OCEAN)
   INTEGER,PARAMETER :: iv3d_h=5                !(OCEAN) (MOM6)
-                                               !          From ocean_sbc.res.nc:
+! LOGICAL           :: DO_UPDATE_H=.true.      !STEVE: put this in params_letkf.f90
+
   INTEGER,PARAMETER :: iv2d_ssh=1              !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
   INTEGER,PARAMETER :: iv2d_sst=2              !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
   INTEGER,PARAMETER :: iv2d_sss=3              !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models
@@ -79,19 +80,16 @@ PUBLIC
 ! CHARACTER(32) :: sh_basefile = 'ocean_barotropic.res.nc'
 ! CHARACTER(32) :: hs_basefile = 'ocean_TS.nc'
 
-  CHARACTER(slen) :: gridfile  = 'MOM.res.nc'
-  CHARACTER(slen) :: gridfile1 = 'MOM.res_1.nc'
-  CHARACTER(slen) :: gridfile2 = 'ocean_topog.nc'
-  CHARACTER(slen) :: gridfile3 = 'ocean_hgrid.nc'
+  CHARACTER(10) :: gridfile  = 'MOM.res.nc'
+  CHARACTER(12) :: gridfile1 = 'MOM.res_1.nc'
+  CHARACTER(14) :: gridfile2 = 'ocean_topog.nc'
+  CHARACTER(14) :: gridfile3 = 'ocean_hgrid.nc'
 
   !For input/output model files:
-  CHARACTER(slen) :: tsbase = 'MOM.res.nc' !(and u, and h)
-  CHARACTER(slen) :: uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
+  CHARACTER(10) :: tsbase = 'MOM.res.nc'   !(and u, and h)
+  CHARACTER(12) :: uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
   CHARACTER(slen) :: hbase
   CHARACTER(slen) :: drbase
-
-  ! For grid_spec.nc data file:
-  CHARACTER(12) :: gridfile = 'grid_spec.nc'
 
   ! Bounds checking (for output by common_mom4.f90::write_restart)
   LOGICAL :: do_physlimit=.true.

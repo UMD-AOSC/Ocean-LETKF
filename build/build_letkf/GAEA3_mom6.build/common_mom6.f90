@@ -11,7 +11,7 @@ MODULE common_oceanmodel
 !
 !=======================================================================
   USE common
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_SLA, DO_DRIFTERS
   USE params_model !, ONLY: nlon, nlat, nlev, nv3d, nv2d, iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv3d_h
   IMPLICIT NONE
   PUBLIC
@@ -24,20 +24,30 @@ CONTAINS
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_oceanmodel
   USE netcdf
+  USE params_model, ONLY: SSHclm_file, nlon, nlat, nlev
+  USE vars_model,   ONLY: SSHclm_m, lon, lat, lon2d, lat2d, lev
+  USE vars_model,   ONLY: dx, dy, area_t
+  USE vars_model,   ONLY: height, kmt, depth, wet, phi0, kmt0
+  USE vars_model,   ONLY: set_vars_model
+
   IMPLICIT NONE
-!  INCLUDE 'netcdf.inc'
+
   INTEGER :: i,j,k
   INTEGER :: ncid,ncid2,ncid3,istat,varid,dimid
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
+  REAL(r_size) :: dlat, dlon, d2, d3
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
 
-  if (DO_ALTIMETRY) then
+  !-----------------------------------------------------------------------------
+  ! Read the SSH model climatology if assimilating SLA's
+  !-----------------------------------------------------------------------------
+  if (DO_ALTIMETRY .and. DO_SLA) then
     INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
     IF(ex) THEN
       ! Read in the model climatology
-      CALL read_etaclm(SSHclm_file,SSHclm_m)
+      CALL read_etaclm
     ELSE
       WRITE(6,*) "The file does not exist: ", SSHclm_file
       WRITE(6,*) "Exiting common_mom6.f90..."
@@ -45,9 +55,9 @@ SUBROUTINE set_common_oceanmodel
     ENDIF
   endif
 
-  !
+  !-----------------------------------------------------------------------------
   ! Lon, Lat, f, orography
-  !
+  !-----------------------------------------------------------------------------
 !STEVE: this part adapted from ROMS, update for MOM4 (and later MOM6) netcdf files:
 !STEVE: GOAL: to utilize all netcdf grid data to completely define the grid and all grid-dependent operations
   INQUIRE(FILE=trim(gridfile),EXIST=ex)
@@ -72,18 +82,28 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,*) "lev(1) = ", lev(1)
   WRITE(6,*) "lev(nlev) = ", lev(nlev)
 
-  !
-  ! dx and dy
-  !
+  !-----------------------------------------------------------------------------
+  ! lon2d, lat2, dx, and dy
+  !-----------------------------------------------------------------------------
 !!STEVE:MOM6: open new gridfile (ocean_hgrid.nc, gridfile3)
-! INQUIRE(FILE=trim(gridfile3),EXIST=ex)
-! IF(.not. ex) THEN
-!   WRITE(6,*) "The file does not exist: ", gridfile3
-!   WRITE(6,*) "Exiting common_mom6.f90..."
-!   STOP(2)
-! ENDIF
-! WRITE(6,'(A)') '  >> accessing file: ', gridfile3
-! call check( NF90_OPEN(gridfile3,NF90_NOWRITE,ncid3) )
+  INQUIRE(FILE=trim(gridfile3),EXIST=ex)
+  if (.not. ex) then
+    WRITE(6,*) "The file does not exist: ", gridfile3
+    WRITE(6,*) "Exiting common_mom6.f90..."
+    STOP(2)
+  endif
+  WRITE(6,'(A)') '  >> accessing file: ', gridfile3
+  call check( NF90_OPEN(gridfile3,NF90_NOWRITE,ncid3) )
+
+  call check( NF90_INQ_VARID(ncid,'x',varid) )   ! Longitude for T-cell
+  call check( NF90_GET_VAR(ncid,varid,lon2d) )
+  WRITE(6,*) "lon2d(1,1) = ", lon2d(1,1)
+  WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
+
+  call check( NF90_INQ_VARID(ncid,'y',varid) )   ! Latitude for T-cell
+  call check( NF90_GET_VAR(ncid,varid,lat2d) )
+  WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
+  WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
 
 ! call check( NF90_INQ_VARID(ncid3,'dx',varid) )    ! width of T_cell (meters)
 ! call check( NF90_GET_VAR(ncid3,varid,dx) ) 
@@ -126,9 +146,9 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,*) "dy(1,1) = ", dy(1,1)
   WRITE(6,*) "dy(nlon,nlat) = ", dy(nlon,nlat)
 
-  !
+  !-----------------------------------------------------------------------------
   ! kmt data
-  !
+  !-----------------------------------------------------------------------------
   !STEVE:MOM6: sum(h>0) (from MOM.res.nc) to find ocean layer depth, where depth > 0 (from ocean_togog.nc)
   call check( NF90_INQ_VARID(ncid,'h',varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid,varid,height) )
@@ -149,7 +169,9 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,*) "depth(1,1) = ", depth(1,1)
   WRITE(6,*) "depth(nlon,nlat) = ", depth(nlon,nlat)
 
+  !-----------------------------------------------------------------------------
 ! !STEVE:MOM6: from ocean_topog.nc:
+  !-----------------------------------------------------------------------------
   call check( NF90_INQ_VARID(ncid2,'wet',varid) )        ! land/sea flag (0=land) for T-cell
   call check( NF90_GET_VAR(ncid2,varid,wet) )
   WRITE(6,*) "wet(1,1) = ", wet(1,1)
@@ -171,38 +193,17 @@ SUBROUTINE set_common_oceanmodel
   enddo
   kmt0 = REAL(kmt,r_size)
 
-  !STEVE: needed for computing the AMOC based on the streamfunction calculation: (in MOM6, thickness from mom restart MOM.res.nc)
-  !STEVE:(MOM6) This won't work in MOM6...
-! call check( NF90_INQ_VARID(ncid,'h',varid) )      ! depth of T-cell
-! call check( NF90_GET_VAR(ncid,varid,zb) )
-! WRITE(6,*) "zb(1) = ", zb(1)
-! WRITE(6,*) "zb(nlev) = ", zb(nlev)
-
-  ! Compute dz:
-! dz(1) = zb(1)
-! do k=2,nlev
-!   dz(k) = zb(k)-zb(k-1)
-! enddo
-
-  !
-  ! Corioris parameter
-  !
-!$OMP PARALLEL WORKSHARE
-  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
-!$OMP END PARALLEL WORKSHARE
-
+  !-----------------------------------------------------------------------------
   ! Close the grid files:
+  !-----------------------------------------------------------------------------
   call check( NF90_CLOSE(ncid) )
 !!call check( NF90_CLOSE(ncid1) )
   call check( NF90_CLOSE(ncid2) )
 ! call check( NF90_CLOSE(ncid3) )
 
-  ! STEVE: for (more) generalized (longitude) grid:
-  lon0 = lon(1)
-  lonf = lon(nlon)
-  lat0 = lat(1)
-  latf = lat(nlat)
-  wrapgap = 360.0d0 - abs(lon0) - abs(lonf)
+  ! Set model variables that depend on initialization and further processing.
+  ! (e.g. lon0, lat0, lonf, latf, wrapgap, ...)
+  CALL set_vars_model
 
 END SUBROUTINE set_common_oceanmodel
 
@@ -210,11 +211,11 @@ END SUBROUTINE set_common_oceanmodel
 !-----------------------------------------------------------------------
 ! File I/O
 !-----------------------------------------------------------------------
-SUBROUTINE read_etaclm(SSHclm_file,SSHclm_m)
+SUBROUTINE read_etaclm
   USE netcdf
+  USE params_model, ONLY: SSHclm_file, nlon, nlat
+  USE vars_model,   ONLY: SSHclm_m
   IMPLICIT NONE
-  CHARACTER(*), INTENT(IN) :: SSHclm_file
-  REAL(r_size), INTENT(OUT) :: SSHclm_m(nlon,nlat)
   REAL(r_sngl) :: buf4(nlon,nlat)
   INTEGER :: i,j
   INTEGER :: ncid, varid
@@ -227,12 +228,12 @@ SUBROUTINE read_etaclm(SSHclm_file,SSHclm_m)
   buf4=0.0
   call check( NF90_INQ_VARID(ncid,'ssh',varid) )
   call check( NF90_GET_VAR(ncid,varid,buf4) )
-  DO j=1,nlat
-    DO i=1,nlon
+  do j=1,nlat
+    do i=1,nlon
       !STEVE: Hopefully reading in meters here... (data might be in cm)
       SSHclm_m(i,j) = REAL(buf4(i,j),r_size)
-    END DO
-  END DO
+    enddo
+  enddo
 
   call check( NF90_CLOSE(ncid) )
 
@@ -247,6 +248,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   !       by the obsope.f90 program prior to running letkf.f90, so the diagnostic files do not have 
   !       to be touched during letkf runtime.
   USE netcdf
+  USE vars_model,   ONLY: SSHclm_m
   IMPLICIT NONE
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -517,6 +519,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !       It is assumed that the o-f data have already been computed by the obsope.f90 program prior
   !       to running letkf.f90, so the diagnostic files should not have to be touched during letkf runtime.
   USE netcdf
+  USE params_letkf, ONLY: DO_UPDATE_H
+  USE vars_model,   ONLY: SSHclm_m
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -527,13 +531,14 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   CHARACTER(slen) :: tsfile,uvfile, sffile, bfile, drfile ! (TS) (UV) (SFC) (barotropic - eta) (DRIFTERS)
   INTEGER :: i,j,k
   INTEGER :: ncid,istat,varid
+  REAL(r_size), PARAMETER :: vmax = 1.0e18
   !STEVE:
   REAL(r_size) :: meanSSH !STEVE: for temporary SSH estimate based on heat content
   REAL(r_size) :: videpth !STEVE: depth of vertically integrated heat content
   !STEVE: for debugging:
   CHARACTER(32) :: testfile
   INTEGER :: iunit,iolen,n,irec
-  !LOGICAL, PARAMETER :: dodebug = .true.
+  LOGICAL, PARAMETER :: dodebug = .true.
   CHARACTER(3) :: MEM3
   CHARACTER(32) :: sfc_infile
   CHARACTER(slen) :: varname
@@ -558,7 +563,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   call check( NF90_OPEN(tsfile,NF90_NOWRITE,ncid) )
   WRITE(6,*) "read_restart:: just opened file ", tsfile
 
+  !-----------------------------------------------------------------------------
   !!! t
+  !-----------------------------------------------------------------------------
   varname='Temp'
   ivid=iv3d_t
 
@@ -587,7 +594,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   endif
 ! !STEVE: end
 
+  !-----------------------------------------------------------------------------
   !!! s
+  !-----------------------------------------------------------------------------
   varname='Salt'
   ivid=iv3d_s
 
@@ -616,31 +625,43 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   endif
 ! !STEVE: end
 
-  !!! h (MOM6)
-! buf4=0.0
-! call check( NF90_INQ_VARID(ncid,'h',varid) )
-! call check( NF90_GET_VAR(ncid,varid,buf4) )
-! if (dodebug) WRITE(6,*) "read_restart :: just got data for variable: layer thickness (h)"
-! DO k=1,nlev
-!   DO j=1,nlat
-!     DO i=1,nlon
-!       v3d(i,j,k,iv3d_h) = REAL(buf4(i,j,k),r_size)
-!     END DO
-!   END DO
-! END DO
-! if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable: layer thickness"
+  if (DO_UPDATE_H) then
+    !---------------------------------------------------------------------------
+    !!! h
+    !---------------------------------------------------------------------------
+    varname='h'
+    ivid=iv3d_h
 
-! !STEVE: debug
-! if (dodebug) then
-!   WRITE(6,*) "POST-h"
-!   WRITE(6,*) "read_restart :: tsfile = ", tsfile
-!   do k=1,nlev
-!     WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_h) = ", MAXVAL(v3d(:,:,k,iv3d_h))
-!   enddo 
-! endif
-! !STEVE: end
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
 
+    select case(prec)
+    case(1)
+      buf4=0.0
+      call check( NF90_GET_VAR(ncid,varid,buf4) )
+      v3d(:,:,:,ivid) = buf4(:,:,:)
+    case(2)
+      buf8=0.0d0
+      call check( NF90_GET_VAR(ncid,varid,buf8) )
+      v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
+    end select
+
+    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable thickness"
+    if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable thickness"
+
+   !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-H"
+      WRITE(6,*) "read_restart :: tsfile = ", tsfile
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_h) = ", MAXVAL(v3d(:,:,k,iv3d_h))
+      enddo
+    endif
+!   !STEVE: end
+  endif
+
+  !-----------------------------------------------------------------------------
   !!! u
+  !-----------------------------------------------------------------------------
   varname='u'
   ivid=iv3d_u
 
@@ -671,9 +692,11 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 
   call check( NF90_CLOSE(ncid) )
 
+  !-----------------------------------------------------------------------------
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open the U/V netcdf restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !-----------------------------------------------------------------------------
   call check( NF90_OPEN(uvfile,NF90_NOWRITE,ncid) )
   IF(istat /= NF90_NOERR) THEN
     WRITE(6,'(A)') 'netCDF OPEN ERROR in read_restart for ',uvfile
@@ -681,7 +704,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   END IF
   WRITE(6,*) "read_restart :: just opened file ", uvfile
 
+  !-----------------------------------------------------------------------------
   !!! v
+  !-----------------------------------------------------------------------------
   varname='v'
   ivid=iv3d_v
 
@@ -774,19 +799,19 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 
     WRITE(6,*) "Writing to", testfile
     irec=1
-    DO n=1,nv3d
-      DO k=1,nlev
+    do n=1,nv3d
+      do k=1,nlev
         WRITE(6,*) "n, k, irec = ", n, k, irec
         WRITE(6,*) "max v3d(n) = ", MAXVAL(v3d(:,:,k,n))
         WRITE(iunit,REC=irec) v3d(:,:,k,n)
         irec = irec + 1
-      END DO
-    END DO
+      enddo
+    enddo
 
-    DO n=1,nv2d
+    do n=1,nv2d
       WRITE(iunit,REC=irec) v2d(:,:,n)
       irec = irec + 1
-    END DO
+    enddo
     CLOSE(iunit)
 
     WRITE(6,*) "Initially read from file: ", infile
@@ -805,6 +830,8 @@ END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
 SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   USE netcdf
+  USE params_letkf, ONLY: DO_UPDATE_H, DO_SLA
+  USE vars_model,   ONLY: SSHclm_m
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
   CHARACTER(*),INTENT(IN) :: outfile
@@ -869,35 +896,35 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
 !         if (v2d(i,j,iv2d_ssh) .ne. 0.0 ) v2d(i,j,iv2d_ssh) = 0.0 !NF90_FILL_FLOAT
 !       endif
 
-        if (v3d(i,j,k,iv3d_t) < -4) then
+        if (v3d(i,j,k,iv3d_t) < min_t) then
           WRITE(6,*) "WARNING: Bad temp value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
-          v3d(i,j,k,iv3d_t) = -4.0
+          v3d(i,j,k,iv3d_t) = min_t
         endif
 
-        if (v3d(i,j,k,iv3d_t) > 40.0) then
+        if (v3d(i,j,k,iv3d_t) > max_t) then
           WRITE(6,*) "WARNING: Bad temp value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
-          v3d(i,j,k,iv3d_t) = 40.0
+          v3d(i,j,k,iv3d_t) = max_t
         endif
 
-        if (v3d(i,j,k,iv3d_s) < 0 ) then
+        if (v3d(i,j,k,iv3d_s) < min_s ) then
           WRITE(6,*) "WARNING: Bad salt value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
-          v3d(i,j,k,iv3d_s) = 0.0
+          v3d(i,j,k,iv3d_s) = min_s
         endif
 
-        if (v3d(i,j,k,iv3d_s) > 50.0) then
+        if (v3d(i,j,k,iv3d_s) > max_s) then
           WRITE(6,*) "WARNING: Bad salt value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
-          v3d(i,j,k,iv3d_s) = 50.0
+          v3d(i,j,k,iv3d_s) = max_s
         endif
 
         if (nv2d > 1 .and. k .eq. 1) then
-          if (v2d(i,j,iv2d_sst) < -4) v2d(i,j,iv2d_sst) = -4.0
-          if (v2d(i,j,iv2d_sst) > 40.0) v2d(i,j,iv2d_sst) = 40.0
-          if (v2d(i,j,iv2d_sss) < 0) v2d(i,j,iv2d_sss) = 0.0
-          if (v2d(i,j,iv2d_sss) > 50.0) v2d(i,j,iv2d_sss) = 50.0
+          if (v2d(i,j,iv2d_sst) < min_t) v2d(i,j,iv2d_sst) = min_t
+          if (v2d(i,j,iv2d_sst) > max_t) v2d(i,j,iv2d_sst) = max_t
+          if (v2d(i,j,iv2d_sss) < min_s) v2d(i,j,iv2d_sss) = min_s
+          if (v2d(i,j,iv2d_sss) > max_s) v2d(i,j,iv2d_sss) = max_s
         endif
 
       enddo
@@ -938,15 +965,23 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   !DEALLOCATE(t3d)
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_t)) )
 
+  !-----------------------------------------------------------------------------
   !!! s
+  !-----------------------------------------------------------------------------
   call check( NF90_INQ_VARID(ncid,'Salt',varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_s)) )
 
-! !!! h (MOM6)
-! call check( NF90_INQ_VARID(ncid,'h',varid) )
-! call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_h)) )
+  !-----------------------------------------------------------------------------
+  !!! h (MOM6)
+  !-----------------------------------------------------------------------------
+  if (DO_UPDATE_H) then
+    call check( NF90_INQ_VARID(ncid,'h',varid) )
+    call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_h)) )
+  endif
 
+  !-----------------------------------------------------------------------------
   !!! u
+  !-----------------------------------------------------------------------------
   call check( NF90_INQ_VARID(ncid,'u',varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_u)) )
 
@@ -957,7 +992,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   call check( NF90_OPEN(uvfile,NF90_WRITE,ncid) )
 
+  !-----------------------------------------------------------------------------
   !!! v
+  !-----------------------------------------------------------------------------
   call check( NF90_INQ_VARID(ncid,'v',varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_v)) )
 
@@ -969,7 +1006,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
     call check( NF90_INQ_VARID(ncid,'ave_ssh',varid) )
 
     ! Convert SSH stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
-    v2d(:,:,iv2d_eta) = v2d(:,:,iv2d_eta) + SSHclm_m(:,:)
+    if (DO_SLA) then
+      v2d(:,:,iv2d_eta) = v2d(:,:,iv2d_eta) + SSHclm_m(:,:)
+    endif
 
     call check( NF90_PUT_VAR(ncid,varid,v2d(:,:,iv2d_eta)) )
   endif
@@ -997,19 +1036,19 @@ SUBROUTINE read_grd(filename,v3d,v2d)
   OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
 
   irec=1
-  DO n=1,nv3d
-    DO k=1,nlev
+  do n=1,nv3d
+    do k=1,nlev
       READ(iunit,REC=irec) buf4
       irec = irec + 1
       v3d(:,:,k,n) = REAL(buf4,r_size)
-    END DO
-  END DO
+    enddo
+  enddo
 
-  DO n=1,nv2d
+  do n=1,nv2d
     READ(iunit,REC=irec) buf4
     irec = irec + 1
     v2d(:,:,n) = REAL(buf4,r_size)
-  END DO
+  enddo
 
   CLOSE(iunit)
 
@@ -1036,23 +1075,22 @@ SUBROUTINE read_grd4(filename,v3d,v2d)
   OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
 
   irec=1
-  DO n=1,nv3d
-    DO k=1,nlev
+  do n=1,nv3d
+    do k=1,nlev
       READ(iunit,REC=irec) ((v3d(i,j,k,n),i=1,nlon),j=1,nlat)
       irec = irec + 1
-    END DO
-  END DO
+    enddo
+  enddo
 
-  DO n=1,nv2d
+  do n=1,nv2d
     READ(iunit,REC=irec) ((v2d(i,j,n),i=1,nlon),j=1,nlat)
     irec = irec + 1
-  END DO
+  enddo
 
   CLOSE(iunit)
 
 ! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
 
-  RETURN
 END SUBROUTINE read_grd4
 
 !-----------------------------------------------------------------------
@@ -1077,23 +1115,23 @@ SUBROUTINE write_grd(filename,v3d,v2d)
   OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
 
   irec=1
-  DO n=1,nv3d
-    DO k=1,nlev
+  do n=1,nv3d
+    do k=1,nlev
       buf4 = 0.0
       buf4 = REAL(v3d(:,:,k,n),r_sngl)
       if (dodebug) print *, "write_grd:: n,k,irec = ",n,k,irec
       WRITE(iunit,REC=irec) buf4
       irec = irec + 1
-    END DO
-  END DO
+    enddo
+  enddo
 
-  DO n=1,nv2d
+  do n=1,nv2d
     buf4 = 0.0
     buf4 = REAL(v2d(:,:,n),r_sngl)
     if (dodebug) print *, "write_grd:: n,irec = ",n,irec
     WRITE(iunit,REC=irec) buf4
     irec = irec + 1
-  END DO
+  enddo
 
   CLOSE(iunit)
 
@@ -1121,19 +1159,19 @@ SUBROUTINE write_grd4(filename,v3d,v2d)
   OPEN(iunit,FILE=filename,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
 
   irec=1
-  DO n=1,nv3d
-    DO k=1,nlev
+  do n=1,nv3d
+    do k=1,nlev
       if (dodebug) print *, "write_grd4:: n,k,irec = ",n,k,irec
       WRITE(iunit,REC=irec) ((v3d(i,j,k,n),i=1,nlon),j=1,nlat)
       irec = irec + 1
-    END DO
-  END DO
+    enddo
+  enddo
 
-  DO n=1,nv2d
+  do n=1,nv2d
     if (dodebug) print *, "write_grd4:: n,irec = ",n,irec
     WRITE(iunit,REC=irec) ((v2d(i,j,n),i=1,nlon),j=1,nlat)
     irec = irec + 1
-  END DO
+  enddo
 
   CLOSE(iunit)
 
@@ -1150,22 +1188,21 @@ SUBROUTINE monit_grd(v3d,v2d)
   REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   INTEGER :: k,n
 
-  DO k=1,nlev
+  do k=1,nlev
     WRITE(6,'(I2,A)') k,'th level'
-    DO n=1,nv3d
+    do n=1,nv3d
       WRITE(6,'(A,2ES10.2)') element(n),MAXVAL(v3d(:,:,k,n)),MINVAL(v3d(:,:,k,n))
-    END DO
-  END DO
+    enddo
+  enddo
 
-  DO n=1,nv2d
+  do n=1,nv2d
     WRITE(6,'(A,2ES10.2)') element(nv3d+n),MAXVAL(v2d(:,:,n)),MINVAL(v2d(:,:,n))
-  END DO
+  enddo
 
-  RETURN
 END SUBROUTINE monit_grd
 
-!STEVE: put this somewhere more general (non model-specific) (ISSUE)
 
+!STEVE: put this somewhere more general (non model-specific) (ISSUE)
 !-----------------------------------------------------------------------
 ! Ensemble manipulations
 !-----------------------------------------------------------------------
@@ -1181,30 +1218,30 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
 
 ! ALLOCATE(v3dm(nij,nlev,nv3d),v2dm(nij,nv2d))
 
-  DO n=1,nv3d
-    DO k=1,nlev
-      DO i=1,nij
+  do n=1,nv3d
+    do k=1,nlev
+      do i=1,nij
         v3dm(i,k,n) = v3d(i,k,1,n)
-        DO m=2,member
+        do m=2,member
           v3dm(i,k,n) = v3dm(i,k,n) + v3d(i,k,m,n)
-        END DO
+        enddo
         v3dm(i,k,n) = v3dm(i,k,n) / REAL(member,r_size)
-      END DO
-    END DO
-  END DO
+      enddo
+    enddo
+  enddo
 
-  DO n=1,nv2d
-    DO i=1,nij
+  do n=1,nv2d
+    do i=1,nij
       v2dm(i,n) = v2d(i,1,n)
-      DO m=2,member
+      do m=2,member
         v2dm(i,n) = v2dm(i,n) + v2d(i,m,n)
-      END DO
+      enddo
       v2dm(i,n) = v2dm(i,n) / REAL(member,r_size)
-    END DO
-  END DO
+    enddo
+  enddo
 
-  RETURN
 END SUBROUTINE ensmean_grd
+
 
 !-----------------------------------------------------------------------
 subroutine check(status)

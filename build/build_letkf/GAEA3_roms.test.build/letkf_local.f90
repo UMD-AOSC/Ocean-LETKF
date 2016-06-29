@@ -75,9 +75,9 @@ MODULE letkf_local
   INTEGER, SAVE       :: initialized = 0
   REAL(r_size), SAVE  :: prev_lon, prev_lat      !STEVE: for checking if this longitude was last searched
 
-  INTEGER, SAVE, ALLOCATABLE      :: idx(:)      !STEVE: index of the observations that are found by kd_search
+  INTEGER, SAVE, ALLOCATABLE      :: idx(:)      !STEVE: index of the observations that are found by kd_search_radius
   REAL(r_size), SAVE, ALLOCATABLE :: dist(:)     !STEVE: distance from the center grid point
-  INTEGER, SAVE :: nn                            !STEVE: total number of local observations found by kd_search
+  INTEGER, SAVE :: nn                            !STEVE: total number of local observations found by kd_search_radius
 
   !! Localization
   !! ------------------------------------------------------------
@@ -166,7 +166,8 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   ! query the KD-tree
   !-----------------------------------------------------------------------------
   if (lon1(ij) /= prev_lon .or. lat1(ij) /= prev_lat) then
-    call kd_search(kdtree_root, obslon, obslat, (/lon1(ij),lat1(ij)/),sigma_max_h_d0, idx, dist, nn)
+!   call kd_search(kdtree_root, obslon, obslat, (/lon1(ij),lat1(ij)/),sigma_max_h_d0, idx, dist, nn)
+    call kd_search_radius(kdtree_root, (/lon1(ij),lat1(ij)/),sigma_max_h_d0, idx, dist, nn, .false.)
     prev_lon = lon1(ij)
     prev_lat = lat1(ij)
     if (dodebug) then
@@ -174,7 +175,7 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
       WRITE(6,*) "sigma_max_h_d0 = ", sigma_max_h_d0
       WRITE(6,*) "dist_zero_ocn_h = ", dist_zero_ocn_h
       WRITE(6,*) "dist_zero_ocn_v = ", dist_zero_ocn_v
-      WRITE(6,*) "Observations found by kd_search = "
+      WRITE(6,*) "Observations found by kd_search_radius = "
       WRITE(6,*) "idx,lon,lat,lev,dist"
       do n=1,nn
         WRITE(6,*) idx(n), obslon(idx(n)), obslat(idx(n)), obslev(idx(n)), dist(n)

@@ -70,6 +70,8 @@ LOGICAL :: DO_ADT=.false.
 LOGICAL :: DO_TRIPOLAR=.true.
 ! For (IRREG_GRID) for non-orthogonal/non-rectilinear grids (not fully supported)
 LOGICAL :: DO_IRREG_GRID=.false.
+! For (Updating model layer thickness)
+LOGICAL :: DO_UPDATE_H=.false.
 
 ! For letkf_obs.f90
 LOGICAL :: DO_QC_MEANDEP=.true.

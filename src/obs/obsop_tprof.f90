@@ -525,6 +525,10 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) DO_POTTEMP_to_INSITU
       if (DO_POTTEMP_to_INSITU) DO_INSITU_to_POTTEMP = .false.
+    case('-remap')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) remap_obs_coords
     case default
       PRINT *, "ERROR: option is not supported: ", arg1
       PRINT *, "(with value : ", trim(arg2), " )"
