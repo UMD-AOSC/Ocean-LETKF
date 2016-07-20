@@ -10,4 +10,6 @@ routines are organized by:
 Upon compilation, the model can be specified, and assuming appropriate encapsulation,
 the rest of the code will be able to compile with any of the supported models.
 
+Upcoming model support: nemo
+
 ~Steve
