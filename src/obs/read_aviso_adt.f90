@@ -147,7 +147,7 @@ j = cnt
 print *, "---------------------------------------------------------------------"
 print *, "start_idx  = ", start_idx
 print *, "end_idx    = ", end_idx
-print *, "days_since = ", days_since
+print *, "days_since (INPUT,but not currently used) = ", days_since
 print *, "subcnt     = ", subcnt
 print *, "times(i)   = ", times(i)
 print *, "times(j)   = ", times(j)

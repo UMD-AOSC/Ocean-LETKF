@@ -36,6 +36,7 @@ PROGRAM obsop_sst
   USE vars_model
   USE common_oceanmodel
   USE params_obs,                ONLY: nobs, id_sst_obs
+  USE params_obs,                ONLY: DO_REMOVE_65N
   USE vars_obs
   USE common_obs_oceanmodel
   USE read_avhrr_pathfinder,     ONLY: read_avhrr_pathfinder_nc, obs_data
@@ -168,6 +169,9 @@ PROGRAM obsop_sst
     print *, "Computing superobs..."
     supercnt = 0
     superobs = 0.0d0
+
+    !STEVE: (ISSUE) this may have problems in the arctic for the tripolar grid,
+    !               or for any irregular grid in general.
     do n=1,nobs ! for each ob,
 !     if (dodebug1) print *, "n = ", n
       ! Scan the longitudes
@@ -196,13 +200,15 @@ PROGRAM obsop_sst
           idx = idx+1
           if (dodebug1) print *, "idx = ", idx
           odat(idx) = superobs(i,j)
-          oerr(idx) = min_oerr + SQRT(M2(i,j))
-          rlon(idx) = (lon(i+1)-lon(i))/2.0d0
-          rlat(idx) = (lat(j+1)-lat(j))/2.0d0
+          oerr(idx) = obserr_scaling*(min_oerr + SQRT(M2(i,j)))
+          rlon(idx) = (lon(i+1)+lon(i))/2.0d0
+          rlat(idx) = (lat(j+1)+lat(j))/2.0d0
           rlev(idx) = 0
           elem(idx) = id_sst_obs
           if (dodebug1) print *, "odat(idx) = ", odat(idx)
           if (dodebug1) print *, "oerr(idx) = ", oerr(idx)
+          if (dodebug1) print *, "rlon(idx) = ", rlon(idx)
+          if (dodebug1) print *, "rlat(idx) = ", rlat(idx)
           if (dodebug1) print *, "ocnt(idx) = ", supercnt(i,j)
         endif
       enddo
@@ -450,6 +456,10 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) obserr_scaling
+    case('-minerr')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) min_oerr
     case('-minqc')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)

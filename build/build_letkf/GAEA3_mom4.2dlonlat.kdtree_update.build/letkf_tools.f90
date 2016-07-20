@@ -74,7 +74,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_model, ONLY: iv2d_mld
   USE params_model, ONLY: iv3d_t !STEVE: for debugging
-  USE params_letkf, ONLY: DO_MLD, DO_NO_VERT_LOC
+  USE params_letkf, ONLY: DO_MLD, DO_NO_VERT_LOC, DO_MLD_MAXSPRD
   USE vars_model,   ONLY: lev
 
   IMPLICIT NONE
@@ -112,7 +112,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !STEVE: for DO_NO_VERT_LOC
   INTEGER :: klev, mlev !mlev is the level for the mixed layer depth
   !STEVE: for DO_MLD
-  REAL(r_size) :: amean2d
+  REAL(r_size) :: max_sprd, mld_sprd
+  REAL(r_size) :: mld=0
 
   WRITE(6,'(A)') 'Hello from das_letkf'
   nobstotal = nobs
@@ -231,14 +232,29 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     ! Initialize the mixed layer depth at level 1 (STEVE: could initialize at background ensemble mean)
     mlev=1
     if (DO_MLD) then
-      ! Initialize the mixed layer depth at the mean MLD of the background ensemble
-      do k=1,nlev-1
-        if (lev(k+1) > mean2d(ij,iv2d_mld)) then
-          mlev = k
-          exit
-        endif
-      enddo
-      !NOTE: this will be updated after the analysis at the first level of this column
+      if (DO_MLD_MAXSPRD) then
+        max_sprd=0
+        do k=1,nlev
+!         mld_sprd = SQRT(SUM(gues3d(ij,k,:,iv3d_t)**2)/(nbv-1))
+          mld_sprd = SUM(gues3d(ij,k,:,iv3d_t)**2) !STEVE: since we're just finding the max, sqrt and division are not really necessary.
+          if (mld_sprd > max_sprd) then
+            ! find the max spread in the column, use this as the 'mixed layer depth' for SST assimilation
+            max_sprd = mld_sprd
+            mlev = k
+          endif
+        enddo
+      else
+        ! Initialize the mixed layer depth at the mean MLD of the background ensemble
+        ! Update the model-derived mixed layer depth
+        mld = mean2d(ij,iv2d_mld)
+        do k=1,nlev-1
+          if (lev(k+1) > mld) then
+            mlev = k
+            exit
+          endif
+        enddo
+        !NOTE: this will be updated after the analysis at the first level of this column
+      endif
     endif
 
     ilev=0
@@ -391,18 +407,18 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           enddo
         enddo
 
-        if (ilev==1 .and. DO_MLD) then
-          !If analyzing the mixed layer depth, update the layer associated with the mld here (was initialized at mlev=1 for this column)
-          do k=1,nlev-1
-            amean2d = anal2d(ij,k,iv2d_mld)
-            if (lev(k+1) > amean2d) then
-              mlev = k
-              exit
-            endif
-          enddo
-        endif
-
       endif !(ilev == 1)
+
+      if (ilev==1 .and. DO_MLD .and. .not. DO_MLD_MAXSPRD) then
+        !If analyzing the mixed layer depth, update the layer associated with the mld here (was initialized at mlev=1 for this column)
+        do k=1,nlev-1
+          mld = anal2d(ij,k,iv2d_mld)
+          if (lev(k+1) > mld) then
+            mlev = k
+            exit
+          endif
+        enddo
+      endif
 
       if (DO_NO_VERT_LOC .or. DO_MLD) then
         if (dodebug) WRITE(6,*) "===================================================================="
@@ -420,6 +436,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
         if (DO_NO_VERT_LOC .and. .not. DO_MLD) mlev=nlev
         if (DO_MLD .and. ilev > mlev) mlev=nlev
+
         do n=1,nv3d
 !         if (dodebug) WRITE(6,*) "n = ", n
           do klev=ilev+1,mlev

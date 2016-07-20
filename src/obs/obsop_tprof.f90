@@ -39,6 +39,7 @@ PROGRAM obsop_tprof
   USE common_oceanmodel
   USE params_obs,                ONLY: nobs, id_t_obs, id_s_obs, id_u_obs, id_v_obs, id_eta_obs
   USE params_obs,                ONLY: DO_INSITU_to_POTTEMP, DO_POTTEMP_to_INSITU
+  USE params_obs,                ONLY: DO_REMOVE_65N
   USE vars_obs
   USE common_obs_oceanmodel
   USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z, sa_from_sp, pt_from_t
@@ -99,11 +100,13 @@ PROGRAM obsop_tprof
   INTEGER :: cnt_obs_u=0, cnt_obs_v=0, cnt_obs_t=0, cnt_obs_s=0
   INTEGER :: cnt_obs_ssh=0, cnt_obs_sst=0, cnt_obs_sss=0, cnt_obs_eta=0
   INTEGER :: cnt_obs_x=0, cnt_obs_y=0, cnt_obs_z=0
+  INTEGER :: cnt_thin=0
   INTEGER, DIMENSION(nv3d+nv2d), SAVE :: cnt_obs = 0
 
   !STEVE: for debugging observation culling:
   INTEGER :: cnt_yout=0, cnt_xout=0, cnt_zout=0, cnt_triout=0
   INTEGER :: cnt_rigtnlon=0, cnt_nearland=0, cnt_oerlt0=0, cnt_altlatrng=0
+  INTEGER :: cnt_nl1=0, cnt_nl2=0, cnt_nl3=0
 
   !-----------------------------------------------------------------------------
   ! Instantiations specific to this observation type:
@@ -230,7 +233,7 @@ PROGRAM obsop_tprof
     ! Convert the physical coordinate to model grid coordinate (note: real, not integer)
     !---------------------------------------------------------------------------
     CALL phys2ijk(elem(n),rlon(n),rlat(n),rlev(n),ri,rj,rk) !(OCEAN)
-   
+
     !---------------------------------------------------------------------------
     ! Filter in the tripolar region until localization is examined in the arctic !(ISSUE)
     !---------------------------------------------------------------------------
@@ -315,6 +318,7 @@ PROGRAM obsop_tprof
             WRITE(6,*) "kmt cell = ", kmt(NINT(ri),NINT(rj))
           endif
           cnt_nearland = cnt_nearland + 1
+          cnt_nl1 = cnt_nl1+1
           CYCLE
         elseif (kmt(NINT(ri),NINT(rj)) .lt. rk) then
           if (debug_obsfilter) then
@@ -323,6 +327,7 @@ PROGRAM obsop_tprof
             WRITE(6,*) "kmt cell = ", kmt(NINT(ri),NINT(rj))
           endif
           cnt_nearland = cnt_nearland + 1
+          cnt_nl2 = cnt_nl2+1
           CYCLE
         endif
       case(2)
@@ -337,6 +342,7 @@ PROGRAM obsop_tprof
             WRITE(6,*) "kmt cell = ", kmt(FLOOR(ri):CEILING(ri),FLOOR(rj):CEILING(rj))
           endif
           cnt_nearland = cnt_nearland + 1
+          cnt_nl1 = cnt_nl1+1
           CYCLE
         elseif(kmt(CEILING(ri),CEILING(rj)) .lt. rk .or. &
                   kmt(CEILING(ri),FLOOR(rj)) .lt. rk .or. &
@@ -349,6 +355,7 @@ PROGRAM obsop_tprof
             WRITE(6,*) "kmt cell = ", kmt(FLOOR(ri):CEILING(ri),FLOOR(rj):CEILING(rj))
           endif
           cnt_nearland = cnt_nearland + 1
+          cnt_nl2 = cnt_nl2+1
           CYCLE
         endif
       end select
@@ -367,7 +374,10 @@ PROGRAM obsop_tprof
     ! Select random subset of observations to speed up processing
     thin_obs : if (abs(obs_randselect - 1) > TINY(1.0d0)) then
       CALL com_rand(1,rand)
-      if (rand(1) > obs_randselect) CYCLE
+      if (rand(1) > obs_randselect) then
+        cnt_thin = cnt_thin+1
+        CYCLE
+      endif
     endif thin_obs
 
     !---------------------------------------------------------------------------
@@ -454,7 +464,10 @@ PROGRAM obsop_tprof
   WRITE(6,*) "cnt_triout = ", cnt_triout
   WRITE(6,*) "cnt_rigtnlon = ", cnt_rigtnlon
   WRITE(6,*) "cnt_nearland = ", cnt_nearland
+  WRITE(6,*) "cnt_nl1 = ", cnt_nl1
+  WRITE(6,*) "cnt_nl2 = ", cnt_nl2
   WRITE(6,*) "cnt_altlatrng = ", cnt_altlatrng
+  WRITE(6,*) "cnt_thin = ", cnt_thin
   if (DO_REMOVE_BLACKSEA) WRITE(6,*) "cnt_blacksea = ", cnt_blacksea
 
   !-----------------------------------------------------------------------------

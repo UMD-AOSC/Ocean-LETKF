@@ -117,7 +117,7 @@ PROGRAM obsop_adt
   INTEGER, DIMENSION(nlon,nlat) :: supercnt
   INTEGER :: idx
   INTEGER :: cnt_obs_thinning = 0
-  INTEGER :: days_since ! 1-1-1950
+  INTEGER :: days_since = -1 ! 1-1-1950
                         ! For input from command line, use linux gnu date: 
                         ! day0=`date '+%s' -d $Y0-$M0-$D0`
                         ! day1=`date '+%s' -d $YYYY-$MM-$DD`
@@ -209,7 +209,7 @@ PROGRAM obsop_adt
           idx = idx+1
           if (dodebug1) print *, "idx = ", idx
           odat(idx) = superobs(i,j)
-          oerr(idx) = min_oerr + SQRT(M2(i,j))
+          oerr(idx) = min_oerr + SQRT(M2(i,j)) !STEVE: the obserr_scaling is applied later, if requested by user input
           rlon(idx) = (lon(i+1)-lon(i))/2.0d0
           rlat(idx) = (lat(j+1)-lat(j))/2.0d0
           rlev(idx) = 0
@@ -497,6 +497,10 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) DO_REMOVE_65N
+    case('-scale')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) obserr_scaling
     case('-debug')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)

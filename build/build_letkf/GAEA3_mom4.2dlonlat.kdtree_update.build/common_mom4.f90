@@ -113,7 +113,7 @@ SUBROUTINE set_common_oceanmodel
 
   if (doverbose) then
     WRITE(6,*) "lon2d(1,1)       = ", lon2d(1,1)
-    WRITE(6,*) "lon2d(nlon,nlon) = ", lon2d(nlon,nlon)
+    WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
   endif
 
   !-----------------------------------------------------------------------------
@@ -132,7 +132,7 @@ SUBROUTINE set_common_oceanmodel
 
   if (doverbose) then
     WRITE(6,*) "lat2d(1,1)       = ", lat2d(1,1)
-    WRITE(6,*) "lat2d(nlon,nlon) = ", lat2d(nlon,nlon)
+    WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
   endif
 
   !-----------------------------------------------------------------------------
@@ -147,7 +147,7 @@ SUBROUTINE set_common_oceanmodel
   endif
 
   CALL check( NF90_INQ_VARID(ncid,'depth_t',varid) )      ! depth of T-cell
-  CALL check( NF90_GET_VAR(ncid,varid,lev) )
+  CALL check( NF90_GET_VAR(ncid,varid,lev2d) )
 
   if (doverbose) then
     WRITE(6,*) "lev2d(1,1)       = ", lev2d(1,1)
@@ -552,7 +552,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
     ! SST
     !---------------------------------------------------------------------------
     varname='t_surf'
-    ivid=iv2d_ssh
+    ivid=iv2d_sst
     CALL check( NF90_INQ_VARID(ncid,trim(varname),varid) ) 
     if (dodebug) WRITE(6,*) "read_restart:: just got data for variable ", trim(varname)
     
@@ -581,7 +581,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
     ! SSS
     !---------------------------------------------------------------------------
     varname='s_surf'
-    ivid=iv2d_ssh
+    ivid=iv2d_sss
     CALL check( NF90_INQ_VARID(ncid,trim(varname),varid) )
     if (dodebug) WRITE(6,*) "read_restart:: just got data for variable ", trim(varname)
 

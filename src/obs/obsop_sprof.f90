@@ -39,6 +39,7 @@ PROGRAM obsop_tprof
   USE vars_model
   USE common_oceanmodel
   USE params_obs,                ONLY: nobs, id_s_obs
+  USE params_obs,                ONLY: DO_REMOVE_65N
   USE vars_obs
   USE common_obs_oceanmodel
   USE read_argo,                 ONLY: obs_data, read_argo_nc

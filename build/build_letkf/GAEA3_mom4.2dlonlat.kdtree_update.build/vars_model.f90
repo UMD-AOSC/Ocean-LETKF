@@ -56,7 +56,7 @@ PUBLIC
 #endif
 
   !STEVE: For generalized grid
-  REAL(r_size),SAVE :: lon0, lonf, lat0, latf
+  REAL(r_size),SAVE :: lon0, lonf, lat0, latf, lev0, levf
   REAL(r_size),SAVE :: wrapgap
 
   LOGICAL,SAVE :: vars_model_initialized = .false.
@@ -138,6 +138,8 @@ SUBROUTINE set_vars_model
   lonf = lon(nlon)
   lat0 = lat(1)
   latf = lat(nlat)
+  lev0 = lev(1)
+  levf = lev(nlev)
 
   if (lon0 .eq. lonf) then
     WRITE(6,*) "ERROR in vars_model.f90::initialize_vars_model(), lon0==lonf==",lon0

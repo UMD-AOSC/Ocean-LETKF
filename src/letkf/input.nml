@@ -25,6 +25,7 @@
  DO_ADT = F,
  DO_NO_VERT_LOC = T,
  DO_MLD = T,
+ DO_MLD_MAXSPRD = T,
  DO_REMOVE_65N = F,
  localization_method = 1,
  cov_infl_mul = 1.0d0,

@@ -117,7 +117,7 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   rk = -1
   rrlon=rlon
 
-  if (rlon > tripolar_lat) then
+  if (rlat > tripolar_lat) then
 
     !---------------------------------------------------------------------------
     ! Get a guess of the starting longitude

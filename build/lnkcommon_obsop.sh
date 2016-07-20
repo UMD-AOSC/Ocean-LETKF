@@ -13,6 +13,7 @@ cp $COMMONDIR/common_mtx.f90 ./
 cp $COMMONDIR/common_letkf.f90 ./
 cp $COMMONDIR/netlib.f ./
 cp $COMMONDIR/netlibblas.f ./
+cp $COMMONDIR/kdtree.f90 ./
 
 MODELDIR=$root/src/model_specific/$model
 cp $MODELDIR/common_$model.f90 ./
