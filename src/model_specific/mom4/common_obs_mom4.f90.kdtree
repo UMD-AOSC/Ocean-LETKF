@@ -957,7 +957,7 @@ SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
 END SUBROUTINE write_obs
 
 
-SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
+SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag)
 !===============================================================================
 ! Write out observations with appended H(xb) for each ob
 !===============================================================================
@@ -972,6 +972,7 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
   REAL(r_size),INTENT(IN) :: oerr(nn)
   REAL(r_size),INTENT(IN) :: ohx(nn)
   REAL(r_size),OPTIONAL,INTENT(IN) :: obhr(nn)
+  LOGICAL,OPTIONAL,INTENT(IN) :: qcflag
   INTEGER,INTENT(IN) :: oqc(nn)
   REAL(r_sngl),ALLOCATABLE :: wk(:)
   INTEGER :: n,iunit
@@ -981,6 +982,7 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
   iunit=92
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   do n=1,nn
+    if (qcflag .and. oqc(n)==0) CYCLE
     wk(1) = REAL(elem(n),r_sngl)   ! ID for observation type
     wk(2) = REAL(rlon(n),r_sngl)   ! Ob lon
     wk(3) = REAL(rlat(n),r_sngl)   ! Ob lat
