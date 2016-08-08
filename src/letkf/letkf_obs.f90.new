@@ -69,7 +69,6 @@ SUBROUTINE set_letkf_obs
 ! Initialize the module
 !===============================================================================
   USE params_model, ONLY: nlat
-  USE params_model, ONLY: iv3d_t, iv3d_s, iv3d_u, iv3d_v
   IMPLICIT NONE
   REAL(r_size) :: ri,rj,rk
   REAL(r_size) :: dlon1,dlon2,dlon,dlat
