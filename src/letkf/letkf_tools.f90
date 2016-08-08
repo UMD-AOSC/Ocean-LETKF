@@ -171,10 +171,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !STEVE: Check to make sure user supplied a set of non-identical ensemble members:
   if (dodebug) then
     WRITE(6,*) "letkf_tools.f90:: After computing perturbations..."
-    WRITE(6,*) "min val for level gues3d(:,1,:,iv3d_t) = ", MINVAL(gues3d(:,1,:,iv3d_t))
-    WRITE(6,*) "max val for level gues3d(:,1,:,iv3d_t) = ", MAXVAL(gues3d(:,1,:,iv3d_t))
+    WRITE(6,*) "min val for level gues3d(:,1,:,1) = ", MINVAL(gues3d(:,1,:,1))
+    WRITE(6,*) "max val for level gues3d(:,1,:,1) = ", MAXVAL(gues3d(:,1,:,1))
   endif
-  if (MAXVAL(gues3d(:,1,:,iv3d_t)) == MINVAL(gues3d(:,1,:,iv3d_t))) then
+  if (MAXVAL(gues3d(:,1,:,1)) == MINVAL(gues3d(:,1,:,1))) then
     WRITE(6,*) "letkf_tools.f90::das_letkf:: It appears that all the ensemble members are identical. EXITING..."
     STOP(833)
   endif
@@ -231,8 +231,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
     ! Initialize the mixed layer depth at level 1 (STEVE: could initialize at background ensemble mean)
     mlev=1
-    if (DO_MLD) then
-      if (DO_MLD_MAXSPRD) then
+    if (DO_MLD .and. iv2d_mld>0) then
+      if (DO_MLD_MAXSPRD .and. iv3d_t>0) then
         max_sprd=0
         do k=1,nlev
 !         mld_sprd = SQRT(SUM(gues3d(ij,k,:,iv3d_t)**2)/(nbv-1))
@@ -246,6 +246,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       else
         ! Initialize the mixed layer depth at the mean MLD of the background ensemble
         ! Update the model-derived mixed layer depth
+        !STEVE: (CHECK this)
         mld = mean2d(ij,iv2d_mld)
         do k=1,nlev-1
           if (lev(k+1) > mld) then
