@@ -58,6 +58,7 @@ REAL(r_size) :: sp_infl_add = 0.d0 !additive inflation
 !-------------------------------------------------------------------------------
 ! For (MLD, assimilate the mixed layer depth)
 LOGICAL :: DO_MLD = .false.
+LOGICAL :: DO_MLD_MAXSPRD = .true.
 ! For (DRIFTERS)
 LOGICAL :: DO_DRIFTERS=.false.
 ! For (ALTIMETRY)
