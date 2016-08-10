@@ -29,6 +29,8 @@ SUBROUTINE set_common_oceanmodel
   USE vars_model,   ONLY: dx, dy, area_t
   USE vars_model,   ONLY: height, kmt, depth, wet, phi0, kmt0
   USE vars_model,   ONLY: set_vars_model
+  USE params_model, ONLY: initialize_params_model
+  USE vars_model,   ONLY: initialize_vars_model
 
   IMPLICIT NONE
 
@@ -39,6 +41,8 @@ SUBROUTINE set_common_oceanmodel
   REAL(r_size) :: dlat, dlon, d2, d3
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
+  CALL initialize_params_model ! (checks to make sure it is initialized)
+  CALL initialize_vars_model   ! (checks to make sure it is initialized)
 
   !-----------------------------------------------------------------------------
   ! Read the SSH model climatology if assimilating SLA's
@@ -95,13 +99,15 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,'(A)') '  >> accessing file: ', gridfile3
   call check( NF90_OPEN(gridfile3,NF90_NOWRITE,ncid3) )
 
-  call check( NF90_INQ_VARID(ncid,'x',varid) )   ! Longitude for T-cell
-  call check( NF90_GET_VAR(ncid,varid,lon2d) )
+  WRITE(6,*) "Reading x coordinate (lon)..."
+  call check( NF90_INQ_VARID(ncid3,'x',varid) )   ! Longitude for T-cell
+  call check( NF90_GET_VAR(ncid3,varid,lon2d) )
   WRITE(6,*) "lon2d(1,1) = ", lon2d(1,1)
   WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
 
-  call check( NF90_INQ_VARID(ncid,'y',varid) )   ! Latitude for T-cell
-  call check( NF90_GET_VAR(ncid,varid,lat2d) )
+  WRITE(6,*) "Reading y coordinate (lat)..."
+  call check( NF90_INQ_VARID(ncid3,'y',varid) )   ! Latitude for T-cell
+  call check( NF90_GET_VAR(ncid3,varid,lat2d) )
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
   WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
 
@@ -118,6 +124,7 @@ SUBROUTINE set_common_oceanmodel
 ! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MIN(area_t) = ", MINVAL(area_t)
 ! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MAX(area_t) = ", MAXVAL(area_t)
 
+  !STEVE: I don't really need this anymore with the kdtree-based search
   if (.true.) then !STEVE: this is TEMPORARY, until I figure out how to use the ocean_hgrid.nc data
     i=0
     j=0
@@ -149,7 +156,7 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
   ! kmt data
   !-----------------------------------------------------------------------------
-  !STEVE:MOM6: sum(h>0) (from MOM.res.nc) to find ocean layer depth, where depth > 0 (from ocean_togog.nc)
+  !STEVE:MOM6: sum(h>0) (from MOM.res.nc) to find ocean layer <reference> depth, where depth > 0 (from ocean_togog.nc)
   call check( NF90_INQ_VARID(ncid,'h',varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid,varid,height) )
   WRITE(6,*) "h(1,1,1) = ", height(1,1,1)
@@ -242,7 +249,7 @@ END SUBROUTINE read_etaclm
 
 !STEVE: add this:
 !-- Read a diagnostic file in mom6 netcdf format ---------------------------------------------------
-SUBROUTINE read_diag(infile,v3d,v2d,prec)
+SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !STEVE: This subroutine reads the hourly/daily diagnostic files produced by MOM6
   !       The t,s,u,v,(ssh) fields are read in from the files so that the o-f data can be computed
   !       by the obsope.f90 program prior to running letkf.f90, so the diagnostic files do not have 
@@ -253,7 +260,8 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
-  INTEGER, INTENT(IN) :: prec ! precision, 1=single, 2=double
+  INTEGER, INTENT(IN), OPTIONAL :: prec_in ! precision, 1=single, 2=double
+  INTEGER :: prec ! precision, 1=single, 2=double
   REAL(r_sngl), ALLOCATABLE, DIMENSION(:,:,:) :: buf4 !(nlon,nlat,nlev)
   REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:) :: buf8 !(nlon,nlat,nlev)
   INTEGER :: i,j,k
@@ -262,6 +270,14 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   LOGICAL, PARAMETER :: dodebug = .true.
   CHARACTER(slen) :: varname
   INTEGER :: ivid
+
+  ! If prec is a provided argument, use indicated precision,
+  if(PRESENT(prec_in))then
+    prec = prec_in
+  else
+    ! otherwise default to single precision.
+    prec = 1
+  endif
 
   ! Assumed format of MOM6 diag file, specified in diag_table:
   !

@@ -298,7 +298,7 @@ SUBROUTINE read_history(infile,v3d,v2d)
     CALL check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
  
     if (doverbose) then
-      WRITE(6,*) "read_diag:: just opened file ", infile
+      WRITE(6,*) "read_history:: just opened file ", infile
     endif  
 
     !---------------------------------------------------------------------------
@@ -307,14 +307,14 @@ SUBROUTINE read_history(infile,v3d,v2d)
     buf4=0.0
     CALL check( NF90_INQ_VARID(ncid,'mld',varid) )
     CALL check( NF90_GET_VAR(ncid,varid,buf4) )
-    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable mld"
+    if (dodebug) WRITE(6,*) "read_history:: just got data for variable mld"
     v2d(:,:,iv2d_mld) = buf4
-    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable: mld"
+    if (dodebug) WRITE(6,*) "read_history:: finished processing data for variable: mld"
   
     ! !STEVE: debug
     if (dodebug) then
       WRITE(6,*) "POST-MLD:"
-      WRITE(6,*) "read_diag:: infile = ", infile
+      WRITE(6,*) "read_history:: infile = ", infile
       WRITE(6,*) "max val for level v2d(:,:,iv2d_mld) = ",MAXVAL(v2d(:,:,iv2d_mld))
     endif
     ! !STEVE: end
@@ -324,7 +324,7 @@ SUBROUTINE read_history(infile,v3d,v2d)
 END SUBROUTINE read_history
 
 
-SUBROUTINE read_diag(infile,v3d,v2d)
+SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 !===============================================================================
 ! Read in a set of netcdf-format mom4 diagnostic files (for now, we're using the restarts)
 !===============================================================================
@@ -336,11 +336,21 @@ SUBROUTINE read_diag(infile,v3d,v2d)
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
+  INTEGER, INTENT(IN), OPTIONAL :: prec_in ! precision, 1=single, 2=double
+  INTEGER :: prec ! precision, 1=single, 2=double
   REAL(r_sngl), ALLOCATABLE :: v3d0(:,:,:,:)
   REAL(r_sngl), ALLOCATABLE :: v2d0(:,:,:)
 
+  ! If prec is a provided argument, use indicated precision,
+  if(PRESENT(prec_in))then
+    prec = prec_in
+  else
+    ! otherwise default to single precision.
+    prec = 1
+  endif
+
   ALLOCATE(v3d0(nlon,nlat,nlev,nv3d), v2d0(nlon,nlat,nv2d))
-  CALL read_restart(infile,v3d0,v2d0,1)
+  CALL read_restart(infile,v3d0,v2d0,prec)
   v3d = REAL(v3d0,r_size)
   v2d = REAL(v2d0,r_size)
 

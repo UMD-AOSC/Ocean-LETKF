@@ -83,6 +83,7 @@ PROGRAM letkf
                               DO_ADT, &              ! logical flag to use Absolute Dynamic Topography (ADT) for altimetry
                               DO_NO_VERT_LOC, &      ! logical flag to skip all vertical localization and project weights (default)
                               DO_MLD, &              ! logical flag to use 2-layer vertical localization: (1) SFC and mixed layer, (2) below mixed layer
+                              DO_MLD_MAXSPRD, &      ! logical flag to use maximum spread instead of mixed layer depth do to steps for DO_MLD 
                               DO_REMOVE_65N, &       ! option to remove points above 65ÂN in letkf instead of in observation operators
                               DO_QC_MEANDEP, &       ! option to quality control observations based on mean departure
                               DO_QC_MAXDEP, &        ! option to quality control observation based on maximum departure across ensemble members

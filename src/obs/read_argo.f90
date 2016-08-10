@@ -102,7 +102,7 @@ REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: vals, stde
 REAL(r_size), ALLOCATABLE, DIMENSION(:) :: depth ! profile depths
 REAL(r_size) :: val
 INTEGER :: cnt, nlv
-LOGICAL :: dodebug=.false.
+LOGICAL :: dodebug=.true.
 REAL(r_size) :: missing_value=-99.0
 REAL(r_sngl) :: mvc=999
 
