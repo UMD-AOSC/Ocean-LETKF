@@ -41,12 +41,14 @@ PUBLIC
   INTEGER,PARAMETER :: iv3d_t=3
   INTEGER,PARAMETER :: iv3d_s=4                !(OCEAN)
   INTEGER,PARAMETER :: iv3d_h=5                !(OCEAN)
-                                               !          From ocean_sbc.res.nc:
-  INTEGER,PARAMETER :: iv2d_ssh=1              !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
-  INTEGER,PARAMETER :: iv2d_sst=2              !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
-  INTEGER,PARAMETER :: iv2d_sss=3              !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models
-  INTEGER,PARAMETER :: iv2d_eta=4              !(OCEAN) ! eta sea surface perturbation from mom4's ocean_barotropic.res.nc restart file
-  INTEGER,PARAMETER :: iv2d_mld=5              !(OCEAN) ! mixed layer depth
+
+  INTEGER,PARAMETER :: iv2d_ssh=1                    !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
+  INTEGER,PARAMETER :: iv2d_ubt=2                    !(OCEAN) ! Barotropic zonal velocity (HYCOM)
+  INTEGER,PARAMETER :: iv2d_vbt=3                    !(OCEAN) ! Barotropic meridional velocity (HYCOM)
+  INTEGER,PARAMETER :: iv2d_sst=4                    !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model (MOM4p1)
+  INTEGER,PARAMETER :: iv2d_sss=5                    !(OCEAN) ! time averaged sss (psu) passed to atmosphere/ice models (MOM4p1)
+  INTEGER,PARAMETER :: iv2d_eta=6              !(OCEAN) ! eta sea surface perturbation from mom4's ocean_barotropic.res.nc restart file
+  INTEGER,PARAMETER :: iv2d_mld=7              !(OCEAN) ! mixed layer depth
   INTEGER,PARAMETER :: iv4d_x=1                !(OCEAN) (DRIFTERS)
   INTEGER,PARAMETER :: iv4d_y=2                !(OCEAN) (DRIFTERS)
   INTEGER,PARAMETER :: iv4d_z=3                !(OCEAN) (DRIFTERS)

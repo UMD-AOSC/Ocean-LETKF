@@ -37,6 +37,8 @@ SUBROUTINE set_common_oceanmodel
   USE params_model, ONLY: gridfile, gridfile1, gridfile2, gridfile3, ncundef
   USE vars_model,   ONLY: area_t
   USE vars_model,   ONLY: fcori, fcori2d
+  USE params_model, ONLY: initialize_params_model
+  USE vars_model,   ONLY: initialize_vars_model
 
   IMPLICIT NONE
 
@@ -56,6 +58,9 @@ SUBROUTINE set_common_oceanmodel
   LOGICAL :: dodebug = .true.
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
+  CALL initialize_params_model ! (checks to make sure it is initialized)
+  CALL initialize_vars_model   ! (checks to make sure it is initialized)
+
 !  !
 !  ! Elements
 !  !

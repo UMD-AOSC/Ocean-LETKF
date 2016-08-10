@@ -19,7 +19,7 @@ IMPLICIT NONE
 PUBLIC
 
 INTEGER,SAVE :: nobs
-INTEGER,PARAMETER :: nid_obs=8
+INTEGER,PARAMETER :: nid_obs=8 !STEVE: sets the dimension of the obs arrays - must be updated depending on choice of obs used.
 INTEGER,PARAMETER :: id_u_obs=2819
 INTEGER,PARAMETER :: id_v_obs=2820
 INTEGER,PARAMETER :: id_t_obs=3073
@@ -33,8 +33,16 @@ INTEGER,PARAMETER :: id_x_obs=1111   !(OCEAN) (DRIFTERS) !STEVE: may want to cha
 INTEGER,PARAMETER :: id_y_obs=2222   !(OCEAN) (DRIFTERS) !STEVE: may want to change this depending on type of drifters
 INTEGER,PARAMETER :: id_z_obs=3333   !(OCEAN) (DRIFTERS) !STEVE: may want to change this depending on type of drifters
 
+INTEGER,PARAMETER :: id_hs_obs=2692    !(SIS) snow thickness
+INTEGER,PARAMETER :: id_hi_obs=8335    !(SIS) ice thickness
+INTEGER,PARAMETER :: id_t1_obs=8915    !(SIS) layer 1 ice temperature
+INTEGER,PARAMETER :: id_t2_obs=8925    !(SIS) layer 2 ice temperature
+INTEGER,PARAMETER :: id_cn_obs=8333    !(SIS) ice concentration
+INTEGER,PARAMETER :: id_ui_obs=8337    !(SIS) ice drift u
+INTEGER,PARAMETER :: id_vi_obs=8334    !(SIS) ice drift v
+
 !!------------------------------------------------------------
-!! unique ID's for observations
+!! unique ID's for observations in COUPLED SYSTEM
 !! STEVE: the following will replace what is above:
 !!------------------------------------------------------------
 !! atmosphere obs
