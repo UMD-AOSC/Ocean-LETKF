@@ -128,7 +128,10 @@ PROGRAM obsop_tprof
   !-----------------------------------------------------------------------------
   ! Read observations from file
   !-----------------------------------------------------------------------------
+  print *, "obsop_tprof.f90:: calling read_argo_nc..."
   CALL read_argo_nc(obsinfile,id_t_obs,obs_data,nobs)
+  print *, "obsop_tprof.f90:: finished read_argo_nc."
+
   ALLOCATE( elem(nobs) )
   ALLOCATE( rlon(nobs) )
   ALLOCATE( rlat(nobs) )
