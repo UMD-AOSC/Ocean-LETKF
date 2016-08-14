@@ -85,7 +85,7 @@ PUBLIC
   REAL(r_size) :: min_t = -4.0d0 ! ÂC
   REAL(r_size) :: max_s = 50.0d0 ! psu
   REAL(r_size) :: min_s =  0.0d0 ! psu
-  
+
   LOGICAL,SAVE :: params_model_initialized = .false.
 
 CONTAINS

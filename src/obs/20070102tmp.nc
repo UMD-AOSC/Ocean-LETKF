@@ -1,1 +1,0 @@
-/ncrc/home1/Steve.Penny/lf1u/OBS/historical/TMP_profs/20070102tmp.nc

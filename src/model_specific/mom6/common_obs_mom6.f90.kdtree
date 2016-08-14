@@ -29,6 +29,9 @@ MODULE common_obs_oceanmodel
   REAL(r_size), SAVE, ALLOCATABLE :: dist(:)     !STEVE: distance from the center grid point
   INTEGER, SAVE :: nn                            !STEVE: total number of local observations found by kd_search_radius
 
+  ! For debugging kdtree:
+  REAL(r_size), ALLOCATABLE, DIMENSION(:) :: lon2ij, lat2ij
+
 CONTAINS
 
 
@@ -45,20 +48,12 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   REAL(r_size),INTENT(OUT) :: yobs
-! REAL(r_size) :: rh(nlon,nlat,nlev)
   INTEGER :: i,j,k,n
-! INTEGER :: is,ie,js,je,ks,ke
   INTEGER :: intelm
   INTEGER :: Aflag = 1 !1 = GODAS-type atlimetery assimilation
   REAL(r_size) :: HLx ! Inferred SSH for the column (representing steric column expansion)
   REAL(r_size) :: Hx ! Interpolated T and S for the column (for computing steric column expansion)
   REAL(r_size) :: SSHclm_ij ! Model climatology interpolated to observation location
-! ie = CEILING( ri )
-! is = ie-1
-! je = CEILING( rj )
-! js = je-1
-! ke = CEILING( rk )
-! ks = ke-1
 
   intelm = NINT(elm)
   SELECT CASE (intelm)
@@ -103,13 +98,11 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   REAL(r_size),INTENT(OUT) :: ri
   REAL(r_size),INTENT(OUT) :: rj
   REAL(r_size),INTENT(OUT) :: rk
-  REAL(r_size) :: aj,ak,ai, rrlon, glon,glat
+  REAL(r_size) :: aj,ak,ai, rrlon, glon,glat,xlon,xlat
 ! REAL(r_size) :: lnps(nlon,nlat)
   REAL(r_size) :: plev(nlev)
   INTEGER :: i,j,k,n, ni,nj, ii,jj
   LOGICAL, PARAMETER :: dodebug = .false.
-
-!STEVE: probably want to replace this with a kd-tree lookup for general search (KDTREE)
 
   !-----------------------------------------------------------------------------
   ! Initialize the KD-tree for the model-grid
@@ -118,33 +111,39 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   if (initialized == 0) then
     WRITE(6,*) "Initializing the obs_local()"
     initialized = 1
-    call kd_init( kdtree_root, RESHAPE(lon2d(:,:),(/1/)), RESHAPE(lat2d(:,:),(/1/)) )
+    call kd_init( kdtree_root, RESHAPE(lon2d(:,:),(/nlon*nlat/)), RESHAPE(lat2d(:,:),(/nlon*nlat/)) )
     WRITE(6,*) "Done constructing KD search tree."
     WRITE(6,*) "nlon*nlat = ", nlon*nlat
-!   ALLOCATE(dist(nlon*nlat))
-!   ALLOCATE(idx(nlon*nlat))
     ALLOCATE(dist(k_sought))
     ALLOCATE( idx(k_sought))
     prev_lon = -1e10
     prev_lat = -1e10
+
+    ! To debug kdtree:
+    if (dodebug) then
+      ALLOCATE(lon2ij(nlon*nlat),lat2ij(nlon*nlat))
+      lon2ij = RESHAPE(lon2d(:,:),(/nlon*nlat/))
+      lat2ij = RESHAPE(lat2d(:,:),(/nlon*nlat/))
+    endif
   endif
 
   !-----------------------------------------------------------------------------
   ! query the KD-tree
   !-----------------------------------------------------------------------------
-  if (rlon /= prev_lon .or. rlat /= prev_lat) then
+  if (rlon .ne. prev_lon .or. rlat .ne. prev_lat) then
     CALL kd_search_nnearest(kdtree_root,  (/rlon, rlat/), k_sought, idx, dist, k_found, .false.)
     prev_lon = rlon
     prev_lat = rlat
     if (dodebug) then
       WRITE(6,*) "common_obs_mom6.f90::phys2ijk ---------------------------- "
+      WRITE(6,*) "base observation point (lon/lat) :: ", rlon, rlat
       WRITE(6,*) "k_sought = ", k_sought
       WRITE(6,*) "k_found  = ", k_found
-      WRITE(6,*) "Observations found by kd_search_nnearest = "
+      WRITE(6,*) "Grid points found by kd_search_nnearest = "
       WRITE(6,*) "idx,ni,nj,lon,lat,dist"
       do n=1,k_found
         ni = MODULO(idx(n)-1,nlon)+1
-        nj = idx(n)/nlat ! Integer division
+        nj = idx(n)/nlon+1 ! Integer division
         WRITE(6,*) idx(n), ni,nj, lon2d(ni,nj), lat2d(ni,nj), dist(n)
       enddo
     endif
@@ -158,10 +157,16 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
   ! First, find the index of the nearest grid point
   ni = MODULO(idx(1)-1,nlon)+1
-  nj = idx(1)/nlat ! Integer division
+  nj = FLOOR(REAL(idx(1))/REAL(nlon))+1 ! Integer division
   glon = lon2d(ni,nj)
-  glat = lat2d(ni,nj) 
-  
+  glat = lat2d(ni,nj)
+
+  ! For debugging:
+  if (dodebug) then
+    xlon = lon2ij(idx(1))
+    xlat = lat2ij(idx(1))
+  endif
+
   !STEVE: initialize to something that will throw errors if it's not changed within
   ri = -1
   rj = -1
@@ -174,12 +179,12 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   !-----------------------------------------------------------------------------
   if (glon == rlon) then
     ai = 0.0
-  elseif (glon < rlon) then 
-    ai = (rlon - lon2d(ii,jj)) / (lon2d(ii+1,jj) - lon2d(ii,jj))
+  elseif (glon < rlon) then
+    ai = (rlon - lon2d(ni,nj)) / (lon2d(ni+1,nj) - lon2d(ni,nj))
   elseif (rlon < glon) then
-    ai = (rlon - lon2d(ii,jj)) / (lon2d(ii,jj) - lon2d(ii-1,jj))
+    ai = (rlon - lon2d(ni,nj)) / (lon2d(ni,nj) - lon2d(ni-1,nj))
   endif
-  ri = REAL(ii,r_size) + ai 
+  ri = REAL(ni,r_size) + ai
 
   !-----------------------------------------------------------------------------
   ! Get latitude scaling
@@ -187,12 +192,12 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   if (glat == rlat) then
     aj = 0.0
   elseif (glat < rlat) then
-    aj = (rlat - lat2d(ii,jj)) / (lat2d(ii,jj+1) - lat2d(ii,jj))
+    aj = (rlat - lat2d(ni,nj)) / (lat2d(ni,nj+1) - lat2d(ni,nj))
   elseif (rlat < glat) then
-    aj = (rlat - lat2d(ii,jj)) / (lat2d(ii,jj) - lat2d(ii,jj-1))
+    aj = (rlat - lat2d(ni,nj)) / (lat2d(ni,nj) - lat2d(ni,nj-1))
     !STEVE: should be negative
   endif
-  rj = REAL(jj,r_size) + aj
+  rj = REAL(nj,r_size) + aj
 
   ! Set flags to mark rlon outside of map range:
   if (ri < 1) then
@@ -207,22 +212,28 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
     rj = nlat+1
   endif
 
-! if (dodebug .and. (ri > nlon .or. ri < 1)) then
+  ! if (dodebug .and. (ri > nlon .or. ri < 1)) then
   if (dodebug) then
     WRITE(6,*) "================="
-    WRITE(6,*) "In common_obs_mom6.f90::phys2ijk," 
+    WRITE(6,*) "In common_obs_mom6.f90::phys2ijk,"
     WRITE(6,*) "-----------------"
     WRITE(6,*) "rlon = ", rlon
-    WRITE(6,*) "ii = ", ii
+    if (dodebug) WRITE(6,*) "xlon = ", xlon
+    WRITE(6,*) "glon = ", glon
+    WRITE(6,*) "ni = ", ni
     WRITE(6,*) "ai = ", ai
     WRITE(6,*) "ri = ", ri
     WRITE(6,*) "lon0 = ", lon0
+    WRITE(6,*) "lonf = ", lonf
     WRITE(6,*) "-----------------"
     WRITE(6,*) "rlat = ", rlat
-    WRITE(6,*) "jj = ", jj
+    if (dodebug) WRITE(6,*) "xlat = ", xlat
+    WRITE(6,*) "glat = ", glat
+    WRITE(6,*) "nj = ", nj
     WRITE(6,*) "aj = ", aj
     WRITE(6,*) "rj = ", rj
-    WRITE(6,*) "lonf = ", lonf
+    WRITE(6,*) "lat0 = ", lat0
+    WRITE(6,*) "latf = ", latf
     WRITE(6,*) "================="
   endif
 
@@ -247,11 +258,24 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
     !
     ! find rk
     !
+!   if (dodebug) WRITE(6,*) "rlev = ", rlev
     do k=1,nlev
+!     if (dodebug) WRITE(6,*) "lev(",k,") = ", lev(k)
       if (rlev < lev(k)) EXIT
       if (k .eq. nlev .and. rlev .eq. lev(nlev)) EXIT !STEVE: added this case for simulated obs that reach the lowest model levels.
                                                       !       Otherwise, k iterates to nlev+1 before exiting loop.
+      if (k>1 .and. lev(k)==0.0) then
+        WRITE(6,*) "common_obs_mom4.f90::phys2ijk:: lev(k)==0.0 but k>1. ERROR, EXITING..."
+        WRITE(6,*) "(model levels array lev() was not appropriately set)"
+        STOP(934)
+      endif
     enddo
+
+    if (rk > nlev) then
+      WRITE(6,*) "common_obs_mom4.f90::phys2ijk:: rk>nlev. ERROR, EXITING..."
+      WRITE(6,*) "(appropriate model leve not found for rlev = ",rlev,")"
+      STOP(935)
+    endif
 
     if (k .eq. 1) then
       rk = 1 !ak
@@ -264,6 +288,19 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
   endif
 
+  if (dodebug) then
+    WRITE(6,*) "-----------------"
+    WRITE(6,*) "rlev = ", rlev
+    WRITE(6,*) "k  = ", k
+    WRITE(6,*) "lev(k-1) = ", lev(k-1)
+    WRITE(6,*) "lev(k)   = ", lev(k)
+    WRITE(6,*) "ak = ", ak
+    WRITE(6,*) "rk = ", rk
+    WRITE(6,*) "lev0 = ", lev(1)
+    WRITE(6,*) "levf = ", lev(nlev)
+    WRITE(6,*) "================="
+  endif 
+  
 END SUBROUTINE phys2ijk
 
 

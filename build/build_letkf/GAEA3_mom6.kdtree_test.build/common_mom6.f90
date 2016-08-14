@@ -29,6 +29,11 @@ SUBROUTINE set_common_oceanmodel
   USE vars_model,   ONLY: dx, dy, area_t
   USE vars_model,   ONLY: height, kmt, depth, wet, phi0, kmt0
   USE vars_model,   ONLY: set_vars_model
+  USE params_model, ONLY: initialize_params_model
+  USE vars_model,   ONLY: initialize_vars_model
+  USE params_model, ONLY: grid_lon_name, grid_lat_name, grid_lev_name
+  USE params_model, ONLY: grid_lon2d_name, grid_lat2d_name
+  USE params_model, ONLY: grid_wet_name, grid_depth_name, grid_height_name
 
   IMPLICIT NONE
 
@@ -37,8 +42,11 @@ SUBROUTINE set_common_oceanmodel
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
   REAL(r_size) :: dlat, dlon, d2, d3
+  REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: work2d
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
+  CALL initialize_params_model ! (checks to make sure it is initialized)
+  CALL initialize_vars_model   ! (checks to make sure it is initialized)
 
   !-----------------------------------------------------------------------------
   ! Read the SSH model climatology if assimilating SLA's
@@ -69,15 +77,15 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,'(A)') '  >> accessing file: ', gridfile
   call check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
 
-  call check( NF90_INQ_VARID(ncid,'lonh',varid) )   ! Longitude for T-cell
+  call check( NF90_INQ_VARID(ncid,grid_lon_name,varid) )   ! Longitude for T-cell
   call check( NF90_GET_VAR(ncid,varid,lon) )
   WRITE(6,*) "lon(1) = ", lon(1)
   WRITE(6,*) "lon(nlon) = ", lon(nlon)
-  call check( NF90_INQ_VARID(ncid,'lath',varid) )   ! Latitude for T-cell
+  call check( NF90_INQ_VARID(ncid,grid_lat_name,varid) )   ! Latitude for T-cell
   call check( NF90_GET_VAR(ncid,varid,lat) )
   WRITE(6,*) "lat(1) = ", lat(1)
   WRITE(6,*) "lat(nlat) = ", lat(nlat)
-  call check( NF90_INQ_VARID(ncid,'Layer',varid) )      ! depth of T-cell
+  call check( NF90_INQ_VARID(ncid,grid_lev_name,varid) )      ! depth of T-cell
   call check( NF90_GET_VAR(ncid,varid,lev) )
   WRITE(6,*) "lev(1) = ", lev(1)
   WRITE(6,*) "lev(nlev) = ", lev(nlev)
@@ -95,13 +103,22 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,'(A)') '  >> accessing file: ', gridfile3
   call check( NF90_OPEN(gridfile3,NF90_NOWRITE,ncid3) )
 
-  call check( NF90_INQ_VARID(ncid,'x',varid) )   ! Longitude for T-cell
-  call check( NF90_GET_VAR(ncid,varid,lon2d) )
+  !STEVE: temporary until I figure out how to use ocean_hgrid 'supergrid' appropriately:
+  ALLOCATE(work2d(nlon2d,nlat2d))
+
+  WRITE(6,*) "Reading x coordinate (lon)..."
+  call check( NF90_INQ_VARID(ncid3,grid_lon2d_name,varid) )   ! Longitude for T-cell
+! call check( NF90_GET_VAR(ncid3,varid,lon2d) )
+  call check( NF90_GET_VAR(ncid3,varid,work2d) )    !STEVE: (ISSUE) ask GFDL for clarification
+  lon2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
   WRITE(6,*) "lon2d(1,1) = ", lon2d(1,1)
   WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
 
-  call check( NF90_INQ_VARID(ncid,'y',varid) )   ! Latitude for T-cell
-  call check( NF90_GET_VAR(ncid,varid,lat2d) )
+  WRITE(6,*) "Reading y coordinate (lat)..."
+  call check( NF90_INQ_VARID(ncid3,grid_lat2d_name,varid) )   ! Latitude for T-cell
+! call check( NF90_GET_VAR(ncid3,varid,lat2d) )
+  call check( NF90_GET_VAR(ncid3,varid,work2d) )    !STEVE: (ISSUE) ask GFDL for clarification
+  lat2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
   WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
 
@@ -118,6 +135,7 @@ SUBROUTINE set_common_oceanmodel
 ! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MIN(area_t) = ", MINVAL(area_t)
 ! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MAX(area_t) = ", MAXVAL(area_t)
 
+  !STEVE: I don't really need this anymore with the kdtree-based search
   if (.true.) then !STEVE: this is TEMPORARY, until I figure out how to use the ocean_hgrid.nc data
     i=0
     j=0
@@ -149,8 +167,8 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
   ! kmt data
   !-----------------------------------------------------------------------------
-  !STEVE:MOM6: sum(h>0) (from MOM.res.nc) to find ocean layer depth, where depth > 0 (from ocean_togog.nc)
-  call check( NF90_INQ_VARID(ncid,'h',varid) ) ! number of vertical T-cells
+  !STEVE:MOM6: sum(h>0) (from MOM.res.nc) to find ocean layer <reference> depth, where depth > 0 (from ocean_togog.nc)
+  call check( NF90_INQ_VARID(ncid,grid_h_name,varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid,varid,height) )
   WRITE(6,*) "h(1,1,1) = ", height(1,1,1)
   WRITE(6,*) "h(nlon,nlat,nlev) = ", height(nlon,nlat,nlev)
@@ -164,7 +182,7 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,'(A)') '  >> accessing file: ', gridfile2
   call check( NF90_OPEN(trim(gridfile2),NF90_NOWRITE,ncid2) )
 
-  call check( NF90_INQ_VARID(ncid2,'depth',varid) ) ! number of vertical T-cells
+  call check( NF90_INQ_VARID(ncid2,grid_depth_name,varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid2,varid,depth) )
   WRITE(6,*) "depth(1,1) = ", depth(1,1)
   WRITE(6,*) "depth(nlon,nlat) = ", depth(nlon,nlat)
@@ -172,7 +190,7 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
 ! !STEVE:MOM6: from ocean_topog.nc:
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid2,'wet',varid) )        ! land/sea flag (0=land) for T-cell
+  call check( NF90_INQ_VARID(ncid2,grid_wet_name,varid) )        ! land/sea flag (0=land) for T-cell
   call check( NF90_GET_VAR(ncid2,varid,wet) )
   WRITE(6,*) "wet(1,1) = ", wet(1,1)
   WRITE(6,*) "wet(nlon,nlat) = ", wet(nlon,nlat)
@@ -242,18 +260,21 @@ END SUBROUTINE read_etaclm
 
 !STEVE: add this:
 !-- Read a diagnostic file in mom6 netcdf format ---------------------------------------------------
-SUBROUTINE read_diag(infile,v3d,v2d,prec)
+SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !STEVE: This subroutine reads the hourly/daily diagnostic files produced by MOM6
   !       The t,s,u,v,(ssh) fields are read in from the files so that the o-f data can be computed
   !       by the obsope.f90 program prior to running letkf.f90, so the diagnostic files do not have 
   !       to be touched during letkf runtime.
+  !STEVE: THUS, only the fields required for computing the OMFs need to be read in here.
+  !       The full 3d model prognostic variables can be read in via read_restart
   USE netcdf
   USE vars_model,   ONLY: SSHclm_m
   IMPLICIT NONE
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
-  INTEGER, INTENT(IN) :: prec ! precision, 1=single, 2=double
+  INTEGER, INTENT(IN), OPTIONAL :: prec_in ! precision, 1=single, 2=double
+  INTEGER :: prec ! precision, 1=single, 2=double
   REAL(r_sngl), ALLOCATABLE, DIMENSION(:,:,:) :: buf4 !(nlon,nlat,nlev)
   REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:) :: buf8 !(nlon,nlat,nlev)
   INTEGER :: i,j,k
@@ -262,6 +283,14 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   LOGICAL, PARAMETER :: dodebug = .true.
   CHARACTER(slen) :: varname
   INTEGER :: ivid
+
+  ! If prec is a provided argument, use indicated precision,
+  if(PRESENT(prec_in))then
+    prec = prec_in
+  else
+    ! otherwise default to single precision.
+    prec = 1
+  endif
 
   ! Assumed format of MOM6 diag file, specified in diag_table:
   !
@@ -363,6 +392,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open the T/S netcdf restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  WRITE(6,*) "read_diag:: opeing file: ",infile
   call check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
   WRITE(6,*) "read_diag :: just opened file ", infile
 
