@@ -16,7 +16,8 @@ model=mom6 #mom4, mom6, hycom, roms
 
 # Experiment name
 #name=${MACHINE}_${model}
-name=${MACHINE}_${model}.kdtree_test
+#name=${MACHINE}_${model}.kdtree_test
+name=${MACHINE}_${model}.2dlonlat.kdtree_update
 #name=test_$model
 #name=TESTc3
 
@@ -69,6 +70,7 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG vars_letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG letkf_local.o letkf_tools.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG input_nml_${model}.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG letkf.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE -o ${PGM} *.o $MPI_LIB $NETCDF_LIB $LBLAS
 

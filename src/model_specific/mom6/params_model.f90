@@ -24,8 +24,6 @@ PUBLIC
   INTEGER,PARAMETER :: ilev_sfc=1
 !
   INTEGER,PARAMETER :: nv3d=5 ! u,v,t,s,h            !(OCEAN)
-! INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
-! INTEGER,PARAMETER :: nv2d=7 ! ssh/t/s, + sfc fluxes: taux,tauy,heat,freshwater
   INTEGER,PARAMETER :: nv2d=5 ! ssh,sst,sss,eta,mld  !(OCEAN) !(ALTIMETRY)
   INTEGER,PARAMETER :: nv4d=0 ! x,y,z                !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
 
@@ -85,11 +83,54 @@ PUBLIC
   CHARACTER(14) :: gridfile2 = 'ocean_topog.nc'
   CHARACTER(14) :: gridfile3 = 'ocean_hgrid.nc'
 
+  ! variable names in gridfile:
+  CHARACTER(2) :: grid_lon_name = 'xh'
+  CHARACTER(2) :: grid_lat_name = 'yh'
+  CHARACTER(2) :: grid_lev_name = 'zl'
+  CHARACTER(4) :: grid_temp_name = 'temp'
+  CHARACTER(4) :: grid_salt_name = 'salt'
+  CHARACTER(1) :: grid_u_name = 'u'
+  CHARACTER(1) :: grid_v_name = 'v'
+  CHARACTER(1) :: grid_h_name = 'h'
+
+  CHARACTER(1) :: grid_lon2d_name = 'x'
+  CHARACTER(1) :: grid_lat2d_name = 'y'
+
+  CHARACTER(3) :: grid_wet_name = 'wet'
+  CHARACTER(5) :: grid_depth_name = 'depth'
+  CHARACTER(10):: grid_height_name = 'col_height'
+
+  ! variable names in diag file:
+  CHARACTER(2) :: diag_lon_name = 'xh'
+  CHARACTER(2) :: diag_lat_name = 'yh'
+  CHARACTER(2) :: diag_lev_name = 'zl'
+  CHARACTER(4) :: diag_temp_name = 'temp'
+  CHARACTER(4) :: diag_salt_name = 'salt'
+  CHARACTER(1) :: diag_u_name = 'u'
+  CHARACTER(1) :: diag_v_name = 'v'
+  CHARACTER(1) :: diag_h_name = 'h'
+  CHARACTER(3) :: diag_ssh_name = 'ssh'
+  CHARACTER(10):: diag_height_name = 'col_height'
+
+  ! variable names in restart file:
+  CHARACTER(2) :: rsrt_lon_name = 'xh'
+  CHARACTER(2) :: rsrt_lat_name = 'yh'
+  CHARACTER(2) :: rsrt_lev_name = 'zl'
+  CHARACTER(4) :: rsrt_temp_name = 'temp'
+  CHARACTER(4) :: rsrt_salt_name = 'salt'
+  CHARACTER(1) :: rsrt_u_name = 'u'
+  CHARACTER(1) :: rsrt_v_name = 'v'
+  CHARACTER(1) :: rsrt_h_name = 'h'
+
   !For input/output model files:
   CHARACTER(10) :: tsbase = 'MOM.res.nc'   !(and u, and h)
   CHARACTER(12) :: uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
   CHARACTER(slen) :: hbase
   CHARACTER(slen) :: drbase
+
+  !STEVE: needed to read in ocean_hgrid.nc with supergrid format
+  INTEGER :: nlon2d ! = 2*nlon  !STEVE: set below in initialize_params_model
+  INTEGER :: nlat2d ! = 2*nlat  !STEVE: set below in initialize_params_model
 
   ! Bounds checking (for output by common_mom4.f90::write_restart)
   LOGICAL :: do_physlimit=.true.
@@ -97,12 +138,16 @@ PUBLIC
   REAL(r_size) :: min_t = -4.0d0 ! ÂC
   REAL(r_size) :: max_s = 50.0d0 ! psu
   REAL(r_size) :: min_s =  0.0d0 ! psu
-  
+
   LOGICAL,SAVE :: params_model_initialized = .false.
 
 CONTAINS
 
+
 SUBROUTINE initialize_params_model
+!===============================================================================
+! Subroutine to initialize the parameters of the model
+!===============================================================================
 
   IMPLICIT NONE
 
@@ -115,8 +160,13 @@ SUBROUTINE initialize_params_model
   nlevall=nlev*nv3d+nv2d
   ngpv=nij0*nlevall
 
+  !STEVE: needed to read in ocean_hgrid.nc with supergrid format
+  nlon2d = 2*nlon+1 !(MOM6)
+  nlat2d = 2*nlat+1 !(MOM6)
+
   params_model_initialized = .true.
 
 END SUBROUTINE initialize_params_model
+
 
 END MODULE params_model

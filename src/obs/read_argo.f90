@@ -16,13 +16,14 @@ MODULE read_argo
 !===============================================================================
 
 USE common,                     ONLY: r_sngl, r_size, slen
-USE params_model,               ONLY: nlev
 USE params_obs,                 ONLY: id_t_obs, id_s_obs
 USE compute_profile_error,      ONLY: cmpTz
 
 IMPLICIT NONE
 
 PUBLIC :: read_argo_nc, argo_data
+
+PUBLIC
 
 INTEGER :: nobs, nobs0
 INTEGER :: i,j,k,n
@@ -102,9 +103,10 @@ REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: vals, stde
 REAL(r_size), ALLOCATABLE, DIMENSION(:) :: depth ! profile depths
 REAL(r_size) :: val
 INTEGER :: cnt, nlv
-LOGICAL :: dodebug=.true.
+LOGICAL :: dodebug=.false.
 REAL(r_size) :: missing_value=-99.0
 REAL(r_sngl) :: mvc=999
+
 
 !-------------------------------------------------------------------------------
 ! Open netcdf file
@@ -365,7 +367,7 @@ do i=1,cnt
   if (dodebug) print *, "read_argo.f90:: stde(:,i) = ", stde(:,i)
 ! if (dodebug) STOP(1)
 
-  do k=1,nlev
+  do k=1,nlv
     val = vals(k,i)
     err = stde(k,i)
     if (val < mvc .and. depth(k) < mvc .and. val > missing_value) then
@@ -389,6 +391,21 @@ do i=1,cnt
 enddo
 nobs = n
 if (dodebug) print *, "nobs = ", nobs
+
+! Explicitly deallocate temporary arrays
+DEALLOCATE(depth)
+DEALLOCATE(xlon)
+DEALLOCATE(ylat)
+DEALLOCATE(hour)
+DEALLOCATE(plat)
+DEALLOCATE(ptyp)
+DEALLOCATE(sid)
+DEALLOCATE(qkey)
+DEALLOCATE(vals)
+DEALLOCATE(stde)
+
+if (dodebug) print *, "Temporary arrays deallocated."
+if (dodebug) print *, "Returning from read_argo_nc..."
 
 END SUBROUTINE read_argo_nc
 

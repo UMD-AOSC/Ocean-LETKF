@@ -1,1 +1,0 @@
-/ncrc/home1/Steve.Penny/lf1u/OBS/historical/AVHRR_PATHFINDER/night/20110101001735-NODC-L3C_GHRSST-SSTskin-AVHRR_Pathfinder-PFV5.2_NOAA19_G_2011001_night-v02.0-fv01.0.nc
