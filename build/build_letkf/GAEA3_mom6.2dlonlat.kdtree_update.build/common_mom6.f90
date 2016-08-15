@@ -269,6 +269,10 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !       The full 3d model prognostic variables can be read in via read_restart
   USE netcdf
   USE vars_model,   ONLY: SSHclm_m
+  USE params_model, ONLY: diag_lon_name, diag_lat_name, diag_lev_name
+  USE params_model, ONLY: diag_temp_name, diag_salt_name
+  USE params_model, ONLY: diag_u_name, diag_v_name, diag_h_name
+  USE params_model, ONLY: diag_ssh_name, diag_height_name
   IMPLICIT NONE
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -401,7 +405,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !!! t
-  varname='temp'
+  varname=diag_temp_name
   ivid=iv3d_t
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -431,7 +435,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   ! !STEVE: end
 
   !!! s
-  varname='salt'
+  varname=diag_salt_name
   ivid=iv3d_s
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -459,7 +463,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   ! !STEVE: end
 
   !!! u
-  varname='u'
+  varname=diag_u_name
   ivid=iv3d_u
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -487,7 +491,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   ! !STEVE: end
 
   !!! v
-  varname='v'
+  varname=diag_v_name
   ivid=iv3d_v
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -519,7 +523,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !!! ssh
-  varname='ssh'
+  varname=diag_ssh_name
   ivid=iv2d_ssh
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -551,6 +555,10 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE netcdf
   USE params_letkf, ONLY: DO_UPDATE_H
   USE vars_model,   ONLY: SSHclm_m
+  USE params_model, ONLY: rsrt_lon_name, rsrt_lat_name, rsrt_lev_name
+  USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
+  USE params_model, ONLY: rsrt_u_name, rsrt_v_name
+  USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -596,7 +604,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! t
   !-----------------------------------------------------------------------------
-  varname='Temp'
+  varname=rsrt_temp_name
   ivid=iv3d_t
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -627,7 +635,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! s
   !-----------------------------------------------------------------------------
-  varname='Salt'
+  varname=rsrt_salt_name
   ivid=iv3d_s
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -659,7 +667,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
     !---------------------------------------------------------------------------
     !!! h
     !---------------------------------------------------------------------------
-    varname='h'
+    varname=rsrt_h_name
     ivid=iv3d_h
 
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -692,7 +700,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! u
   !-----------------------------------------------------------------------------
-  varname='u'
+  varname=rsrt_u_name
   ivid=iv3d_u
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -737,7 +745,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! v
   !-----------------------------------------------------------------------------
-  varname='v'
+  varname=rsrt_v_name
   ivid=iv3d_v
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -771,7 +779,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   altimetry : if(DO_ALTIMETRY) then
 
     !!! SSH
-    varname='ave_ssh'
+    varname=rsrt_ssh_name
     ivid=iv2d_ssh
 
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -779,18 +787,18 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
-        v2d(:,:,ivid) = buf4(:,:,1) - REAL(SSHclm_m(:,:),r_sngl)
+        v2d(:,:,ivid) = buf4(:,:,1)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
-        v2d(:,:,ivid) = REAL(buf8(:,:,1),r_sngl) - REAL(SSHclm_m(:,:),r_sngl)
+        v2d(:,:,ivid) = REAL(buf8(:,:,1),r_sngl)
     end select
 
-    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable ave_ssh"
+    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable ssh"
     if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable SSH"
 
     ! Convert SSH eta stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
-    v2d(:,:,ivid) = v2d(:,:,iv2d_eta) - SSHclm_m(:,:)
+    if (DO_SLA) v2d(:,:,ivid) = v2d(:,:,iv2d_eta) - SSHclm_m(:,:)
 
     ! !STEVE: debug
     if (dodebug) then
@@ -862,6 +870,10 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   USE netcdf
   USE params_letkf, ONLY: DO_UPDATE_H, DO_SLA
   USE vars_model,   ONLY: SSHclm_m
+  USE params_model, ONLY: rsrt_lon_name, rsrt_lat_name, rsrt_lev_name
+  USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
+  USE params_model, ONLY: rsrt_u_name, rsrt_v_name
+  USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
   CHARACTER(*),INTENT(IN) :: outfile
@@ -985,7 +997,7 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   enddo
   endif
 
-  call check( NF90_INQ_VARID(ncid,'Temp',varid) )
+  call check( NF90_INQ_VARID(ncid,rsrt_temp_name,varid) )
 
   !STEVE: debug DEBUG
   !STEVE: switch out the data to see if this writes properly
@@ -998,21 +1010,21 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   !-----------------------------------------------------------------------------
   !!! s
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid,'Salt',varid) )
+  call check( NF90_INQ_VARID(ncid,rsrt_salt_name,varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_s)) )
 
   !-----------------------------------------------------------------------------
   !!! h (MOM6)
   !-----------------------------------------------------------------------------
   if (DO_UPDATE_H) then
-    call check( NF90_INQ_VARID(ncid,'h',varid) )
+    call check( NF90_INQ_VARID(ncid,rsrt_h_name,varid) )
     call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_h)) )
   endif
 
   !-----------------------------------------------------------------------------
   !!! u
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid,'u',varid) )
+  call check( NF90_INQ_VARID(ncid,rsrt_u_name,varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_u)) )
 
   call check( NF90_CLOSE(ncid) )
@@ -1025,7 +1037,7 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   !-----------------------------------------------------------------------------
   !!! v
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid,'v',varid) )
+  call check( NF90_INQ_VARID(ncid,rsrt_v_name,varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_v)) )
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1033,7 +1045,7 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   if (DO_ALTIMETRY) then
     call check( NF90_OPEN(bfile,NF90_WRITE,ncid) )
-    call check( NF90_INQ_VARID(ncid,'ave_ssh',varid) )
+    call check( NF90_INQ_VARID(ncid,rsrt_ssh_name,varid) )
 
     ! Convert SSH stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
     if (DO_SLA) then

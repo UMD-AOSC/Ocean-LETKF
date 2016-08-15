@@ -113,14 +113,15 @@ PUBLIC
   CHARACTER(10):: diag_height_name = 'col_height'
 
   ! variable names in restart file:
-  CHARACTER(2) :: rsrt_lon_name = 'xh'
-  CHARACTER(2) :: rsrt_lat_name = 'yh'
-  CHARACTER(2) :: rsrt_lev_name = 'zl'
-  CHARACTER(4) :: rsrt_temp_name = 'temp'
-  CHARACTER(4) :: rsrt_salt_name = 'salt'
+  CHARACTER(2) :: rsrt_lon_name = 'lonh'
+  CHARACTER(2) :: rsrt_lat_name = 'lath'
+  CHARACTER(2) :: rsrt_lev_name = 'Layer'
+  CHARACTER(4) :: rsrt_temp_name = 'Temp'
+  CHARACTER(4) :: rsrt_salt_name = 'Salt'
   CHARACTER(1) :: rsrt_u_name = 'u'
   CHARACTER(1) :: rsrt_v_name = 'v'
   CHARACTER(1) :: rsrt_h_name = 'h'
+  CHARACTER(3) :: rsrt_ssh_name = 'ave_ssh'
 
   !For input/output model files:
   CHARACTER(10) :: tsbase = 'MOM.res.nc'   !(and u, and h)
