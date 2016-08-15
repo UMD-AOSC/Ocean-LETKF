@@ -1025,7 +1025,7 @@ SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
 
   ALLOCATE(bufs(nij1max,nlevall,nprocs), bufr(nij1max,nlevall))
 
-  ns = nij1max * nlevall
+  ns = nij1max * nlevall !STEVE: (ISSUE) consider nlevall replacing with nv. nlevall is nlevall=nlev*nv3d+nv2d, way bigger than we need here (e.g. nv0=8 above)
   nr = ns
   if (myrank == nrank) then
     j=0
