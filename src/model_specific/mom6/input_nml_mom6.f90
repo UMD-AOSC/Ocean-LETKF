@@ -8,22 +8,55 @@ PUBLIC :: read_input_namelist
 
 PRIVATE
   ! Namelist inputs:  
+ 
 #ifdef DYNAMIC
-  NAMELIST /params_model_nml/ gridfile, &  ! MOM6 file containing model grid information
-                              gridfile1,&  !
-                              gridfile2,&  !
-                              gridfile3,&  !
+  ! Grid dimensions are set in params_model.f90, but only used in a namelist if compiled for dynamic arrays:
+  NAMELIST /grid_dimensions_nml/ & 
                               nlon, &      ! number of longitude grid points (Can be specified via namelist or in netcdf gridfile)
                               nlat, &      ! number of latitude grid points
-                              nlev, &      ! number of model levels
-                              SSHclm_file  ! model ssh climatology for altimetry assimilation
-#else
+                              nlev         ! number of model levels
+#endif
+
   NAMELIST /params_model_nml/ gridfile, &  ! MOM4 grid_spec.nc file 
                               gridfile1,&  !
                               gridfile2,&  !
                               gridfile3,&  !
+                              tsbase,& !
+                              uvbase,& !
+                              grid_lon_name,& !
+                              grid_lat_name,& !
+                              grid_lev_name,& !
+                              grid_temp_name,& !
+                              grid_salt_name,& !
+                              grid_u_name,& !
+                              grid_v_name,& !
+                              grid_h_name,& !
+                              grid_lon2d_name,& !
+                              grid_lat2d_name,& !
+                              grid_wet_name,& !
+                              grid_depth_name,& !
+                              grid_height_name,& !
+                              diag_lon_name,& !
+                              diag_lat_name,& !
+                              diag_lev_name,& !
+                              diag_temp_name,& !
+                              diag_salt_name,& !
+                              diag_u_name,& !
+                              diag_v_name,& !
+                              diag_h_name,& !
+                              diag_ssh_name,& !
+                              diag_height_name,& !
+                              rsrt_lon_name,& !
+                              rsrt_lat_name,& !
+                              rsrt_lev_name,& !
+                              rsrt_temp_name,& !
+                              rsrt_salt_name,& !
+                              rsrt_u_name,& !
+                              rsrt_v_name,& !
+                              rsrt_h_name,& !
+                              rsrt_ssh_name,& !
                               SSHclm_file  ! model ssh climatology for altimetry assimilation
-#endif
+
   NAMELIST /params_obs_nml/   obs1nrec, &  ! number of records in obs.dat type file
                               obs2nrec     ! number of records in obs2.dat type file
 
@@ -65,6 +98,9 @@ SUBROUTINE read_input_namelist
   INQUIRE(FILE="input.nml", EXIST=ex)
   if (ex) then
     OPEN(fid,file="input.nml", status='OLD') !, delim='APOSTROPHE')
+#ifdef DYNAMIC
+    READ(fid,nml=grid_dimensions_nml)
+#endif
     READ(fid,nml=params_model_nml)
     READ(fid,nml=params_obs_nml)
     READ(fid,nml=params_letkf_nml)

@@ -84,11 +84,11 @@ PUBLIC
   CHARACTER(14) :: gridfile3 = 'ocean_hgrid.nc'
 
   ! variable names in gridfile:
-  CHARACTER(2) :: grid_lon_name = 'xh'
-  CHARACTER(2) :: grid_lat_name = 'yh'
-  CHARACTER(2) :: grid_lev_name = 'zl'
-  CHARACTER(4) :: grid_temp_name = 'temp'
-  CHARACTER(4) :: grid_salt_name = 'salt'
+  CHARACTER(2) :: grid_lon_name = 'lonh'
+  CHARACTER(2) :: grid_lat_name = 'lath'
+  CHARACTER(2) :: grid_lev_name = 'Layer'
+  CHARACTER(4) :: grid_temp_name = 'Temp'
+  CHARACTER(4) :: grid_salt_name = 'Salt'
   CHARACTER(1) :: grid_u_name = 'u'
   CHARACTER(1) :: grid_v_name = 'v'
   CHARACTER(1) :: grid_h_name = 'h'
