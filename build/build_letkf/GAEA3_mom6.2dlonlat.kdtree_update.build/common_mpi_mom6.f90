@@ -518,7 +518,7 @@ SUBROUTINE read_ens_mpi(file,member,v3d,v2d)
     if (im <= member) then
       WRITE(filename(1:7),'(A4,I3.3)') file,im
       WRITE(6,'(A,I3.3,2A)') 'In common_mpi_mom4.f90::read_ens_mpi, MYRANK ',myrank,' is reading a file ',filename
-      CALL read_restart(filename,v3dg,v2dg,1) !STEVE: 20150317, trying this out...
+      CALL read_restart(filename,v3dg,v2dg,2) !STEVE: 20150317, trying this out...
 !     CALL read_grd4(filename,v3dg,v2dg) !STEVE: 20130709, trying this out...
 !     CALL read_grd(filename,v3dg,v2dg)  !STEVE: causes type problem in scatter_grd_mpi
 !     if (.false.) CALL write_grd4('test.'//filename,v3dg,v2dg) 
@@ -575,7 +575,7 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
 !     WRITE(6,*) "common_mpi_mom4.f90::write_ens_mpi:: MAXVAL(ABS(v3dg(:,:,:,iv3d_t))) = ", MAXVAL(ABS(v3dg(:,:,:,iv3d_t)))
 !     WRITE(6,*) "common_mpi_mom4.f90::write_ens_mpi:: MAXVAL(ABS(v3dg(:,:,:,iv3d_s))) = ", MAXVAL(ABS(v3dg(:,:,:,iv3d_s)))
 
-      CALL write_restart(filename,v3dg,v2dg)
+      CALL write_restart(filename,v3dg,v2dg,2)
 !     CALL write_grd4(filename,v3dg,v2dg)
     endif
   enddo

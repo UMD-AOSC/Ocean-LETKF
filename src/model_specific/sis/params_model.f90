@@ -72,6 +72,29 @@ PUBLIC
   ! For grid_spec.nc data file:
   CHARACTER(12) :: gridfile = 'grid_spec.nc'
 
+  ! variable names in gridfile:
+  CHARACTER(8) :: grid_lon_name = 'grid_x_T'
+  CHARACTER(8) :: grid_lat_name = 'grid_y_T'
+  CHARACTER(2) :: grid_lev_name = 'zt'
+  CHARACTER(3) :: grid_lon2d_name = 'x_T'
+  CHARACTER(3) :: grid_lat2d_name = 'y_T'
+  CHARACTER(3) :: grid_wet_name = 'wet'
+  CHARACTER(10):: grid_kmt_name = 'num_levels'
+
+  ! variable names in diag file:
+  CHARACTER(6) :: diag_hs_name = 'h_snow'
+  CHARACTER(5) :: diag_hi_name = 'h_ice'
+  CHARACTER(6) :: diag_t1_name = 't_ice1'
+  CHARACTER(6) :: diag_t2_name = 't_ice2'
+  CHARACTER(9) :: diag_ps_name = 'part_size'
+
+  ! variable names in restart file:
+  CHARACTER(6) :: rsrt_hs_name = 'h_snow'
+  CHARACTER(5) :: rsrt_hi_name = 'h_ice'
+  CHARACTER(6) :: rsrt_t1_name = 't_ice1'
+  CHARACTER(6) :: rsrt_t2_name = 't_ice2'
+  CHARACTER(9) :: rsrt_ps_name = 'part_size'
+
   ! Bounds checking (for output by common_mom4.f90::write_restart)
   LOGICAL :: do_physlimit=.true.
   REAL(r_size) :: max_t = 40.0d0 ! ÂC

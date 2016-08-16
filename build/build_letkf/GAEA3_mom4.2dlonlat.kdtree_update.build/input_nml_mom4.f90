@@ -9,15 +9,23 @@ PUBLIC :: read_input_namelist
 PRIVATE
   ! Namelist inputs:  
 #ifdef DYNAMIC
-  NAMELIST /params_model_nml/ gridfile, &  ! MOM6 file containing model grid information
+  ! Grid dimensions are set in params_model.f90, but only used in a namelist if compiled for dynamic arrays:
+  NAMELIST /grid_dimensions_nml/ & 
                               nlon, &      ! number of longitude grid points (Can be specified via namelist or in netcdf gridfile)
                               nlat, &      ! number of latitude grid points
-                              nlev, &      ! number of model levels
-                              SSHclm_file  ! model ssh climatology for altimetry assimilation
-#else
+                              nlev         ! number of model levels
+#endif
+
+!#ifdef DYNAMIC
+!  NAMELIST /params_model_nml/ gridfile, &  ! MOM6 file containing model grid information
+!                              nlon, &      ! number of longitude grid points (Can be specified via namelist or in netcdf gridfile)
+!                              nlat, &      ! number of latitude grid points
+!                              nlev, &      ! number of model levels
+!                              SSHclm_file  ! model ssh climatology for altimetry assimilation
+!#else
   NAMELIST /params_model_nml/ gridfile, &  ! MOM4 grid_spec.nc file 
                               SSHclm_file  ! model ssh climatology for altimetry assimilation
-#endif
+!#endif
   NAMELIST /params_obs_nml/   obs1nrec, &  ! number of records in obs.dat type file
                               obs2nrec     ! number of records in obs2.dat type file
 
@@ -58,6 +66,9 @@ SUBROUTINE read_input_namelist
   INQUIRE(FILE="input.nml", EXIST=ex)
   if (ex) then
     OPEN(fid,file="input.nml", status='OLD') !, delim='APOSTROPHE')
+#ifdef DYNAMIC
+    READ(fid,nml=grid_dimensions_nml)
+#endif
     READ(fid,nml=params_model_nml)
     READ(fid,nml=params_obs_nml)
     READ(fid,nml=params_letkf_nml)

@@ -103,6 +103,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !STEVE: for debugging
   LOGICAL :: debug_sfckmt = .false.
   LOGICAL :: dodebug = .true.
+  LOGICAL :: doverbose = .false.
   LOGICAL :: debug_zeroinc = .false.
   INTEGER :: nn
   REAL(r_size) :: maxdep_val
@@ -218,7 +219,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   do ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
                !NOTE: I switched the loops for ij and ilev (below) based on an indication
                !      by T. Sluka that this improved performance due to caching issues (3/22/16)
-    if (dodebug) WRITE(6,*) "ij = ", ij
+    if (dodebug .or. doverbose) WRITE(6,*) "ij = ", ij
 
     !(OCEAN) The gridpoint is on land, so just assign undef values and CYCLE
     if (kmt1(ij) < 1) then
@@ -276,13 +277,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         !WRITE(6,*) "CYCLE: kmt1(ij) = ", kmt1(ij)
         EXIT !STEVE: skip all deeper levels
       endif
-      if (dodebug) WRITE(6,*) "ilev = ", ilev
-      if (dodebug) WRITE(6,*) "mlev = ", mlev
+      if (doverbose) WRITE(6,*) "ilev = ", ilev
+      if (doverbose) WRITE(6,*) "mlev = ", mlev
 
       !-------------------------------------------------------------------------
       ! Loop through all prognostic variables (e.g. temp, salt, u, v, etc.)
       !-------------------------------------------------------------------------
-      if (dodebug) WRITE(6,*) "Doing 3D variables..."
+      if (doverbose) WRITE(6,*) "Doing 3D variables..."
       do n=1,nv3d
         if (var_local_n2n(n) < n) then
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
@@ -290,7 +291,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         else
           !STEVE: need to change localization for obs below mlev - added to input arguments (3/25/2016)
           CALL obs_local(ij,ilev,mlev,var_local(n,:),hdxf,rdiag,rloc,dep,nobsl,nobstotal)
-          if (dodebug) WRITE(6,*) "letkf_tools.f90::post-obs_local(3d):: Assimilating ", nobsl, " observations."
+          if (dodebug .and. nobsl > 0) WRITE(6,*) "letkf_tools.f90::post-obs_local(3d):: Assimilating ", nobsl, " observations."
 
           parm = work3d(ij,ilev,n)
 
@@ -321,7 +322,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           !-------------------------------------------------------------------------
           ! Call LETKF MAIN subroutine
           !-------------------------------------------------------------------------
-!         if (dodebug) WRITE(6,*) "Calling letkf_core..."
+          if (doverbose) WRITE(6,*) "Calling letkf_core..."
           CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))
 
           if ( debug_zeroinc .and. nobsl > 0 ) then 
@@ -338,7 +339,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         endif
 
         !STEVE: Use the trans matrix computed in letkf_core to form the analysis ensemble
-!       if (dodebug) WRITE(6,*) "Setting anal3d..."
+        if (doverbose) WRITE(6,*) "Setting anal3d..."
         do m=1,nbv
           anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
           do k=1,nbv
@@ -374,7 +375,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       ! Go through the 2d variables
       !-------------------------------------------------------------------------
       if (ilev == 1) then !update 2d variable at ilev=1
-        if (dodebug) WRITE(6,*) "Doing 2D variables..."
+        if (doverbose) WRITE(6,*) "Doing 2D variables..."
         do n=1,nv2d
           if (var_local_n2n(nv3d+n) <= nv3d) then
             trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
@@ -384,7 +385,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d) !(inflation)
           else
             CALL obs_local(ij,ilev,mlev,var_local(n,:),hdxf,rdiag,rloc,dep,nobsl,nobstotal)
-            if (dodebug) WRITE(6,*) "letkf_tools.f90::post-obs_local(2d):: Assimilating ", nobsl, " observations."
+            if (dodebug .and. nobsl > 0) WRITE(6,*) "letkf_tools.f90::post-obs_local(2d):: Assimilating ", nobsl, " observations."
 
             parm = work2d(ij,n)
             !STEVE: check rdiag for > 0
@@ -422,9 +423,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       endif
 
       if (DO_NO_VERT_LOC .or. DO_MLD) then
-        if (dodebug) WRITE(6,*) "===================================================================="
-        if (dodebug) WRITE(6,*) "Doing DO_NO_VERT_LOC projection to lower levels..."
-        if (dodebug) WRITE(6,*) "===================================================================="
+        if (doverbose) WRITE(6,*) "===================================================================="
+        if (doverbose) WRITE(6,*) "Doing DO_NO_VERT_LOC projection to lower levels..."
+        if (doverbose) WRITE(6,*) "===================================================================="
         !STEVE: Assimilating SSTs: I want to assimilate ONLY profiles below the mixed layer,
         !       and BOTH profiles and SSTs in the mixed layer.
         ! If we are below the mixed layer depth, remove all SST data, do one more level, then
@@ -439,27 +440,27 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         if (DO_MLD .and. ilev > mlev) mlev=nlev
 
         do n=1,nv3d
-!         if (dodebug) WRITE(6,*) "n = ", n
+          if (doverbose) WRITE(6,*) "n = ", n
           do klev=ilev+1,mlev
-!           if (dodebug) WRITE(6,*) "set mean: klev = ", klev
+            if (doverbose) WRITE(6,*) "set mean: klev = ", klev
             anal3d(ij,klev,:,n) = mean3d(ij,klev,n)
           enddo
 
           do m=1,nbv
-!           if (dodebug) WRITE(6,*) "row member m = ", m
+!           if (doverbose) WRITE(6,*) "row member m = ", m
             !-------------------------------------------
             ! Update the whole layer with these weights:
             !-------------------------------------------
             do k=1,nbv
-!             if (dodebug) WRITE(6,*) "col member: k = ", k
+!             if (doverbose) WRITE(6,*) "col member: k = ", k
               do klev=ilev+1,mlev
-!              if (dodebug) WRITE(6,*) "set members: k, klev = ", k,klev
+!              if (doverbose) WRITE(6,*) "set members: k, klev = ", k,klev
                 if (klev <= kmt1(ij)) then !STEVE: apply the weights from this level to all deeper levels equally
-!                 if (dodebug) WRITE(6,*) "applying weights..."
+!                 if (doverbose) WRITE(6,*) "applying weights..."
                   anal3d(ij,klev,m,n) = anal3d(ij,klev,m,n) + gues3d(ij,klev,k,n) * trans(k,m,n)
                   work3d(ij,klev,:) = work3d(ij,ilev,:)   !adaptive inflation
                 else !STEVE: this depth is beyond the ocean floor
-!                 if (dodebug) WRITE(6,*) "hit land."
+!                 if (doverbose) WRITE(6,*) "hit land."
                   anal3d(ij,klev:nlev,m,n) = 0.0
                   work3d(ij,klev:nlev,n) = 0.0
                   EXIT
@@ -470,8 +471,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           enddo !m
         enddo !n
         ilev=mlev
-        if (dodebug) WRITE(6,*) "final mlev=ilev = ", ilev
-        if (dodebug) WRITE(6,*) "===================================================================="
+        if (doverbose) WRITE(6,*) "final mlev=ilev = ", ilev
+        if (doverbose) WRITE(6,*) "===================================================================="
       endif !DO_MLD
 
     enddo !ilev

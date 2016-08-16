@@ -1013,7 +1013,6 @@ END SUBROUTINE scatter_grd_mpi_smalltoall
 ! (since in the initialization, that is all we need)
 !-----------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
-  USE params_model, ONLY: nlevall
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: nrank
   INTEGER,INTENT(IN) :: nx,ny,nv
@@ -1023,9 +1022,9 @@ SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
   REAL(r_sngl), ALLOCATABLE :: bufr(:,:) !(nij1max,nlevall)
   INTEGER :: j,k,n,ierr,ns,nr
 
-  ALLOCATE(bufs(nij1max,nlevall,nprocs), bufr(nij1max,nlevall))
+  ALLOCATE(bufs(nij1max,nv,nprocs), bufr(nij1max,nv))
 
-  ns = nij1max * nlevall
+  ns = nij1max * nv
   nr = ns
   if (myrank == nrank) then
     j=0
