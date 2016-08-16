@@ -277,8 +277,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         !WRITE(6,*) "CYCLE: kmt1(ij) = ", kmt1(ij)
         EXIT !STEVE: skip all deeper levels
       endif
-      if (dodebug) WRITE(6,*) "ilev = ", ilev
-      if (dodebug) WRITE(6,*) "mlev = ", mlev
+      if (doverbose) WRITE(6,*) "ilev = ", ilev
+      if (doverbose) WRITE(6,*) "mlev = ", mlev
 
       !-------------------------------------------------------------------------
       ! Loop through all prognostic variables (e.g. temp, salt, u, v, etc.)

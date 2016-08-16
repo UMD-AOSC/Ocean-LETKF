@@ -27,15 +27,19 @@ CONTAINS
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_oceanmodel
   USE netcdf
-  USE params_model
+  USE params_model, ONLY: nlon, nlat !STEVE: for debugging
+  USE params_model, ONLY: gridfile
+  USE params_model, ONLY: grid_lon_name, grid_lat_name, grid_lev_name
+  USE params_model, ONLY: grid_lon2d_name, grid_lat2d_name
+  USE params_model, ONLY: grid_wet_name, grid_kmt_name
   USE vars_model
-! USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
 
   IMPLICIT NONE
   INTEGER :: i,j,k
   INTEGER :: ncid,ncid2,ncid3,istat,varid,dimid
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
+  LOGICAL :: doverbose = .true.
 
   WRITE(6,'(A)') 'Hello from set_common_sis'
   !
@@ -49,69 +53,66 @@ SUBROUTINE set_common_oceanmodel
     STOP(2)
   ENDIF
   WRITE(6,'(A)') '  >> accessing file: ', gridfile
-  call check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
-  call check( NF90_INQ_VARID(ncid,'grid_x_T',varid) )   ! Longitude for T-cell
-  call check( NF90_GET_VAR(ncid,varid,lon) )
-  WRITE(6,*) "lon(1) = ", lon(1)
-  WRITE(6,*) "lon(nlon) = ", lon(nlon)
-  call check( NF90_INQ_VARID(ncid,'grid_y_T',varid) )   ! Latitude for T-cell
-  call check( NF90_GET_VAR(ncid,varid,lat) )
-  WRITE(6,*) "lat(1) = ", lat(1)
-  WRITE(6,*) "lat(nlat) = ", lat(nlat)
-  call check( NF90_INQ_VARID(ncid,'zt',varid) )      ! depth of T-cell
+
+  !-----------------------------------------------------------------------------
+  ! Get 1d and 2d longitude fields:
+  !-----------------------------------------------------------------------------
+  CALL check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
+  CALL check( NF90_INQ_VARID(ncid,grid_lon_name,varid) )   ! Longitude for T-cell
+  CALL check( NF90_GET_VAR(ncid,varid,lon) )
+
+  if (doverbose) then
+    WRITE(6,*) "lon(1) = ", lon(1)
+    WRITE(6,*) "lon(nlon) = ", lon(nlon)
+  endif
+
+  CALL check( NF90_INQ_VARID(ncid,grid_lon2d_name,varid) )   ! Longitude for T-cell
+  CALL check( NF90_GET_VAR(ncid,varid,lon2d) )
+
+  if (doverbose) then
+    WRITE(6,*) "lon2d(1,1)       = ", lon2d(1,1)
+    WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! Get 1d and 2d latitude fields:
+  !-----------------------------------------------------------------------------
+  CALL check( NF90_INQ_VARID(ncid,grid_lat_name,varid) )   ! Latitude for T-cell
+  CALL check( NF90_GET_VAR(ncid,varid,lat) )
+
+  if (doverbose) then
+    WRITE(6,*) "lat(1) = ", lat(1)
+    WRITE(6,*) "lat(nlat) = ", lat(nlat)
+  endif
+
+  CALL check( NF90_INQ_VARID(ncid,grid_lat2d_name,varid) )   ! Longitude for T-cell
+  CALL check( NF90_GET_VAR(ncid,varid,lat2d) )
+
+  if (doverbose) then
+    WRITE(6,*) "lat2d(1,1)       = ", lat2d(1,1)
+    WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
+  endif
+
+  ! 
+  ! Lev data
+  !
+  call check( NF90_INQ_VARID(ncid,grid_lev_name,varid) )      ! depth of T-cell
   call check( NF90_GET_VAR(ncid,varid,lev) )
   WRITE(6,*) "lev(1) = ", lev(1)
   WRITE(6,*) "lev(nlev) = ", lev(nlev)
 
   !
-  ! dx and dy
-  !
-  call check( NF90_INQ_VARID(ncid,'ds_01_21_T',varid) )    ! width of T_cell (meters)
-  call check( NF90_GET_VAR(ncid,varid,dx) )
-  call check( NF90_INQ_VARID(ncid,'ds_10_12_T',varid) )    ! height of T_cell (meters)
-  call check( NF90_GET_VAR(ncid,varid,dy) )
-  call check( NF90_INQ_VARID(ncid,'area_T',varid) )        ! area of T_cell
-  call check( NF90_GET_VAR(ncid,varid,area_t) )
-  WRITE(6,*) "common_sis:: grid_spec.nc MIN(dx) = ", MINVAL(dx)
-  WRITE(6,*) "common_sis:: grid_spec.nc MAX(dx) = ", MAXVAL(dx)
-  WRITE(6,*) "common_sis:: grid_spec.nc MIN(dy) = ", MINVAL(dy)
-  WRITE(6,*) "common_sis:: grid_spec.nc MAX(dy) = ", MAXVAL(dy)
-  WRITE(6,*) "common_sis:: grid_spec.nc MIN(area_t) = ", MINVAL(area_t)
-  WRITE(6,*) "common_sis:: grid_spec.nc MAX(area_t) = ", MAXVAL(area_t)
-
-  !
   ! kmt data
   !
-  call check( NF90_INQ_VARID(ncid,'num_levels',varid) ) ! number of vertical T-cells
+  call check( NF90_INQ_VARID(ncid,grid_kmt_name,varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid,varid,kmt0) )
   WRITE(6,*) "kmt0(1,1) = ", kmt0(1,1)
   WRITE(6,*) "kmt0(nlon,nlat) = ", kmt0(nlon,nlat)
   kmt = NINT(kmt0)
-  call check( NF90_INQ_VARID(ncid,'wet',varid) )        ! land/sea flag (0=land) for T-cell
+  call check( NF90_INQ_VARID(ncid,grid_wet_name,varid) )        ! land/sea flag (0=land) for T-cell
   call check( NF90_GET_VAR(ncid,varid,wet) )
   WRITE(6,*) "wet(1,1) = ", wet(1,1)
   WRITE(6,*) "wet(nlon,nlat) = ", wet(nlon,nlat)
-
-  WRITE(6,*) "Using dx and dy from netcdf file: ", gridfile
-  WRITE(6,*) "dx(1,1) = ", dx(1,1)
-  WRITE(6,*) "dx(nlon,nlat) = ", dx(nlon,nlat)
-  WRITE(6,*) "dy(1,1) = ", dy(1,1)
-  WRITE(6,*) "dy(nlon,nlat) = ", dy(nlon,nlat)
-
-  !
-  ! Corioris parameter
-  !
-  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
-
-  ! Close the grid_spec.nc file:
-  call check( NF90_CLOSE(ncid) )
-
-  ! STEVE: for (more) generalized (longitude) grid:
-  lon0 = lon(1)
-  lonf = lon(nlon)
-  lat0 = lat(1)
-  latf = lat(nlat)
-  wrapgap = 360.0d0 - abs(lon0) - abs(lonf)
 
 END SUBROUTINE set_common_oceanmodel
 
@@ -123,6 +124,9 @@ END SUBROUTINE set_common_oceanmodel
 SUBROUTINE read_diag(infile,v3d,v2d,prec)
   USE params_model, ONLY: iv3d_hs, iv3d_hi, iv3d_t1, iv3d_t2, iv3d_ps, iv2d_cn
   USE params_model, ONLY: nlon,nlat,nlev,nv3d,nv2d
+  USE params_model, ONLY: diag_hs_name, diag_hi_name
+  USE params_model, ONLY: diag_t1_name, diag_t2_name
+  USE params_model, ONLY: diag_ps_name
   !STEVE: This subroutine reads the hourly/daily diagnostic files produced by SIS
   !       The (hs, hi, t1, t2, cn, ui, uv, etc.) fields are read in from the files so that the o-f data can be computed
   !       by the obsop_XXX.f90 program prior to running letkf.f90, so the diagnostic files do not have 
@@ -162,7 +166,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !!! snow thickness
-  varname='h_snow'
+  varname=diag_hs_name
   ivid=iv3d_hs
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -195,7 +199,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   ! !STEVE: end
 
   !!! ice thickness
-  varname='h_ice'
+  varname=diag_hi_name
   ivid=iv3d_hi
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -226,7 +230,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   ! !STEVE: end
 
   !!! layer 1 ice temperature
-  varname='t_ice1'
+  varname=diag_t1_name
   ivid=iv3d_t1
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -256,8 +260,8 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   endif
   ! !STEVE: end
 
-  !!! v
-  varname='t_ice2'
+  !!! layer 2 ice temperature
+  varname=diag_t2_name
   ivid=iv3d_t2
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -300,7 +304,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
       ALLOCATE(buf8(nlon,nlat,nlev+1))
   end select
 
-  varname='part_size'
+  varname=diag_ps_name
   ivid=iv3d_ps
 
   WRITE(6,*) "Reading part_size..."
@@ -336,15 +340,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
 
   !STEVE: assign concentration as integral of part size across all categories:
   ivid=iv2d_cn
-  WRITE(6,*) "Compute sum along categories (dimension 3)..."
-! v2d(:,:,ivid) = 0.0d0
-! do k=1,nlev
-!   do j=1,nlat
-!     do i=1,nlon
-!       v2d(i,j,ivid) = v2d(i,j,ivid) + v3d(i,j,k,iv3d_ps)
-!     enddo
-!   enddo
-! enddo
+  WRITE(6,*) "Compute concentration as sum along categories (dimension 3)..."
   v2d(:,:,ivid) = sum(v3d(:,:,:,iv3d_ps),dim=3)
   WRITE(6,*) "Assign values > 1 to be equal to 1..."
   where(v2d(:,:,ivid)>1) v2d(:,:,ivid)=1.0d0
@@ -375,6 +371,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE params_model, ONLY: iv3d_hs, iv3d_hi, iv3d_t1, iv3d_t2, iv3d_ps, iv2d_cn
   USE params_model, ONLY: nlon,nlat,nlev,nv3d,nv2d
   USE params_model, ONLY: nij0
+  USE params_model, ONLY: rsrt_hs_name, rsrt_hi_name
+  USE params_model, ONLY: rsrt_t1_name, rsrt_t2_name
+  USE params_model, ONLY: rsrt_ps_name
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -414,7 +413,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   WRITE(6,*) "read_restart:: just opened file ", ncfile
 
   !!! thickness of the upper snow layer
-  varname='h_snow'
+  varname=rsrt_hs_name
   ivid=iv3d_hs
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -443,7 +442,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 ! !STEVE: end
 
   !!! thickness of the lower ice layer
-  varname='h_ice'
+  varname=rsrt_hi_name
   ivid=iv3d_hi
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -463,7 +462,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 
  !STEVE: debug
   if (dodebug) then
-    WRITE(6,*) "POST-SALT"
+    WRITE(6,*) "POST-h_ice"
     WRITE(6,*) "read_restart :: ncfile = ", ncfile
     do k=1,nlev
       WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_hi) = ", MAXVAL(v3d(:,:,k,iv3d_hi))
@@ -472,7 +471,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 ! !STEVE: end
 
   !!! temperature of the top half ice layer
-  varname='t_ice1'
+  varname=rsrt_t1_name
   ivid=iv3d_t1
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -501,7 +500,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
 ! !STEVE: end
 
   !!! temperature of the bottom half ice layer
-  varname='t_ice2'
+  varname=rsrt_t2_name
   ivid=iv3d_t2
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -533,7 +532,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable t_ice2"
 
   !!! part_size, used to compute concentration
-  varname='part_size'
+  varname=rsrt_ps_name
   ivid=iv3d_ps
 
   select case(prec)
@@ -577,51 +576,12 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   v2d(:,:,ivid) = sum(v3d(:,:,:,iv3d_ps),dim=3)
   where(v2d(:,:,ivid)>1) v2d(:,:,ivid)=1.0d0
 
-  ! For additional variables:
-  ! E.g. surface fluxes, drifters
-
 ! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
 
   !STEVE: clean up undefined values:
   WHERE (ABS(v3d) .ge. vmax) v3d = 0.0
   WHERE (ABS(v2d) .ge. vmax) v2d = 0.0
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! !STEVE: debug test
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (.false.) then
-    testfile = "test_read4.grd"
-!   CALL write_grd(trim(testfile),v3d,v2d)
-
-    iunit=55
-    INQUIRE(IOLENGTH=iolen) iolen
-    OPEN(iunit,FILE=testfile,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
-
-    WRITE(6,*) "Writing to", testfile
-    irec=1
-    DO n=1,nv3d
-      DO k=1,nlev
-        WRITE(6,*) "n, k, irec = ", n, k, irec
-        WRITE(6,*) "max v3d(n) = ", MAXVAL(v3d(:,:,k,n))
-        WRITE(iunit,REC=irec) v3d(:,:,k,n)
-        irec = irec + 1
-      END DO
-    END DO
-
-    DO n=1,nv2d
-      WRITE(iunit,REC=irec) v2d(:,:,n)
-      irec = irec + 1
-    END DO
-    CLOSE(iunit)
-
-    WRITE(6,*) "Initially read from file: ", infile
-    WRITE(6,*) "STOP 10"
-    STOP(10)
-  endif
-! !STEVE: debug end
-
-! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
-!
 END SUBROUTINE read_restart
 
 
@@ -645,6 +605,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   USE params_model, ONLY: basefile
   USE params_model, ONLY: iv3d_hs, iv3d_hi, iv3d_t1, iv3d_t2, iv3d_ps, iv2d_cn
   USE params_model, ONLY: nlon,nlat,nlev,nv3d,nv2d
+  USE params_model, ONLY: rsrt_hs_name, rsrt_hi_name
+  USE params_model, ONLY: rsrt_t1_name, rsrt_t2_name
+  USE params_model, ONLY: rsrt_ps_name
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
   CHARACTER(*),INTENT(IN) :: outfile
@@ -671,113 +634,25 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   v3d = REAL(v3d_in,r_size)
   v2d = REAL(v2d_in,r_size)
 
-  ! STEVE: for safety, clean up the variables for output:
-  if (do_physlimit) then
-  do k=1,nlev
-    do j=1,nlat
-      do i=1,nlon
-!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_t) .ne. 0.0 ) then
-!         WRITE(6,*) "WARNING: data on land point in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
-!         v3d(i,j,k,iv3d_t) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_s) .ne. 0.0 ) then
-!         WRITE(6,*) "WARNING: data on land point in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
-!         v3d(i,j,k,iv3d_s) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_u) .ne. 0.0 ) then
-!         WRITE(6,*) "WARNING: data on land point in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
-!         v3d(i,j,k,iv3d_u) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_v) .ne. 0.0 ) then
-!         WRITE(6,*) "WARNING: data on land point in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
-!         v3d(i,j,k,iv3d_v) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (k .eq. 1 .and. kmt(i,j) .eq. 0) then 
-!         if (v2d(i,j,iv2d_sst) .ne. 0.0 ) v2d(i,j,iv2d_sst) = 0.0 !NF90_FILL_FLOAT
-!         if (v2d(i,j,iv2d_sss) .ne. 0.0 ) v2d(i,j,iv2d_sss) = 0.0 !NF90_FILL_FLOAT
-!         if (v2d(i,j,iv2d_ssh) .ne. 0.0 ) v2d(i,j,iv2d_ssh) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (v3d(i,j,k,iv3d_t) < -4) then
-!         WRITE(6,*) "WARNING: Bad temp value in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
-!         v3d(i,j,k,iv3d_t) = -4.0
-!       endif
-
-!       if (v3d(i,j,k,iv3d_t) > 40.0) then
-!         WRITE(6,*) "WARNING: Bad temp value in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
-!         v3d(i,j,k,iv3d_t) = 40.0
-!       endif
-
-!       if (v3d(i,j,k,iv3d_s) < 0 ) then
-!         WRITE(6,*) "WARNING: Bad salt value in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
-!         v3d(i,j,k,iv3d_s) = 0.0
-!       endif
-
-!       if (v3d(i,j,k,iv3d_s) > 50.0) then
-!         WRITE(6,*) "WARNING: Bad salt value in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
-!         v3d(i,j,k,iv3d_s) = 50.0
-!       endif
-
-!       if (nv2d > 1 .and. k .eq. 1) then
-!         if (v2d(i,j,iv2d_sst) < -4) v2d(i,j,iv2d_sst) = -4.0
-!         if (v2d(i,j,iv2d_sst) > 40.0) v2d(i,j,iv2d_sst) = 40.0
-!         if (v2d(i,j,iv2d_sss) < 0) v2d(i,j,iv2d_sss) = 0.0
-!         if (v2d(i,j,iv2d_sss) > 50.0) v2d(i,j,iv2d_sss) = 50.0
-!       endif
-
-      enddo
-    enddo
-  enddo
-  endif
-  
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !STEVE: open netcdf diagnostic/restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   call check( NF90_OPEN(ncfile,NF90_WRITE,ncid) )
 
   !!! h_snow
-  !STEVE: for debugging
-  if (.false.) then
-  do m=1,nv3d
-    do k=1,nlev
-      do j=1,nlat
-        do i=1,nlon
-!       if ( isnan( REAL(v3d(i,j,k,m),r_size) ) )then
-!         WRITE(6,*) "common_sis.f90::write_grd:: ERROR: found NaN..."
-!         WRITE(6,*) "v3d(i,j,k,m) contains NaN. i,j,k,m = ", i,j,k,m
-!         STOP 1
-!       endif
-        enddo
-      enddo
-    enddo
-  enddo
-  endif
-
-  call check( NF90_INQ_VARID(ncid,'h_snow',varid) )
+  call check( NF90_INQ_VARID(ncid,rsrt_hs_name,varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_hs)) )
 
   !!! h_ice
-  call check( NF90_INQ_VARID(ncid,'h_ice',varid) )
+  call check( NF90_INQ_VARID(ncid,rsrt_hi_name,varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_hi)) )
 
   !!! t_ice1
-  call check( NF90_INQ_VARID(ncid,'t_ice1',varid) )
+  call check( NF90_INQ_VARID(ncid,rsrt_t1_name,varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_t1)) )
 
   !!! t_ice2
-  call check( NF90_INQ_VARID(ncid,'t_ice2',varid) )
+  call check( NF90_INQ_VARID(ncid,rsrt_t2_name,varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_t2)) )
 
   call check( NF90_CLOSE(ncid) )
@@ -861,6 +736,9 @@ SUBROUTINE write_grd(filename,v3d,v2d)
   CLOSE(iunit)
 
 END SUBROUTINE write_grd
+
+
+
 !-----------------------------------------------------------------------
 ! Monitor
 !-----------------------------------------------------------------------
@@ -884,6 +762,7 @@ SUBROUTINE monit_grd(v3d,v2d)
   END DO
 
 END SUBROUTINE monit_grd
+
 
 !-----------------------------------------------------------------------
 ! Ensemble manipulations
