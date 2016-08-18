@@ -27,12 +27,16 @@ CONTAINS
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_oceanmodel
   USE netcdf
-  USE params_model, ONLY: nlon, nlat !STEVE: for debugging
+  USE params_model, ONLY: nlon, nlat, nlev !STEVE: for debugging
   USE params_model, ONLY: gridfile
   USE params_model, ONLY: grid_lon_name, grid_lat_name, grid_lev_name
   USE params_model, ONLY: grid_lon2d_name, grid_lat2d_name
   USE params_model, ONLY: grid_wet_name, grid_kmt_name
-  USE vars_model
+  USE params_model, ONLY: initialize_params_model
+  USE vars_model,   ONLY: initialize_vars_model
+  USE vars_model,   ONLY: lon, lat, lev, lon2d, lat2d
+  USE vars_model,   ONLY: kmt0, kmt, wet
+  USE vars_model,   ONLY: set_vars_model
 
   IMPLICIT NONE
   INTEGER :: i,j,k
@@ -42,10 +46,12 @@ SUBROUTINE set_common_oceanmodel
   LOGICAL :: doverbose = .true.
 
   WRITE(6,'(A)') 'Hello from set_common_sis'
-  !
+  CALL initialize_params_model ! (checks to make sure it is initialized)
+  CALL initialize_vars_model   ! (checks to make sure it is initialized)
+
+  !-----------------------------------------------------------------------------
   ! Lon, Lat, f, orography
-  !
-!STEVE: GOAL: to utilize all netcdf grid data to completely define the grid and all grid-dependent operations
+  !-----------------------------------------------------------------------------
   INQUIRE(FILE=trim(gridfile),EXIST=ex)
   IF(.not. ex) THEN
     WRITE(6,*) "The file does not exist: ", gridfile
@@ -114,6 +120,10 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,*) "wet(1,1) = ", wet(1,1)
   WRITE(6,*) "wet(nlon,nlat) = ", wet(nlon,nlat)
 
+  ! Set model variables that depend on initialization and further processing.
+  ! (e.g. lon0, lat0, lonf, latf, wrapgap, ...)
+  CALL set_vars_model
+
 END SUBROUTINE set_common_oceanmodel
 
 !-----------------------------------------------------------------------
@@ -121,7 +131,7 @@ END SUBROUTINE set_common_oceanmodel
 !-----------------------------------------------------------------------
 !STEVE: add this:
 !-- Read a diagnostic file in sis netcdf format ---------------------------------------------------
-SUBROUTINE read_diag(infile,v3d,v2d,prec)
+SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   USE params_model, ONLY: iv3d_hs, iv3d_hi, iv3d_t1, iv3d_t2, iv3d_ps, iv2d_cn
   USE params_model, ONLY: nlon,nlat,nlev,nv3d,nv2d
   USE params_model, ONLY: diag_hs_name, diag_hi_name
@@ -138,7 +148,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
-  INTEGER, INTENT(IN) :: prec ! precision, 1=single, 2=double
+  INTEGER, INTENT(IN), OPTIONAL :: prec_in ! precision, 1=single, 2=double
   REAL(r_sngl), ALLOCATABLE, DIMENSION(:,:,:) :: buf4 !(nlon,nlat,nlev)
   REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:) :: buf8 !(nlon,nlat,nlev)
   INTEGER :: i,j,k
@@ -147,6 +157,14 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   LOGICAL, PARAMETER :: dodebug = .true.
   CHARACTER(slen) :: varname
   INTEGER :: ivid
+  INTEGER :: prec
+
+  if (PRESENT(prec_in)) then
+    prec = prec_in 
+  else
+    prec = 2
+    WRITE(6,*) "common_sis.f90::read_diag:: using default precision = ", prec
+  endif
 
   select case(prec)
     case(1)

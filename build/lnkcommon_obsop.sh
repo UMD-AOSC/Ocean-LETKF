@@ -40,6 +40,8 @@ cp $OBSDIR/obsop_sprof.f90 ./
 cp $OBSDIR/obsop_sst.f90 ./
 cp $OBSDIR/obsop_adt.f90 ./
 cp $OBSDIR/gsw_pot_to_insitu.f90 ./
+cp $OBSDIR/read_ice_txt.f90 ./
+cp $OBSDIR/obsop_icefrac.f90 ./
 
 # Software package for equation of state computation from TEOS-2010
 GSWDIR=$root/src/obs/gsw_fortran_v3_03
