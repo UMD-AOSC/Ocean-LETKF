@@ -38,7 +38,7 @@ source $CONFIGDIR/$MACHINE.netcdf.sh
 source $CONFIGDIR/$MACHINE.modules_ldtn.sh
 
 # Model name:
-model=mom6
+model=hycom
 
 # Experiment name:
 name=${MACHINE}_${model}.2dlonlat.kdtree_update
