@@ -51,6 +51,9 @@ BDIR=$CDIR/build_obsop/$name.build
 mkdir -p $BDIR
 cd $BDIR
 
+#STEVE: for debugging:
+#F90_OPT="$F90_OPT -check all"
+
 #===============================================================================
 rm -f $BDIR/*.f90
 rm -f $BDIR/*.f

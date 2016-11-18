@@ -728,7 +728,7 @@ SUBROUTINE write_grd(filename,v3d,v2d)
   REAL(r_sngl),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   INTEGER :: iunit,iolen
   INTEGER :: i,j,k,n,irec
-  LOGICAL, PARAMETER :: dodebug=.false.
+  LOGICAL, PARAMETER :: dodebug=.true.
 
   if (dodebug) print *, "write_grd:: open filename = ",filename
   iunit=55

@@ -9,7 +9,7 @@ IMPLICIT NONE
 !
 ! NOTE: The code ASSUMES that the profiles are only defined on the model grid
 !       levels. The behavoir when that is not the case (e.g. if the raw observation
-!       profiles were uses) is unknown.
+!       profiles were used) is unknown.
 !
 ! Authors:
 !       Steve Penny
@@ -24,9 +24,9 @@ IMPLICIT NONE
 !                1.0             1.0
 !                1.5             0.4444
 !
-REAL, PARAMETER :: maxerr = 999.0
-REAL, PARAMETER :: kav = 5
-REAL, PARAMETER :: teps = 0.00005 !epsilon(1.0)
+REAL,    PARAMETER :: maxerr = 999.0 !STEVE: large number assigned as max error
+REAL,    PARAMETER :: teps = 0.00005 !epsilon(1.0)  !STEVE: a small number
+INTEGER, PARAMETER :: kav = 5        !STEVE: indicates how many gridpoints to use in the vetical averaging
 !LOGICAL :: DO_SCALEDZ=.false.
 LOGICAL :: DO_SQRT=.false.
 LOGICAL :: dodebug=.false.
@@ -41,7 +41,7 @@ CONTAINS
 
 SUBROUTINE cmpTz(se,se0,seF,t,z,kd,spv)
   USE common, ONLY: r_size
-  INTEGER ::  k, kk, km, kp, kv2, cnt, kav
+  INTEGER ::  k, kk, km, kp, kv2, cnt
   REAL :: tzmn, tzmx
   REAL(r_size),DIMENSION(kd), INTENT(OUT) :: se  ! standard deviations (errors)
   REAL(r_size), INTENT(IN) :: se0

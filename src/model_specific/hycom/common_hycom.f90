@@ -377,7 +377,7 @@ END SUBROUTINE read_etaclm
 
 
 !STEVE: add this:
-SUBROUTINE read_diag(infile,v3d,v2d,prec)
+SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 !===============================================================================
 ! Read a archive/restart file in binary format extracted from hycom ab-format
 !===============================================================================
@@ -395,7 +395,8 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:,:),INTENT(OUT) :: v3d !(nlon,nlat,nlev,nv3d)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:),  INTENT(OUT) :: v2d !(nlon,nlat,nv2d)
-  INTEGER, INTENT(IN) :: prec ! precision, 1=single, 2=double
+  INTEGER, INTENT(IN), OPTIONAL :: prec_in ! precision, 1=single, 2=double
+  INTEGER :: prec
   REAL(r_sngl), ALLOCATABLE, DIMENSION(:,:,:) :: buf4 !(nlon,nlat,nlev)
   REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:) :: buf8 !(nlon,nlat,nlev)
   INTEGER :: i,j,k
@@ -407,6 +408,14 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec)
   ALLOCATE(v3d(nlon,nlat,nlev,nv3d))
   ALLOCATE(v2d(nlon,nlat,nv2d))
 
+  ! Check for input argument for precision
+  if (PRESENT(prec_in)) then
+    prec = prec_in
+  else
+    prec = 1 ! default is 1
+  endif
+
+  ! Use specified precision
   if (prec == 1) then
     WRITE(6,*) "read_diag::  single precision requested, but option not available at this time."
     WRITE(6,*) "read_diag::  using double precision read..."
@@ -457,7 +466,7 @@ END SUBROUTINE read_diag
 
 !-----------------------------------------------------------------------
 !-- Read a restart file at the analysis time  --------------------------
-SUBROUTINE read_restart(infile,v3d,v2d,prec)
+SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
   !STEVE: This subroutine reads the HYCOM restart file.
   !       The t,s,u,v,(ssh) fields are read in from a file so that the transform can be applied to them.
   !       It is assumed that the o-f data have already been computed by the obsope.f90 program prior
@@ -470,14 +479,22 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),ALLOCATABLE,DIMENSION(:,:,:,:),INTENT(OUT) :: v3d !(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),ALLOCATABLE,DIMENSION(:,:,:),  INTENT(OUT) :: v2d !(nlon,nlat,nv2d)
-  INTEGER, INTENT(IN) :: prec ! precision, 1 = single, 2 = double
+  INTEGER, INTENT(IN), OPTIONAL :: prec_in ! precision, 1=single, 2=double
+  INTEGER :: prec
   REAL(r_size), ALLOCATABLE :: v3d8(:,:,:,:)
   REAL(r_size), ALLOCATABLE :: v2d8(:,:,:)
+
+  ! Check for input argument for precision
+  if (PRESENT(prec_in)) then
+    prec = prec_in
+  else
+    prec = 2 ! default is 2
+  endif
 
 ! !STEVE: for now, only use the HYCOM archive format. The output ab file will be converted to a restart file externally.
   ALLOCATE(v3d(nlon,nlat,nlev,nv3d),v2d(nlon,nlat,nv2d))
   ALLOCATE(v3d8(nlon,nlat,nlev,nv3d),v2d8(nlon,nlat,nv2d))
-  CALL read_diag(infile,v3d8,v2d8,prec)
+  CALL read_diag(infile,v3d8,v2d8,prec) !WARNING - default for read_diag may be prec=1
   v3d = REAL(v3d8,r_sngl)
   v2d = REAL(v2d8,r_sngl)
   DEALLOCATE(v3d8,v2d8)
