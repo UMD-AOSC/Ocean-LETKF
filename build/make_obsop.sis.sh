@@ -70,10 +70,6 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG kdtree.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG common_obs_$model.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG read_ice_txt.f90
 #--
-# Equation of state for converting from model to obs space is in here:
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_oceanographic_toolbox.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_pot_to_insitu.f90
-#--
 $F90 $OMP $F90_OPT obsop_icefrac.f90 -o ${PGM}.icefrac.x *.o $NETCDF_LIB
 
 rm -f *.mod

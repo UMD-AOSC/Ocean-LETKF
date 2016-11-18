@@ -112,6 +112,7 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   LOGICAL :: ijset=.false.
   REAL(r_size) :: lonA,lonB,latA,latB
   INTEGER :: i0,j0,i1,j1
+  REAL(r_size),DIMENSION(2) :: llpt ! array for lon,lat point
 
   LOGICAL :: dodebug = .false.
 
@@ -144,7 +145,8 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   ! query the KD-tree
   !-----------------------------------------------------------------------------
   if (rlon .ne. prev_lon .or. rlat .ne. prev_lat) then
-    CALL kd_search_nnearest(kdtree_root,  (/rlon, rlat/), k_sought, idx, dist, k_found, .false.)
+    llpt = (/rlon, rlat/)
+    CALL kd_search_nnearest(kdtree_root, llpt, k_sought, idx, dist, k_found, .false.)
     prev_lon = rlon
     prev_lat = rlat
     if (dodebug) then
@@ -889,7 +891,7 @@ SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
 END SUBROUTINE write_obs
 
 
-SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag)
+SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag_in)
 !===============================================================================
 ! Write out observations with appended H(xb) for each ob
 !===============================================================================
@@ -903,17 +905,49 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag
   REAL(r_size),INTENT(IN) :: odat(nn)
   REAL(r_size),INTENT(IN) :: oerr(nn)
   REAL(r_size),INTENT(IN) :: ohx(nn)
-  REAL(r_size),OPTIONAL,INTENT(IN) :: obhr(nn)
-  LOGICAL,OPTIONAL,INTENT(IN) :: qcflag
+  REAL(r_size),OPTIONAL,INTENT(IN) :: obhr(nn)     ! Optional, array of time indices giving the non-interger hour
+  LOGICAL,     OPTIONAL,INTENT(IN) :: qcflag_in    ! Optional, flag to remove all qc'd data from the output prior to writing
+  LOGICAL :: qcflag
   INTEGER,INTENT(IN) :: oqc(nn)
   REAL(r_sngl),ALLOCATABLE :: wk(:)
   INTEGER :: n,iunit
   LOGICAL, PARAMETER :: dodebug=.false.
+
+  if (PRESENT(qcflag_in)) then
+    qcflag = qcflag_in
+  else
+    qcflag = .false.
+  endif
  
+  if (dodebug) then
+    WRITE(6,*) "common_obs_mom4::write_obs2::"
+    WRITE(6,*) "obs2nrec = ", obs2nrec
+  endif
+  if (dodebug) WRITE(6,*) "ALLOCATE wk..."
   ALLOCATE(wk(obs2nrec))
+  if (dodebug) WRITE(6,*) "Done ALLOCATE wk."
   iunit=92
+  if (dodebug) WRITE(6,*) "Open iunit ",iunit, "..."
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  if (dodebug) WRITE(6,*) "Done Open iunit ",iunit,"."
+
+  if (dodebug) WRITE(6,*) "nn = ", nn
+  if (dodebug) then
+    print *, "wk = ", wk
+    print *, "elem(1) = ", elem(1)
+    print *, "rlon(1) = ", rlon(1)
+    print *, "rlat(1) = ", rlat(1)
+    print *, "rlev(1) = ", rlev(1)
+    print *, "odat(1) = ", odat(1)
+    print *, "oerr(1) = ", oerr(1)
+    print *, "ohx(1)  = ", ohx(1)
+    print *, "oqc(1)  = ", oqc(1)
+    print *, "obhr(1) = ", obhr(1)
+  endif
+
   do n=1,nn
+    if (dodebug) print *, "n = ", n
+    if (dodebug) WRITE(6,*) "n = ", n," / ",nn
     if (qcflag .and. oqc(n)==0) CYCLE
     wk(1) = REAL(elem(n),r_sngl)   ! ID for observation type
     wk(2) = REAL(rlon(n),r_sngl)   ! Ob lon
@@ -931,6 +965,8 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag
     endif
     WRITE(iunit) wk
   enddo
+
+  if (dodebug) WRITE(6,*) "write_obs2:: returning..."
 
   CLOSE(iunit)
 

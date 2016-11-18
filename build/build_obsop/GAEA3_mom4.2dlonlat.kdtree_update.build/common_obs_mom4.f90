@@ -112,6 +112,7 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   LOGICAL :: ijset=.false.
   REAL(r_size) :: lonA,lonB,latA,latB
   INTEGER :: i0,j0,i1,j1
+  REAL(r_size),DIMENSION(2) :: llpt ! array for lon,lat point
 
   LOGICAL :: dodebug = .false.
 
@@ -144,7 +145,8 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   ! query the KD-tree
   !-----------------------------------------------------------------------------
   if (rlon .ne. prev_lon .or. rlat .ne. prev_lat) then
-    CALL kd_search_nnearest(kdtree_root,  (/rlon, rlat/), k_sought, idx, dist, k_found, .false.)
+    llpt = (/rlon, rlat/)
+    CALL kd_search_nnearest(kdtree_root, llpt, k_sought, idx, dist, k_found, .false.)
     prev_lon = rlon
     prev_lat = rlat
     if (dodebug) then
@@ -689,74 +691,6 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
     CALL center_obs_coords(rlon,oerr,nn)
   endif
     
-! do n=1,nn
-!   ! Special processing for obs:
-!   !STEVE: this handles the fact that the observations are typically on a 0 to 360º grid, while
-!   !       the NCEP mom4p1 grid configuration is on a ~ -285 to 75º grid
-!   if (process_obs) then
-!     if (rlon(n) >= lonf) then
-!       if (dodebug) then
-!         WRITE(6,*) "letkf_obs.f90:: Wrapping large lon obs to model grid: n = ", n
-!         WRITE(6,*) "pre  - rlon(n) = ", rlon(n)
-!         WRITE(6,*) "360 - rlon(n) = ", 360.0 - rlon(n)
-!       endif
-!       ! Update the coordinate
-!       if (abs(rlon(n) - lonf) < wrapgap ) then
-!         ! First, handle observations that are just outside of the model grid
-!         !STEVE: shift it if it's just outside grid
-!         if (abs(rlon(n) - lonf) < wrapgap/2) then
-!           rlon(n) = lonf
-!         else
-!           rlon(n) = lon0
-!         endif
-!         ! Increase error to compensate
-!         oerr(n) = oerr(n)*2
-!       else
-!         ! Otherwise, wrap the observation coordinate to be inside of the defined model grid coordinates
-!         !Wrap the coordinate
-!         rlon(n) = REAL(lon0 + abs(rlon(n) - lonf) - wrapgap,r_size)
-!       endif
-!       if (dodebug) WRITE(6,*) "post - rlon(n) = ", rlon(n)
-!     elseif (rlon(n) < lon0) then
-!       if (dodebug) then
-!         WRITE(6,*) "letkf_obs.f90:: Wrapping small lon obs to model grid: n = ", n
-!         WRITE(6,*) "pre  - rlon(n) = ", rlon(n)
-!         WRITE(6,*) "360 - rlon(n) = ", 360.0 - rlon(n)
-!       endif
-!       ! Update the coordinate
-!       if (abs(lon0 - rlon(n)) < wrapgap ) then
-!         !STEVE: shift it if it's just outside grid
-!         if (abs(lon0 - rlon(n)) < wrapgap/2) then
-!           rlon(n) = lon0
-!         else
-!           rlon(n) = lonf 
-!         endif
-!         ! Increase error to compensate                                 
-!         oerr(n) = oerr(n)*2
-!       else
-!         !Wrap the coordinate
-!         rlon(n) = REAL(lonf - abs(lon0 - rlon(n)) + wrapgap,r_size)
-!       endif
-!       if (dodebug) WRITE(6,*) "post - rlon(n) = ", rlon(n)
-!     endif
-!   endif 
-! enddo
-
-! if (MAXVAL(rlon) > lonf) then
-!   WRITE(6,*) "read_obs:: Error: MAX(observation lon, i.e. rlon) > lonf"
-!   WRITE(6,*) "rlon = ", rlon
-!   WRITE(6,*) "lonf = ", lonf
-!   WRITE(6,*) "lon(nlon) = ", lon(nlon)
-!   STOP(2)
-! endif
-! if (MINVAL(rlon) < lon0) then
-!   WRITE(6,*) "read_obs:: Error: MIN(observation lon, i.e. rlon) < lon0"
-!   WRITE(6,*) "rlon = ", rlon
-!   WRITE(6,*) "lon0 = ", lon0
-!   WRITE(6,*) "lon(1) = ", lon(1)
-!   STOP(2)
-! endif
-
 END SUBROUTINE read_obs
 
 
@@ -957,7 +891,7 @@ SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
 END SUBROUTINE write_obs
 
 
-SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
+SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag_in)
 !===============================================================================
 ! Write out observations with appended H(xb) for each ob
 !===============================================================================
@@ -971,16 +905,50 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
   REAL(r_size),INTENT(IN) :: odat(nn)
   REAL(r_size),INTENT(IN) :: oerr(nn)
   REAL(r_size),INTENT(IN) :: ohx(nn)
-  REAL(r_size),OPTIONAL,INTENT(IN) :: obhr(nn)
+  REAL(r_size),OPTIONAL,INTENT(IN) :: obhr(nn)     ! Optional, array of time indices giving the non-interger hour
+  LOGICAL,     OPTIONAL,INTENT(IN) :: qcflag_in    ! Optional, flag to remove all qc'd data from the output prior to writing
+  LOGICAL :: qcflag
   INTEGER,INTENT(IN) :: oqc(nn)
   REAL(r_sngl),ALLOCATABLE :: wk(:)
   INTEGER :: n,iunit
   LOGICAL, PARAMETER :: dodebug=.false.
+
+  if (PRESENT(qcflag_in)) then
+    qcflag = qcflag_in
+  else
+    qcflag = .false.
+  endif
  
+  if (dodebug) then
+    WRITE(6,*) "common_obs_mom4::write_obs2::"
+    WRITE(6,*) "obs2nrec = ", obs2nrec
+  endif
+  if (dodebug) WRITE(6,*) "ALLOCATE wk..."
   ALLOCATE(wk(obs2nrec))
+  if (dodebug) WRITE(6,*) "Done ALLOCATE wk."
   iunit=92
+  if (dodebug) WRITE(6,*) "Open iunit ",iunit, "..."
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  if (dodebug) WRITE(6,*) "Done Open iunit ",iunit,"."
+
+  if (dodebug) WRITE(6,*) "nn = ", nn
+  if (dodebug) then
+    print *, "wk = ", wk
+    print *, "elem(1) = ", elem(1)
+    print *, "rlon(1) = ", rlon(1)
+    print *, "rlat(1) = ", rlat(1)
+    print *, "rlev(1) = ", rlev(1)
+    print *, "odat(1) = ", odat(1)
+    print *, "oerr(1) = ", oerr(1)
+    print *, "ohx(1)  = ", ohx(1)
+    print *, "oqc(1)  = ", oqc(1)
+    print *, "obhr(1) = ", obhr(1)
+  endif
+
   do n=1,nn
+    if (dodebug) print *, "n = ", n
+    if (dodebug) WRITE(6,*) "n = ", n," / ",nn
+    if (qcflag .and. oqc(n)==0) CYCLE
     wk(1) = REAL(elem(n),r_sngl)   ! ID for observation type
     wk(2) = REAL(rlon(n),r_sngl)   ! Ob lon
     wk(3) = REAL(rlat(n),r_sngl)   ! Ob lat
@@ -997,6 +965,8 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
     endif
     WRITE(iunit) wk
   enddo
+
+  if (dodebug) WRITE(6,*) "write_obs2:: returning..."
 
   CLOSE(iunit)
 

@@ -21,6 +21,9 @@ cp $MODELDIR/common_mpi_$model.f90 ./
 cp $MODELDIR/common_obs_$model.f90 ./
 cp $MODELDIR/params_model.f90 ./
 cp $MODELDIR/vars_model.f90 ./
+if [ -f $MODELDIR/${model}_io.f90 ]; then
+  cp $MODELDIR/${model}_io.f90 ./
+fi
 
 LETKFDIR=$root/src/letkf
 cp $LETKFDIR/params_letkf.f90 ./

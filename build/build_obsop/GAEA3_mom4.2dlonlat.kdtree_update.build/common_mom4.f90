@@ -54,7 +54,7 @@ SUBROUTINE set_common_oceanmodel
   USE netcdf
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD  
   IMPLICIT NONE
   INTEGER :: i,j,k
   INTEGER :: ncid,varid
@@ -240,7 +240,7 @@ SUBROUTINE read_etaclm(SSHclm_file,SSHclm_m)
   USE netcdf
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD  
   IMPLICIT NONE
   CHARACTER(*), INTENT(IN) :: SSHclm_file
   REAL(r_size), INTENT(OUT) :: SSHclm_m(nlon,nlat)
@@ -278,7 +278,7 @@ SUBROUTINE read_history(infile,v3d,v2d)
   USE netcdf
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(INOUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -298,7 +298,7 @@ SUBROUTINE read_history(infile,v3d,v2d)
     CALL check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
  
     if (doverbose) then
-      WRITE(6,*) "read_diag:: just opened file ", infile
+      WRITE(6,*) "read_history:: just opened file ", infile
     endif  
 
     !---------------------------------------------------------------------------
@@ -307,14 +307,14 @@ SUBROUTINE read_history(infile,v3d,v2d)
     buf4=0.0
     CALL check( NF90_INQ_VARID(ncid,'mld',varid) )
     CALL check( NF90_GET_VAR(ncid,varid,buf4) )
-    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable mld"
+    if (dodebug) WRITE(6,*) "read_history:: just got data for variable mld"
     v2d(:,:,iv2d_mld) = buf4
-    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable: mld"
+    if (dodebug) WRITE(6,*) "read_history:: finished processing data for variable: mld"
   
     ! !STEVE: debug
     if (dodebug) then
       WRITE(6,*) "POST-MLD:"
-      WRITE(6,*) "read_diag:: infile = ", infile
+      WRITE(6,*) "read_history:: infile = ", infile
       WRITE(6,*) "max val for level v2d(:,:,iv2d_mld) = ",MAXVAL(v2d(:,:,iv2d_mld))
     endif
     ! !STEVE: end
@@ -324,23 +324,33 @@ SUBROUTINE read_history(infile,v3d,v2d)
 END SUBROUTINE read_history
 
 
-SUBROUTINE read_diag(infile,v3d,v2d)
+SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 !===============================================================================
 ! Read in a set of netcdf-format mom4 diagnostic files (for now, we're using the restarts)
 !===============================================================================
   USE netcdf
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
+  INTEGER, INTENT(IN), OPTIONAL :: prec_in ! precision, 1=single, 2=double
+  INTEGER :: prec ! precision, 1=single, 2=double
   REAL(r_sngl), ALLOCATABLE :: v3d0(:,:,:,:)
   REAL(r_sngl), ALLOCATABLE :: v2d0(:,:,:)
 
+  ! If prec is a provided argument, use indicated precision,
+  if(PRESENT(prec_in))then
+    prec = prec_in
+  else
+    ! otherwise default to single precision.
+    prec = 1
+  endif
+
   ALLOCATE(v3d0(nlon,nlat,nlev,nv3d), v2d0(nlon,nlat,nv2d))
-  CALL read_restart(infile,v3d0,v2d0,1)
+  CALL read_restart(infile,v3d0,v2d0,prec)
   v3d = REAL(v3d0,r_size)
   v2d = REAL(v2d0,r_size)
 
@@ -369,7 +379,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
   USE netcdf
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -665,12 +675,15 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         CALL check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
-        v2d(:,:,ivid) = buf4(:,:,1) - REAL(SSHclm_m(:,:),r_sngl)
+        v2d(:,:,ivid) = buf4(:,:,1)
       case(2)
         buf8=0.0d0
         CALL check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
-        v2d(:,:,ivid) = REAL(buf8(:,:,1),r_sngl) - REAL(SSHclm_m(:,:),r_sngl)
+        v2d(:,:,ivid) = REAL(buf8(:,:,1),r_sngl)
     end select
+
+    ! Convert SSH eta stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
+    if (DO_SLA) v2d(:,:,ivid) = v2d(:,:,ivid) - SSHclm_m(:,:)
 
     ! !STEVE: debug
     if (dodebug) then
@@ -683,7 +696,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
     CALL check( NF90_CLOSE(ncid) )
   endif altimetry
 
-  mld : if (DO_MLD) then
+  mld : if (DO_MLD .and. .not. DO_MLD_MAXSPRD) then
     ! Add the ensemble of mixed-layer depths to the model state for analysis
     CALL read_history(hsfile,v3d,v2d)
   endif mld
@@ -751,7 +764,7 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in) !,prec_in)
   USE netcdf
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD  
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: outfile
   REAL(r_sngl),INTENT(IN) :: v3d_in(nlon,nlat,nlev,nv3d)
@@ -990,7 +1003,7 @@ SUBROUTINE read_grd(filename,v3d,v2d)
 !===============================================================================
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD  
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -1028,7 +1041,7 @@ SUBROUTINE write_grd(filename,v3d,v2d)
 !===============================================================================
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD  
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_sngl),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
@@ -1069,7 +1082,7 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
 !===============================================================================
   USE params_model
   USE vars_model
-  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA
+  USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD  
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: member
   INTEGER,INTENT(IN) :: nij
