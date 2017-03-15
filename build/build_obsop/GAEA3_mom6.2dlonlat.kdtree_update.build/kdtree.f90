@@ -117,9 +117,8 @@ contains
     integer, pointer :: hp(:)
     real(dp) :: lo(kd_dim), hi(kd_dim)
     integer :: taskmom(50), taskdim(50)
+    real(dp), dimension(2) :: llpt !STEVE: lon/lat point in 2-d array
 
-    
-    
     ! generate initial unsorted index array
     write (*,*) "Initializing kd-tree with ", size(lons), "locations"
     allocate(root%ptindx(size(lons)))
@@ -133,7 +132,8 @@ contains
     do n=1, size(lons)
        root%pts_ll(n,1) = lons(n)*pi/180.0d0
        root%pts_ll(n,2) = lats(n)*pi/180.0d0       
-       root%pts(n,:) = ll2xyz( (/lons(n), lats(n)/) )
+       llpt = (/lons(n), lats(n)/) !STEVE: created to prevent: forrtl: warning (406): fort: (1): In call to LL2XYZ, an array temporary was created for argument #1
+       root%pts(n,:) = ll2xyz( llpt ) ! (/lons(n), lats(n)/) )
     end do
 
     ! calculate the number of kd boxes needed and create memory for them

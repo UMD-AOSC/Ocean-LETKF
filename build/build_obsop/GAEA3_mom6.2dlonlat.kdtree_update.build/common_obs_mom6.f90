@@ -50,10 +50,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   REAL(r_size),INTENT(OUT) :: yobs
   INTEGER :: i,j,k,n
   INTEGER :: intelm
-  INTEGER :: Aflag = 1 !1 = GODAS-type atlimetery assimilation
-  REAL(r_size) :: HLx ! Inferred SSH for the column (representing steric column expansion)
-  REAL(r_size) :: Hx ! Interpolated T and S for the column (for computing steric column expansion)
-  REAL(r_size) :: SSHclm_ij ! Model climatology interpolated to observation location
 
   intelm = NINT(elm)
   SELECT CASE (intelm)
@@ -359,7 +355,7 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
   REAL(r_size),INTENT(OUT) :: var5
   REAL(r_size) :: ai,aj,ak
   INTEGER :: i,j,k
-  LOGICAL, PARAMETER :: dodebug = .true.
+  LOGICAL, PARAMETER :: dodebug = .false.
 
   i = CEILING(ri)
   ai = ri - REAL(i-1,r_size)
@@ -787,7 +783,7 @@ SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
 END SUBROUTINE write_obs
 
 
-SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
+SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag_in)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
@@ -799,15 +795,24 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
   REAL(r_size),INTENT(IN) :: oerr(nn)
   REAL(r_size),INTENT(IN) :: ohx(nn)
   REAL(r_size),INTENT(IN) :: obhr(nn)
+  LOGICAL, INTENT(IN), OPTIONAL :: qcflag_in
+  LOGICAL :: qcflag
   INTEGER,INTENT(IN) :: oqc(nn)
   REAL(r_sngl) :: wk(9)
   INTEGER :: n,iunit
   LOGICAL, PARAMETER :: dodebug=.false.
 
+  if (PRESENT(qcflag_in)) then
+    qcflag = qcflag_in
+  else
+    qcflag = .false.
+  endif
+
   iunit=92
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
 
   do n=1,nn
+    if (qcflag .and. oqc(n)==0) CYCLE
     wk(1) = REAL(elem(n),r_sngl)  ! ID for observation type
     wk(2) = REAL(rlon(n),r_sngl)  ! Ob lon
     wk(3) = REAL(rlat(n),r_sngl)  ! Ob lat
@@ -816,7 +821,7 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
     wk(6) = REAL(oerr(n),r_sngl)  ! Estimated observation error
     wk(7) = REAL(ohx(n),r_sngl)   ! Model forecast transformed to observation space: H(xb)
     wk(8) = REAL(oqc(n),r_sngl)   ! Quality control ID (1==keep, 0==discard) for use in assimilation
-    wk(9) = REAL(obhr(n),r_sngl)   ! Quality control ID (1==keep, 0==discard) for use in assimilation
+    wk(9) = REAL(obhr(n),r_sngl)  ! Quality control ID (1==keep, 0==discard) for use in assimilation
     if (dodebug) PRINT '(I6,2F7.2,F10.2,6F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
     WRITE(iunit) wk
   enddo

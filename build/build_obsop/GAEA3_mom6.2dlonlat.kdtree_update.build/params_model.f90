@@ -72,11 +72,6 @@ PUBLIC
 ! endif
 
   CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
-! CHARACTER(32) :: ts_basefile = 'ocean_temp_salt.res.nc'
-! CHARACTER(32) :: uv_basefile = 'ocean_velocity.res.nc'
-! CHARACTER(32) :: sf_basefile = 'ocean_sbc.res.nc'
-! CHARACTER(32) :: sh_basefile = 'ocean_barotropic.res.nc'
-! CHARACTER(32) :: hs_basefile = 'ocean_TS.nc'
 
   CHARACTER(10) :: gridfile  = 'MOM.res.nc'
   CHARACTER(12) :: gridfile1 = 'MOM.res_1.nc'
@@ -84,11 +79,11 @@ PUBLIC
   CHARACTER(14) :: gridfile3 = 'ocean_hgrid.nc'
 
   ! variable names in gridfile:
-  CHARACTER(2) :: grid_lon_name = 'xh'
-  CHARACTER(2) :: grid_lat_name = 'yh'
-  CHARACTER(2) :: grid_lev_name = 'zl'
-  CHARACTER(4) :: grid_temp_name = 'temp'
-  CHARACTER(4) :: grid_salt_name = 'salt'
+  CHARACTER(4) :: grid_lon_name = 'lonh'
+  CHARACTER(4) :: grid_lat_name = 'lath'
+  CHARACTER(5) :: grid_lev_name = 'Layer'
+  CHARACTER(4) :: grid_temp_name = 'Temp'
+  CHARACTER(4) :: grid_salt_name = 'Salt'
   CHARACTER(1) :: grid_u_name = 'u'
   CHARACTER(1) :: grid_v_name = 'v'
   CHARACTER(1) :: grid_h_name = 'h'
@@ -100,6 +95,10 @@ PUBLIC
   CHARACTER(5) :: grid_depth_name = 'depth'
   CHARACTER(10):: grid_height_name = 'col_height'
 
+  ! Diagnostic file filenames !STEVE: these aren't used, instead files are specified explicitly by obsop_xxx.f90 routine
+  CHARACTER(11) :: diag_tsbase = 'MOM.diag.nc'   !(and u, and h)
+  CHARACTER(11) :: diag_uvbase = 'MOM.diag.nc'  !(v and ave_ssh/sfc)
+  CHARACTER(slen) :: diag_hbase
   ! variable names in diag file:
   CHARACTER(2) :: diag_lon_name = 'xh'
   CHARACTER(2) :: diag_lat_name = 'yh'
@@ -112,20 +111,22 @@ PUBLIC
   CHARACTER(3) :: diag_ssh_name = 'ssh'
   CHARACTER(10):: diag_height_name = 'col_height'
 
+  ! Restart filenames
+  CHARACTER(10) :: rsrt_tsbase = 'MOM.res.nc'   !(and u, and h)
+  CHARACTER(12) :: rsrt_uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
+  CHARACTER(slen) :: rsrt_hbase
   ! variable names in restart file:
-  CHARACTER(2) :: rsrt_lon_name = 'xh'
-  CHARACTER(2) :: rsrt_lat_name = 'yh'
-  CHARACTER(2) :: rsrt_lev_name = 'zl'
-  CHARACTER(4) :: rsrt_temp_name = 'temp'
-  CHARACTER(4) :: rsrt_salt_name = 'salt'
+  CHARACTER(4) :: rsrt_lon_name = 'lonh'
+  CHARACTER(4) :: rsrt_lat_name = 'lath'
+  CHARACTER(5) :: rsrt_lev_name = 'Layer'
+  CHARACTER(4) :: rsrt_temp_name = 'Temp'
+  CHARACTER(4) :: rsrt_salt_name = 'Salt'
   CHARACTER(1) :: rsrt_u_name = 'u'
   CHARACTER(1) :: rsrt_v_name = 'v'
   CHARACTER(1) :: rsrt_h_name = 'h'
+  CHARACTER(7) :: rsrt_ssh_name = 'ave_ssh'
 
-  !For input/output model files:
-  CHARACTER(10) :: tsbase = 'MOM.res.nc'   !(and u, and h)
-  CHARACTER(12) :: uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
-  CHARACTER(slen) :: hbase
+  !STEVE: unused:
   CHARACTER(slen) :: drbase
 
   !STEVE: needed to read in ocean_hgrid.nc with supergrid format
@@ -134,16 +135,28 @@ PUBLIC
 
   ! Bounds checking (for output by common_mom4.f90::write_restart)
   LOGICAL :: do_physlimit=.true.
-  REAL(r_size) :: max_t = 40.0d0 ! ÂC
-  REAL(r_size) :: min_t = -4.0d0 ! ÂC
+  REAL(r_size) :: max_t = 40.0d0 ! ºC
+  REAL(r_size) :: min_t = -4.0d0 ! ºC
   REAL(r_size) :: max_s = 50.0d0 ! psu
   REAL(r_size) :: min_s =  0.0d0 ! psu
-  
+  REAL(r_size) :: max_u = 99.0d0 ! m/s
+  REAL(r_size) :: min_u =-99.0d0 ! m/s
+  REAL(r_size) :: max_v = 99.0d0 ! m/s
+  REAL(r_size) :: min_v =-99.0d0 ! m/s
+  REAL(r_size) :: max_h = 90.0d3 ! =90000 m
+  REAL(r_size) :: min_h =  0.0d0 ! m
+  REAL(r_size) :: max_eta = 99.0d0 ! m
+  REAL(r_size) :: min_eta =-99.0d0 ! m
+
   LOGICAL,SAVE :: params_model_initialized = .false.
 
 CONTAINS
 
+
 SUBROUTINE initialize_params_model
+!===============================================================================
+! Subroutine to initialize the parameters of the model
+!===============================================================================
 
   IMPLICIT NONE
 
@@ -157,11 +170,12 @@ SUBROUTINE initialize_params_model
   ngpv=nij0*nlevall
 
   !STEVE: needed to read in ocean_hgrid.nc with supergrid format
-  nlon2d = 2*nlon+1
-  nlat2d = 2*nlat+1
+  nlon2d = 2*nlon+1 !(MOM6)
+  nlat2d = 2*nlat+1 !(MOM6)
 
   params_model_initialized = .true.
 
 END SUBROUTINE initialize_params_model
+
 
 END MODULE params_model

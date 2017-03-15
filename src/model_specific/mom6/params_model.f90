@@ -72,11 +72,6 @@ PUBLIC
 ! endif
 
   CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
-! CHARACTER(32) :: ts_basefile = 'ocean_temp_salt.res.nc'
-! CHARACTER(32) :: uv_basefile = 'ocean_velocity.res.nc'
-! CHARACTER(32) :: sf_basefile = 'ocean_sbc.res.nc'
-! CHARACTER(32) :: sh_basefile = 'ocean_barotropic.res.nc'
-! CHARACTER(32) :: hs_basefile = 'ocean_TS.nc'
 
   CHARACTER(10) :: gridfile  = 'MOM.res.nc'
   CHARACTER(12) :: gridfile1 = 'MOM.res_1.nc'
@@ -100,6 +95,10 @@ PUBLIC
   CHARACTER(5) :: grid_depth_name = 'depth'
   CHARACTER(10):: grid_height_name = 'col_height'
 
+  ! Diagnostic file filenames !STEVE: these aren't used, instead files are specified explicitly by obsop_xxx.f90 routine
+  CHARACTER(11) :: diag_tsbase = 'MOM.diag.nc'   !(and u, and h)
+  CHARACTER(11) :: diag_uvbase = 'MOM.diag.nc'  !(v and ave_ssh/sfc)
+  CHARACTER(slen) :: diag_hbase
   ! variable names in diag file:
   CHARACTER(2) :: diag_lon_name = 'xh'
   CHARACTER(2) :: diag_lat_name = 'yh'
@@ -112,6 +111,10 @@ PUBLIC
   CHARACTER(3) :: diag_ssh_name = 'ssh'
   CHARACTER(10):: diag_height_name = 'col_height'
 
+  ! Restart filenames
+  CHARACTER(10) :: rsrt_tsbase = 'MOM.res.nc'   !(and u, and h)
+  CHARACTER(12) :: rsrt_uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
+  CHARACTER(slen) :: rsrt_hbase
   ! variable names in restart file:
   CHARACTER(4) :: rsrt_lon_name = 'lonh'
   CHARACTER(4) :: rsrt_lat_name = 'lath'
@@ -123,10 +126,7 @@ PUBLIC
   CHARACTER(1) :: rsrt_h_name = 'h'
   CHARACTER(7) :: rsrt_ssh_name = 'ave_ssh'
 
-  !For input/output model files:
-  CHARACTER(10) :: tsbase = 'MOM.res.nc'   !(and u, and h)
-  CHARACTER(12) :: uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
-  CHARACTER(slen) :: hbase
+  !STEVE: unused:
   CHARACTER(slen) :: drbase
 
   !STEVE: needed to read in ocean_hgrid.nc with supergrid format

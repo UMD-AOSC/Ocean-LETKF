@@ -53,14 +53,14 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
   if (DO_ALTIMETRY .and. DO_SLA) then
     INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
-    IF(ex) THEN
+    if (ex) then
       ! Read in the model climatology
       CALL read_etaclm
-    ELSE
+    else
       WRITE(6,*) "The file does not exist: ", SSHclm_file
       WRITE(6,*) "Exiting common_mom6.f90..."
       STOP(1)
-    ENDIF
+    endif
   endif
 
   !-----------------------------------------------------------------------------
@@ -263,12 +263,16 @@ END SUBROUTINE read_etaclm
 SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !STEVE: This subroutine reads the hourly/daily diagnostic files produced by MOM6
   !       The t,s,u,v,(ssh) fields are read in from the files so that the o-f data can be computed
-  !       by the obsope.f90 program prior to running letkf.f90, so the diagnostic files do not have 
+  !       by the obsop_xxx.f90 program prior to running letkf.f90, so the diagnostic files do not have 
   !       to be touched during letkf runtime.
   !STEVE: THUS, only the fields required for computing the OMFs need to be read in here.
   !       The full 3d model prognostic variables can be read in via read_restart
   USE netcdf
   USE vars_model,   ONLY: SSHclm_m
+  USE params_model, ONLY: diag_lon_name, diag_lat_name, diag_lev_name
+  USE params_model, ONLY: diag_temp_name, diag_salt_name
+  USE params_model, ONLY: diag_u_name, diag_v_name, diag_h_name
+  USE params_model, ONLY: diag_ssh_name, diag_height_name
   IMPLICIT NONE
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -283,6 +287,13 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   LOGICAL, PARAMETER :: dodebug = .false.
   CHARACTER(slen) :: varname
   INTEGER :: ivid
+
+  !STEVE: flags to read in each variable
+  LOGICAL :: DO_temp = .true.
+  LOGICAL :: DO_salt = .true.
+  LOGICAL :: DO_u    = .false.
+  LOGICAL :: DO_v    = .false.
+  LOGICAL :: DO_ssh  = .true.
 
   ! If prec is a provided argument, use indicated precision,
   if(PRESENT(prec_in))then
@@ -392,150 +403,165 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open the T/S netcdf restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  WRITE(6,*) "read_diag:: opening file: ",infile
-  call check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
-  WRITE(6,*) "read_diag :: just opened file ", infile
+  if (DO_temp .or. DO_salt) then
+    WRITE(6,*) "read_diag:: opening file: ",infile
+    call check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
+    WRITE(6,*) "read_diag :: just opened file ", infile
+  endif
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! 3D-Variables
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
   !!! t
-  varname='temp'
-  ivid=iv3d_t
+  if (DO_temp) then
+    varname=diag_temp_name
+    ivid=iv3d_t
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
 
-  if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
-  select case (prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = REAL(buf4,r_size)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = buf8
-  end select
+    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
+    select case (prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4) )
+        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8) )
+        v3d(:,:,:,ivid) = buf8
+    end select
 
-  if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
+    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
   
-  ! !STEVE: debug
-  if (dodebug) then
-    WRITE(6,*) "POST-TEMP"
-    WRITE(6,*) "read_diag:: infile = ", infile
-    do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_t) = ",MAXVAL(v3d(:,:,k,iv3d_t))
-    enddo
+    ! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-TEMP"
+      WRITE(6,*) "read_diag:: infile = ", infile
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_t) = ",MAXVAL(v3d(:,:,k,iv3d_t))
+      enddo
+    endif
+    ! !STEVE: end
   endif
-  ! !STEVE: end
-
+ 
   !!! s
-  varname='salt'
-  ivid=iv3d_s
+  if (DO_salt) then 
+    varname=diag_salt_name
+    ivid=iv3d_s
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-  if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
-  select case (prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = REAL(buf4,r_size)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = buf8
-  end select
-  if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
+    select case (prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4) )
+        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8) )
+        v3d(:,:,:,ivid) = buf8
+    end select
+    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
   
-  ! !STEVE: debug
-  if (dodebug) then
-    WRITE(6,*) "POST-SALT"
-    WRITE(6,*) "read_diag:: infile = ", infile
-    do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_s) = ",MAXVAL(v3d(:,:,k,iv3d_s))
-    enddo
+    ! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-SALT"
+      WRITE(6,*) "read_diag:: infile = ", infile
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_s) = ",MAXVAL(v3d(:,:,k,iv3d_s))
+      enddo
+    endif
+    ! !STEVE: end
   endif
-  ! !STEVE: end
 
   !!! u
-  varname='u'
-  ivid=iv3d_u
+  if (DO_u) then
+    varname=diag_u_name
+    ivid=iv3d_u
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-  if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
-  select case (prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = REAL(buf4,r_size)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = buf8
-  end select
-  if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
+    select case (prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4) )
+        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8) )
+        v3d(:,:,:,ivid) = buf8
+    end select
+    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
   
-  ! !STEVE: debug
-  if (dodebug) then
-    WRITE(6,*) "POST-U"
-    WRITE(6,*) "read_diag:: infile = ", infile
-    do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_u) = ",MAXVAL(v3d(:,:,k,iv3d_u))
-    enddo
+    ! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-U"
+      WRITE(6,*) "read_diag:: infile = ", infile
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_u) = ",MAXVAL(v3d(:,:,k,iv3d_u))
+      enddo
+    endif
+    ! !STEVE: end
   endif
-  ! !STEVE: end
 
   !!! v
-  varname='v'
-  ivid=iv3d_v
+  if (DO_v) then
+    varname=diag_v_name
+    ivid=iv3d_v
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-  if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
-  select case (prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = REAL(buf4,r_size)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = buf8
-  end select
-  if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
+      select case (prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4) )
+        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8) )
+        v3d(:,:,:,ivid) = buf8
+    end select
+    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
 
-  ! !STEVE: debug
-  if (dodebug) then
-    WRITE(6,*) "POST-V"
-    WRITE(6,*) "read_diag:: infile = ", infile
-    do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_v) = ",MAXVAL(v3d(:,:,k,iv3d_v))
-    enddo
+    ! !STEVE: debug
+    if (dodebug) then
+      WRITE(6,*) "POST-V"
+      WRITE(6,*) "read_diag:: infile = ", infile
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_v) = ",MAXVAL(v3d(:,:,k,iv3d_v))
+      enddo
+    endif
+    ! !STEVE: end
   endif
-  ! !STEVE: end
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! 2D-Variables
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !!! ssh
-  varname='ssh'
-  ivid=iv2d_ssh
+  if (DO_ssh) then
+    varname=diag_ssh_name
+    ivid=iv2d_ssh
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-  if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
-  select case (prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
-      v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
-      v2d(:,:,ivid) = buf8(:,:,1) - SSHclm_m(:,:)
-  end select
-  if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
+    select case (prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
+        v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
+        v2d(:,:,ivid) = buf8(:,:,1) - SSHclm_m(:,:)
+    end select
+    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
 
+  endif
+
+  !STEVE: assuming all variables were in a single diagnostic file
   call check( NF90_CLOSE(ncid) )
   
 END SUBROUTINE read_diag
@@ -546,11 +572,16 @@ END SUBROUTINE read_diag
 SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !STEVE: This subroutine reads the MOM.res.nc, MOM.res_1.nc, etc. restart files produced by MOM6
   !       The t,s,u,v,(ssh) fields are read in from a file so that the transform can be applied to them.
-  !       It is assumed that the o-f data have already been computed by the obsope.f90 program prior
+  !       It is assumed that the o-f data have already been computed by the obsop_xxx.f90 program prior
   !       to running letkf.f90, so the diagnostic files should not have to be touched during letkf runtime.
   USE netcdf
   USE params_letkf, ONLY: DO_UPDATE_H
   USE vars_model,   ONLY: SSHclm_m
+  USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
+  USE params_model, ONLY: rsrt_lon_name, rsrt_lat_name, rsrt_lev_name
+  USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
+  USE params_model, ONLY: rsrt_u_name, rsrt_v_name
+  USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -574,9 +605,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   CHARACTER(slen) :: varname
   INTEGER :: ivid
 
-  tsfile = trim(infile)//'.'//trim(tsbase)
-  uvfile = trim(infile)//'.'//trim(uvbase)
-  bfile  = trim(infile)//'.'//trim(hbase)
+  tsfile = trim(infile)//'.'//trim(rsrt_tsbase)
+  uvfile = trim(infile)//'.'//trim(rsrt_uvbase)
+  bfile  = trim(infile)//'.'//trim(rsrt_hbase)
 
   select case(prec)
     case(1)
@@ -596,7 +627,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! t
   !-----------------------------------------------------------------------------
-  varname='Temp'
+  varname=rsrt_temp_name
   ivid=iv3d_t
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -627,7 +658,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! s
   !-----------------------------------------------------------------------------
-  varname='Salt'
+  varname=rsrt_salt_name
   ivid=iv3d_s
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -659,7 +690,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
     !---------------------------------------------------------------------------
     !!! h
     !---------------------------------------------------------------------------
-    varname='h'
+    varname=rsrt_h_name
     ivid=iv3d_h
 
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -692,7 +723,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! u
   !-----------------------------------------------------------------------------
-  varname='u'
+  varname=rsrt_u_name
   ivid=iv3d_u
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -737,7 +768,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! v
   !-----------------------------------------------------------------------------
-  varname='v'
+  varname=rsrt_v_name
   ivid=iv3d_v
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -771,7 +802,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   altimetry : if(DO_ALTIMETRY) then
 
     !!! SSH
-    varname='ave_ssh'
+    varname=rsrt_ssh_name
     ivid=iv2d_ssh
 
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -779,18 +810,18 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
-        v2d(:,:,ivid) = buf4(:,:,1) - REAL(SSHclm_m(:,:),r_sngl)
+        v2d(:,:,ivid) = buf4(:,:,1)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
-        v2d(:,:,ivid) = REAL(buf8(:,:,1),r_sngl) - REAL(SSHclm_m(:,:),r_sngl)
+        v2d(:,:,ivid) = REAL(buf8(:,:,1),r_sngl)
     end select
 
-    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable ave_ssh"
+    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable ssh"
     if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable SSH"
 
     ! Convert SSH eta stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
-    v2d(:,:,ivid) = v2d(:,:,iv2d_eta) - SSHclm_m(:,:)
+    if (DO_SLA) v2d(:,:,ivid) = v2d(:,:,iv2d_eta) - SSHclm_m(:,:)
 
     ! !STEVE: debug
     if (dodebug) then
@@ -858,18 +889,23 @@ END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
 ! Write a set of MOM6 restart files to initialize the next model run
 !-----------------------------------------------------------------------
-SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
+SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   USE netcdf
   USE params_letkf, ONLY: DO_UPDATE_H, DO_SLA
   USE vars_model,   ONLY: SSHclm_m
+  USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
+  USE params_model, ONLY: rsrt_lon_name, rsrt_lat_name, rsrt_lev_name
+  USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
+  USE params_model, ONLY: rsrt_u_name, rsrt_v_name
+  USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
   CHARACTER(*),INTENT(IN) :: outfile
   REAL(r_sngl),INTENT(IN) :: v3d_in(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2d_in(nlon,nlat,nv2d)
-  REAL(r_size), ALLOCATABLE :: v3d(:,:,:,:) !(nlon,nlat,nlev,nv3d)
-  REAL(r_size), ALLOCATABLE :: v2d(:,:,:) !(nlon,nlat,nv2d)
-  REAL(r_size), ALLOCATABLE :: t3d(:,:,:,:) !(nlon,nlat,nlev,nv3d)
+  INTEGER, INTENT(IN) :: prec ! precision, 1 = single, 2 = double
+  REAL(r_sngl), ALLOCATABLE, DIMENSION(:,:,:) :: buf4
+  REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:) :: buf8
   CHARACTER(slen) :: tsfile,uvfile, sffile,drfile, bfile ! (TS) (UV) (SFC) (DRIFTERS) (ALTIMETRY)
   INTEGER :: ncid,istat,varid
   INTEGER :: m,k,j,i !STEVE: for debugging
@@ -878,169 +914,156 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   REAL(r_size), DIMENSION(:,:,:), ALLOCATABLE :: data4D
   CHARACTER(slen) :: sfc_outfile, sfc_infile
   CHARACTER(3) :: MEM3
+  LOGICAL :: dodebug = .true.
 
   !STEVE: this is the routine that writes out the individual analysis files for
   !       each esnsemble member in netcdf format.
 
-  tsfile = trim(outfile)//'.'//trim(tsbase)
-  uvfile = trim(outfile)//'.'//trim(uvbase)
-  bfile  = trim(outfile)//'.'//trim(hbase)
+  tsfile = trim(outfile)//'.'//trim(rsrt_tsbase)
+  uvfile = trim(outfile)//'.'//trim(rsrt_uvbase)
+  bfile  = trim(outfile)//'.'//trim(rsrt_hbase)
 
-  ALLOCATE(v3d(nlon,nlat,nlev,nv3d),v2d(nlon,nlat,nv2d))
-
-  v3d = REAL(v3d_in,r_size)
-  v2d = REAL(v2d_in,r_size)
-
-  ! STEVE: for safety, clean up the variables for output:
-  if (do_physlimit) then
-  do k=1,nlev
-    do j=1,nlat
-      do i=1,nlon
-!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_t) .ne. 0.0 ) then
-!         WRITE(6,*) "WARNING: data on land point in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
-!         v3d(i,j,k,iv3d_t) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_s) .ne. 0.0 ) then
-!         WRITE(6,*) "WARNING: data on land point in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
-!         v3d(i,j,k,iv3d_s) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_u) .ne. 0.0 ) then
-!         WRITE(6,*) "WARNING: data on land point in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
-!         v3d(i,j,k,iv3d_u) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (kmt(i,j) .lt. k .and. v3d(i,j,k,iv3d_v) .ne. 0.0 ) then
-!         WRITE(6,*) "WARNING: data on land point in analysis output:"
-!         WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
-!         v3d(i,j,k,iv3d_v) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-!       if (k .eq. 1 .and. kmt(i,j) .eq. 0) then 
-!         if (v2d(i,j,iv2d_sst) .ne. 0.0 ) v2d(i,j,iv2d_sst) = 0.0 !NF90_FILL_FLOAT
-!         if (v2d(i,j,iv2d_sss) .ne. 0.0 ) v2d(i,j,iv2d_sss) = 0.0 !NF90_FILL_FLOAT
-!         if (v2d(i,j,iv2d_ssh) .ne. 0.0 ) v2d(i,j,iv2d_ssh) = 0.0 !NF90_FILL_FLOAT
-!       endif
-
-        if (v3d(i,j,k,iv3d_t) < min_t) then
-          WRITE(6,*) "WARNING: Bad temp value in analysis output:"
-          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
-          v3d(i,j,k,iv3d_t) = min_t
-        endif
-
-        if (v3d(i,j,k,iv3d_t) > max_t) then
-          WRITE(6,*) "WARNING: Bad temp value in analysis output:"
-          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
-          v3d(i,j,k,iv3d_t) = max_t
-        endif
-
-        if (v3d(i,j,k,iv3d_s) < min_s ) then
-          WRITE(6,*) "WARNING: Bad salt value in analysis output:"
-          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
-          v3d(i,j,k,iv3d_s) = min_s
-        endif
-
-        if (v3d(i,j,k,iv3d_s) > max_s) then
-          WRITE(6,*) "WARNING: Bad salt value in analysis output:"
-          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
-          v3d(i,j,k,iv3d_s) = max_s
-        endif
-
-        if (nv2d > 1 .and. k .eq. 1) then
-          if (v2d(i,j,iv2d_sst) < min_t) v2d(i,j,iv2d_sst) = min_t
-          if (v2d(i,j,iv2d_sst) > max_t) v2d(i,j,iv2d_sst) = max_t
-          if (v2d(i,j,iv2d_sss) < min_s) v2d(i,j,iv2d_sss) = min_s
-          if (v2d(i,j,iv2d_sss) > max_s) v2d(i,j,iv2d_sss) = max_s
-        endif
-
-      enddo
-    enddo
-  enddo
+  if (prec == 1) then
+    WRITE(6,*) "common_mom6.f90::write_restart:: input argument prec=1 (single precision) is not yet supported. Update write_restart subroutine. EXITING..."
+    STOP(24)
   endif
+
+  select case(prec)
+    case(1)
+      if (dodebug) WRITE(6,*) "write_restart::ALLOCATE buf4..."
+      ALLOCATE(buf4(nlon,nlat,nlev))
+      if (dodebug) WRITE(6,*) "Done ALLOCATE buf4."
+    case(2)
+      if (dodebug) WRITE(6,*) "write_restart::ALLOCATE buf8..."
+      ALLOCATE(buf8(nlon,nlat,nlev))
+      if (dodebug) WRITE(6,*) "Done ALLOCATE buf8."
+  end select
+
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !STEVE: open temp/salt file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (dodebug) WRITE(6,*) "Opening file for temperature and salinity..."
   call check( NF90_OPEN(tsfile,NF90_WRITE,ncid) )
+  if (dodebug) WRITE(6,*) "Opened file for temperature and salinity."
 
-  !!! t
-  !STEVE: for debugging
-  if (.false.) then
-  do m=1,nv3d
-    do k=1,nlev
-      do j=1,nlat
-        do i=1,nlon
-!       if ( isnan( REAL(v3d(i,j,k,m),r_size) ) )then
-!         WRITE(6,*) "common_mom6.f90::write_grd4:: ERROR: found NaN..."
-!         WRITE(6,*) "v3d(i,j,k,m) contains NaN. i,j,k,m = ", i,j,k,m
-!         STOP 1
-!       endif
-        enddo
-      enddo
-    enddo
-  enddo
+  if (dodebug) WRITE(6,*) "Get id for temperature..."
+  call check( NF90_INQ_VARID(ncid,rsrt_temp_name,varid) )
+
+  buf8 = REAL(v3d_in(:,:,:,iv3d_t),r_size)
+
+  ! Apply physical limits to the output analysis:
+  if (do_physlimit) then
+    WHERE (buf8 < min_t) buf8 = min_t
+    WHERE (buf8 > max_t) buf8 = max_t
   endif
 
-  call check( NF90_INQ_VARID(ncid,'Temp',varid) )
-
-  !STEVE: debug DEBUG
-  !STEVE: switch out the data to see if this writes properly
-  !ALLOCATE(t3d(nlon,nlat,nlev,nv3d))
-  !t3d(:,:,:,iv3d_t) = 1.0
-  !call check( NF90_PUT_VAR(ncid,varid,t3d(:,:,:,iv3d_t)) )
-  !DEALLOCATE(t3d)
-  call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_t)) )
+  if (dodebug) WRITE(6,*) "Write data for temperature..."
+  call check( NF90_PUT_VAR(ncid,varid,buf8) )
 
   !-----------------------------------------------------------------------------
   !!! s
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid,'Salt',varid) )
-  call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_s)) )
+  if (dodebug) WRITE(6,*) "Get id for salinity..."
+  call check( NF90_INQ_VARID(ncid,rsrt_salt_name,varid) )
+
+  buf8 = REAL(v3d_in(:,:,:,iv3d_s),r_size)
+
+  ! Apply physical limits to the output analysis:
+  if (do_physlimit) then
+    WHERE (buf8 < min_s) buf8 = min_s
+    WHERE (buf8 > max_s) buf8 = max_s
+  endif
+
+  if (dodebug) WRITE(6,*) "Write data for salinity..."
+  call check( NF90_PUT_VAR(ncid,varid,buf8) )
 
   !-----------------------------------------------------------------------------
   !!! h (MOM6)
   !-----------------------------------------------------------------------------
   if (DO_UPDATE_H) then
-    call check( NF90_INQ_VARID(ncid,'h',varid) )
-    call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_h)) )
+    if (dodebug) WRITE(6,*) "Get id for layer thickness (h)..."
+    call check( NF90_INQ_VARID(ncid,rsrt_h_name,varid) )
+    if (dodebug) WRITE(6,*) "Write data for layer thickness (h)..."
+
+    buf8 = REAL(v3d_in(:,:,:,iv3d_h),r_size)
+
+    ! Apply physical limits to the output analysis:
+    if (do_physlimit) then
+      WHERE (buf8 < min_h) buf8 = min_h
+      WHERE (buf8 > max_h) buf8 = max_h
+    endif
+
+    call check( NF90_PUT_VAR(ncid,varid,buf8) )
+
   endif
 
   !-----------------------------------------------------------------------------
   !!! u
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid,'u',varid) )
-  call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_u)) )
+  if (dodebug) WRITE(6,*) "Get id for u component of velocity..."
+  call check( NF90_INQ_VARID(ncid,rsrt_u_name,varid) )
+
+  buf8 = REAL(v3d_in(:,:,:,iv3d_u),r_size)
+
+  ! Apply physical limits to the output analysis:
+  if (do_physlimit) then
+    WHERE (buf8 < min_u) buf8 = min_u
+    WHERE (buf8 > max_u) buf8 = max_u
+  endif
+
+  if (dodebug) WRITE(6,*) "Write data for u component of velocity..."
+  call check( NF90_PUT_VAR(ncid,varid,buf8) )
 
   call check( NF90_CLOSE(ncid) )
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !!! uv file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (dodebug) WRITE(6,*) "Opening file for velocity and surface height..."
   call check( NF90_OPEN(uvfile,NF90_WRITE,ncid) )
 
   !-----------------------------------------------------------------------------
   !!! v
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid,'v',varid) )
-  call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_v)) )
+  if (dodebug) WRITE(6,*) "Get id for v component of velocity..."
+  call check( NF90_INQ_VARID(ncid,rsrt_v_name,varid) )
+
+  buf8 = REAL(v3d_in(:,:,:,iv3d_v),r_size)
+
+  ! Apply physical limits to the output analysis:
+  if (do_physlimit) then
+    WHERE (buf8 < min_v) buf8 = min_v
+    WHERE (buf8 > max_v) buf8 = max_v
+  endif
+
+  if (dodebug) WRITE(6,*) "Write data for v component of velocity..."
+  call check( NF90_PUT_VAR(ncid,varid,buf8) )
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Write the updated eta_t to analysis restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   if (DO_ALTIMETRY) then
-    call check( NF90_OPEN(bfile,NF90_WRITE,ncid) )
-    call check( NF90_INQ_VARID(ncid,'ave_ssh',varid) )
+! if (dodebug) WRITE(6,*) "Opening file for surface height..."
+!   call check( NF90_OPEN(bfile,NF90_WRITE,ncid) )
+    if (dodebug) WRITE(6,*) "Get id for ssh..."
+    call check( NF90_INQ_VARID(ncid,rsrt_ssh_name,varid) )
+
+    buf8(:,:,1) = REAL(v2d_in(:,:,iv2d_eta),r_size)
+
+    ! Apply physical limits to the output analysis:
+    if (do_physlimit) then
+      WHERE (buf8(:,:,1) < min_h) buf8(:,:,1) = min_eta
+      WHERE (buf8(:,:,1) > max_h) buf8(:,:,1) = max_eta
+    endif
 
     ! Convert SSH stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
     if (DO_SLA) then
-      v2d(:,:,iv2d_eta) = v2d(:,:,iv2d_eta) + SSHclm_m(:,:)
+      buf8(:,:,1) = buf8(:,:,1) + SSHclm_m(:,:)
     endif
 
-    call check( NF90_PUT_VAR(ncid,varid,v2d(:,:,iv2d_eta)) )
+    if (dodebug) WRITE(6,*) "Write data for ssh..."
+    call check( NF90_PUT_VAR(ncid,varid,buf8(:,:,1)) )
   endif
 
   call check( NF90_CLOSE(ncid) )
