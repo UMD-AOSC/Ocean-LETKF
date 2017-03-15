@@ -344,10 +344,10 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
     WRITE(6,*) "POST-part_size"
     WRITE(6,*) "read_diag :: infile = ", infile
     do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_t2) = ", MAXVAL(v3d(:,:,k,iv3d_ps))
+      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_ps) = ", MAXVAL(v3d(:,:,k,iv3d_ps))
     enddo
     do k=1,nlev
-      WRITE(6,*) "min val for level v3d(:,:,", k, ",iv3d_t2) = ", MINVAL(v3d(:,:,k,iv3d_ps))
+      WRITE(6,*) "min val for level v3d(:,:,", k, ",iv3d_ps) = ", MINVAL(v3d(:,:,k,iv3d_ps))
     enddo
   endif
 ! !STEVE: end
@@ -673,6 +673,10 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in)
   call check( NF90_INQ_VARID(ncid,rsrt_t2_name,varid) )
   call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_t2)) )
 
+  !!! part size
+  call check( NF90_INQ_VARID(ncid,rsrt_ps_name,varid) )
+  call check( NF90_PUT_VAR(ncid,varid,v3d(:,:,:,iv3d_ps)) )
+
   call check( NF90_CLOSE(ncid) )
 
 END SUBROUTINE write_restart
@@ -728,7 +732,7 @@ SUBROUTINE write_grd(filename,v3d,v2d)
   REAL(r_sngl),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   INTEGER :: iunit,iolen
   INTEGER :: i,j,k,n,irec
-  LOGICAL, PARAMETER :: dodebug=.false.
+  LOGICAL, PARAMETER :: dodebug=.true.
 
   if (dodebug) print *, "write_grd:: open filename = ",filename
   iunit=55

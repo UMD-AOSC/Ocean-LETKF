@@ -87,7 +87,7 @@ PROGRAM obsop_adt
                                       ! surface temp data from the model (v3d(:,:,1)).
   !STEVE: to adjust writing to output file
   LOGICAL :: verbose = .false.
-  LOGICAL :: dodebug1 = .false.
+  LOGICAL :: dodebug1 = .true.
   LOGICAL :: print1st = .true.
 
   INTEGER :: cnt_obs_u=0, cnt_obs_v=0, cnt_obs_t=0, cnt_obs_s=0
@@ -122,7 +122,11 @@ PROGRAM obsop_adt
                         ! day0=`date '+%s' -d $Y0-$M0-$D0`
                         ! day1=`date '+%s' -d $YYYY-$MM-$DD`
                         ! days_since=$(( ( $day1 - $day0 ) / ( 86400 ) ))
-  REAL(r_size) :: min_oerr = 0.04
+  REAL(r_size) :: min_oerr = 0.04 !STEVE: 0.04 is generally cited as an 'instrument error', so add this onto superob stdev estimate of representativeness error
+
+  !STEVE: Set these to true to ensure that the I/O routines read the necessary files for the background data:
+  DO_ALTIMETRY = .true.
+  DO_ADT = .true.
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_oceanmodel module, and process command line options
@@ -195,11 +199,12 @@ PROGRAM obsop_adt
       supercnt(i,j) = supercnt(i,j) + 1
       delta(i,j) = odat(n) - superobs(i,j)
       superobs(i,j) = superobs(i,j) + delta(i,j)/supercnt(i,j)
-      M2(i,j) = M2(i,j) + delta(i,j)*(odat(n) - superobs(i,j))
+      M2(i,j) = M2(i,j) + delta(i,j)*(odat(n) - superobs(i,j))  !STEVE: Online algorithm for computation of variance
 !     if (dodebug1) print *, "supercnt(",i,",",j,") = ", supercnt(i,j)
     enddo
-    !"superobs" contains the mean
-    !M2 contains the variance:
+    ! NOTE:
+    ! "superobs" contains the mean
+    ! "M2" contains the variance:
     WHERE(supercnt > 1) M2 = M2 / (supercnt - 1)
 
     idx=0
@@ -210,8 +215,8 @@ PROGRAM obsop_adt
           if (dodebug1) print *, "idx = ", idx
           odat(idx) = superobs(i,j)
           oerr(idx) = min_oerr + SQRT(M2(i,j)) !STEVE: the obserr_scaling is applied later, if requested by user input
-          rlon(idx) = (lon(i+1)-lon(i))/2.0d0
-          rlat(idx) = (lat(j+1)-lat(j))/2.0d0
+          rlon(idx) = (lon(i+1)+lon(i))/2.0d0
+          rlat(idx) = (lat(j+1)+lat(j))/2.0d0
           rlev(idx) = 0
           elem(idx) = id_eta_obs
           if (dodebug1) print *, "odat(idx) = ", odat(idx)
@@ -405,6 +410,24 @@ PROGRAM obsop_adt
     ! observation operator (computes H(x)) for specified member
     !---------------------------------------------------------------------------
     CALL Trans_XtoY(elem(n),ri,rj,rk,v3d,v2d,ohx(n))
+
+    if (dodebug1) then
+      if (abs(ohx(n)) < epsilon(1.0d0) .and. odat(n) > 0.1) then
+        WRITE(6,*) "obsop_adt.f90 :: ERROR! It appears that ohx is erroneously set to 0."
+        WRITE(6,*) "ri = ", ri 
+        WRITE(6,*) "rj = ", rj 
+        WRITE(6,*) "rk = ", rk 
+        WRITE(6,*) "elem(n) = ", elem(n)
+        WRITE(6,*) "rlon(n) = ", rlon(n)
+        WRITE(6,*) "rlat(n) = ", rlat(n)
+        WRITE(6,*) "rlev(n) = ", rlev(n)
+        WRITE(6,*) "-----------------------"
+        WRITE(6,*) "odat(n) = ", odat(n)
+        WRITE(6,*) "ohx(n)  = ", ohx(n)
+        WRITE(6,*) "-----------------------"
+        STOP(962)
+      endif
+    endif
 
     !GUILLAUME:ADT
     if (DO_ADT .AND. elem(n).eq.id_eta_obs) then

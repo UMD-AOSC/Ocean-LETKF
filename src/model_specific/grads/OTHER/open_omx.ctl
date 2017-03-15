@@ -1,8 +1,0 @@
-'open omb.ctl'
-'open oml.ctl'
-'open omg.ctl'
-'open omh.ctl'
-'open omc.ctl'
-'open ogb.ctl'
-'open oga.ctl'
-'set gxout grfill'
