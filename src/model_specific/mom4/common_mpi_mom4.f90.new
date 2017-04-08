@@ -898,9 +898,7 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
 
   do n=1,nv2d
     do m = mstart,mend
-      do k=1,nlev
-        bufs2(1:nij1,m-mstart+1) = REAL(v2d(:,m,n),r_sngl)
-      enddo
+      bufs2(1:nij1,m-mstart+1) = REAL(v2d(:,m,n),r_sngl)
     enddo
 
     CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
