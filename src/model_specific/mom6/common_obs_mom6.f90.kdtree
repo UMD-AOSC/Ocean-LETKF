@@ -41,7 +41,6 @@ CONTAINS
 SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_eta, iv2d_sst, iv2d_sss
-  IMPLICIT NONE
 
   REAL(r_size),INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
@@ -86,7 +85,6 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   USE params_model, ONLY: nlon, nlat, nlev
   USE vars_model,   ONLY: lon2d, lat2d, lev2d, lon, lat, lev
   USE vars_model,   ONLY: lon0, lonf, lat0, latf, wrapgap
-  IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: elem
   REAL(r_size),INTENT(IN) :: rlon
   REAL(r_size),INTENT(IN) :: rlat
@@ -304,7 +302,6 @@ END SUBROUTINE phys2ijk
 ! Interpolation
 !-----------------------------------------------------------------------
 SUBROUTINE itpl_2d(var,ri,rj,var5)
-  IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlon,nlat)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
@@ -347,7 +344,6 @@ END SUBROUTINE itpl_2d
 
 
 SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
-  IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlon,nlat,nlev)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
@@ -395,7 +391,6 @@ END SUBROUTINE itpl_3d
 ! Monitor departure
 !-----------------------------------------------------------------------
 SUBROUTINE monit_dep(nn,elm,dep,qc)
-  IMPLICIT NONE
   INTEGER,INTENT(IN) :: nn
   REAL(r_size),INTENT(IN) :: elm(nn)
   REAL(r_size),INTENT(IN) :: dep(nn)
@@ -538,7 +533,6 @@ END SUBROUTINE monit_dep
 ! Basic modules for observation input
 !-----------------------------------------------------------------------
 SUBROUTINE get_nobs(cfile,nrec,nn)
-  IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nrec
   INTEGER,INTENT(OUT) :: nn
@@ -643,7 +637,6 @@ END SUBROUTINE get_nobs
 SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
   USE vars_model, ONLY: lon0, lonf, lat0, latf, wrapgap
 ! USE vars_model, ONLY: lon, lat, lev
-  IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
   REAL(r_size),INTENT(OUT) :: elem(nn) ! element number
@@ -710,7 +703,6 @@ END SUBROUTINE read_obs
 
 
 SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
-  IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
   REAL(r_size),INTENT(OUT) :: elem(nn) ! element number
@@ -748,7 +740,6 @@ END SUBROUTINE read_obs2
 
 !STEVE: adding for support
 SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
-  IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
   REAL(r_size),INTENT(IN) :: elem(nn) ! element number
@@ -784,7 +775,6 @@ END SUBROUTINE write_obs
 
 
 SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag_in)
-  IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
   REAL(r_size),INTENT(IN) :: elem(nn) ! element number
@@ -836,7 +826,6 @@ SUBROUTINE center_obs_coords(rlon,oerr,nn)
 ! Center all observations within the longitudes defined by the model grid
 !===============================================================================
   USE vars_model,   ONLY: lon0, lonf, wrapgap
-  IMPLICIT NONE
   REAL(r_size),INTENT(INOUT) :: rlon(nn)
   REAL(r_size),INTENT(INOUT) :: oerr(nn)
   INTEGER, INTENT(IN) :: nn
@@ -944,6 +933,7 @@ SUBROUTINE center_obs_coords(rlon,oerr,nn)
   endif
 
 END SUBROUTINE center_obs_coords
+
 
 
 END MODULE common_obs_oceanmodel
