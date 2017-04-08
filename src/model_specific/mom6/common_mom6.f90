@@ -289,6 +289,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   INTEGER :: ivid
 
   !STEVE: flags to read in each variable
+  !       (ISSUE) make these a namelist input
   LOGICAL :: DO_temp = .true.
   LOGICAL :: DO_salt = .true.
   LOGICAL :: DO_u    = .false.
