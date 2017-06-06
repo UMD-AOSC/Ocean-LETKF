@@ -38,5 +38,15 @@ cp $LDIR/params_letkf.f90 ./
 cp $LDIR/vars_letkf.f90 ./
 cp $LDIR/vars_obs.f90 ./
 
+if [ ${model} == "hycom" ]; then
+   cp $MODELDIR/mod_xc.F ./
+   cp $MODELDIR/mod_za.F ./
+   cp $MODELDIR/mod_ppsw.F ./
+   cp $MODELDIR/wtime.F ./
+   cp $MODELDIR/hycom_intrp.f ./
+   cp $MODELDIR/layer2z.f ./
+fi
+
+
 OBSDIR=$root/src/obs
 cp $OBSDIR/params_obs.f90 ./
