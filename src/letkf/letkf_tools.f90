@@ -346,7 +346,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) + gues3d(ij,ilev,k,n) * trans(k,m,n)
 
             !STEVE: debug - check for bad values
-            if ( anal3d(ij,ilev,m,n) < -10 ) then
+            ! JILI skip checking h for now (add n<5)
+            if ( anal3d(ij,ilev,m,n) < -10 .and. n < 5) then
+            !if ( anal3d(ij,ilev,m,n) < -10 ) then
+
               WRITE(6,*) "Problem in letkf_das after letkf_core. k = ", k
               WRITE(6,*) "ij, ilev, m, n = ", ij,ilev,m,n
               WRITE(6,*) "anal3d(ij,ilev,m,n) = ", anal3d(ij,ilev,m,n)
@@ -364,6 +367,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
               WRITE(6,*) "dep(1:nobsl) = ", dep(1:nobsl)
               WRITE(6,*) "parm = ", parm
               WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
+! dong
               STOP(6)
             endif
           enddo

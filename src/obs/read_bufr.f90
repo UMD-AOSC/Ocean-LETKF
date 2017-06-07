@@ -46,7 +46,7 @@ MODULE read_bufr
 
   CONTAINS
 
-  SUBROUTINE read_bufr_dumpjb(lunit,typ,obs_data,nobs)
+  SUBROUTINE read_bufr_dumpjb(lunit,typ,obs_data,nobs)                                                                                        
 
     IMPLICIT NONE  !STEVE: this isn't working with bufr subroutines
 
@@ -70,6 +70,7 @@ MODULE read_bufr
     INTEGER :: ireadmg,ireadsb
     LOGICAL :: dodebug=.false.
     INTEGER :: n
+
 
     !STEVE: for lack of a better approach, for now I'm just guessing at the
     !possible number of observations in one given day:
@@ -119,9 +120,13 @@ MODULE read_bufr
 
       ! filter by subset type
       stype=''
-      if(subset=='NC031001') stype='BATHY'
-      if(subset=='NC031002') stype='TESAC'
-      if(subset=='NC031003') stype='TRKOB'
+      ! JILI modified code number
+      !if(subset=='NC031001') stype='BATHY'
+      !if(subset=='NC031002') stype='TESAC'
+      !if(subset=='NC031003') stype='TRKOB'
+      if(subset=='TESAC') stype='TESAC'
+      if(subset=='BATHY') stype='BATHY'
+      if(subset=='TRKOB') stype='TRKOB'
       if(stype=='') CALL bort('unknown message type '//subset)
       if (dodebug) print"(80('-'))"
       if (dodebug) print*
@@ -144,11 +149,13 @@ MODULE read_bufr
         CALL ufbint(lunit,date,5,1,iret,'YEAR MNTH DAYS HOUR MINU')
         rdate=date 
 
+
         !-----------------------------------------------------------------------
         ! read the id and location - read clon/clat if clonh/clath not available
         !-----------------------------------------------------------------------
         CALL ufbint(lunit,sloc,3,1,iret,'RPID CLONH CLATH')
         if(sloc(2)>=bmiss) CALL ufbint(lunit,sloc,3,1,iret,'RPID CLON CLAT ')
+
 
         !-----------------------------------------------------------------------
         ! read the measurement indicators
@@ -205,7 +212,9 @@ MODULE read_bufr
           stde(1) = se0 + seF
         endif
 
-        do l=1,nlvl  
+       if (sloc(2) .lt. 0.0) sloc(2)=modulo(sloc(2),360.0)
+
+        do l=1,nlvl
           dbss = btocn(1,l)
           stmp = btocn(2,l)
           saln = btocn(3,l)
@@ -223,7 +232,7 @@ MODULE read_bufr
             nobs = nobs+1
             n = nobs
             if (nobs > maxobs) then
-              print *, "read_bufr_dumpjb:: ERROR! Must increase size of maxobs = ", maxobs
+              print *, "read_bufr_dumpjb:: ERROR! Must increase size of maxobs = ", maxobs                 
               STOP(99)
             endif
           else
@@ -248,14 +257,16 @@ MODULE read_bufr
           obs_data(n)%ptyp = plat     !platform type
           obs_data(n)%sid  = ""       !
           obs_data(n)%qkey = ""       !quality key
-          
+
           if (dodebug) print *, "obs_data(n) = ", obs_data(n)
         enddo
+
+
 
         if (dodebug) then
           print*
           print"(80('-'))"
-          pause
+          !pause
           print"(80('-'))"
         endif
       enddo

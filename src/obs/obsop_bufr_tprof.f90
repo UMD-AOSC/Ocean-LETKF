@@ -25,6 +25,7 @@ PROGRAM obsop_bufr_tprof
 !   for each member added in a new column.
 ! 
 ! !REVISION HISTORY:
+!   06/06/2017 Jili Dong modified for HYCOM 
 !   03/17/2016 Steve Penny separated obsop.f90 into separate files
 !   04/03/2014 Steve Penny modified for use with OCEAN at NCEP.
 !   04/03/2013 Takemasa Miyoshi created for SPEEDY atmospheric model.
@@ -36,13 +37,15 @@ PROGRAM obsop_bufr_tprof
   USE common
   USE params_model
   USE vars_model
-  USE common_mom4
+  USE common_oceanmodel
   USE params_obs,                ONLY: nobs, id_t_obs, id_s_obs, id_u_obs, id_v_obs, id_eta_obs
   USE params_obs,                ONLY: DO_INSITU_to_POTTEMP, DO_POTTEMP_to_INSITU
   USE vars_obs
-  USE common_obs_mom4
-  USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z
+  USE common_obs_oceanmodel
+! USE common_obs_oceanmodel      ONLY: center_obs_coords 
+  USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z, sa_from_sp, pt_from_t                      
   USE read_bufr,                 ONLY: bufr_data, read_bufr_dumpjb, maxobs
+
 
   IMPLICIT NONE
 
@@ -86,15 +89,20 @@ PROGRAM obsop_bufr_tprof
   LOGICAL :: verbose = .false.
   LOGICAL :: print1st = .true.
   LOGICAL :: dodebug1 = .false.
+  LOGICAL :: DO_REMOVE_65N = .true.
+
 
   INTEGER :: cnt_obs_u=0, cnt_obs_v=0, cnt_obs_t=0, cnt_obs_s=0
   INTEGER :: cnt_obs_ssh=0, cnt_obs_sst=0, cnt_obs_sss=0, cnt_obs_eta=0
-  INTEGER :: cnt_obs_x=0, cnt_obs_y=0, cnt_obs_z=0
+  INTEGER :: cnt_obs_x=0, cnt_obs_y=0, cnt_obs_z=0            
   INTEGER, DIMENSION(nv3d+nv2d), SAVE :: cnt_obs = 0
 
   !STEVE: for debugging observation culling:
   INTEGER :: cnt_yout=0, cnt_xout=0, cnt_zout=0, cnt_triout=0
   INTEGER :: cnt_rigtnlon=0, cnt_nearland=0, cnt_oerlt0=0, cnt_altlatrng=0
+
+  ! JILI 
+  INTEGER ::rim1,rjm1 
 
   !-----------------------------------------------------------------------------
   ! Instantiations specific to this observation type:
@@ -107,7 +115,10 @@ PROGRAM obsop_bufr_tprof
   !-----------------------------------------------------------------------------
   ! Initialize the common_mom4 module, and process command line options
   !-----------------------------------------------------------------------------
-  CALL set_common_mom4
+! JILI For HYCOM use common ocean model
+!  CALL set_common_mom4
+  CALL set_common_oceanmodel
+
   CALL process_command_line !(get: -obsin <obsinfile> -gues <guesfile> -obsout <obsoutfile>)
 
   !-----------------------------------------------------------------------------
@@ -116,6 +127,7 @@ PROGRAM obsop_bufr_tprof
   !STEVE: for lack of a better approach, for now I'm just guessing at the
   !possible number of observations in one given day:
   nobs = maxobs
+
   print *, "ALLOCATING obs_data with nobs = ", nobs
   ALLOCATE(obs_data(nobs))
 
@@ -143,13 +155,14 @@ PROGRAM obsop_bufr_tprof
     oqc(i)  = 0
     obhr(i) = obs_data(i)%hour
   enddo
-  if (print1st) then 
+
+  if (print1st .and. nobs > 0) then 
     print *, "elem(1),rlon(1),rlat(1),obhr(1) = ", elem(1),rlon(1),rlat(1),obhr(1)
     print *, "odat(1:40) = ", odat(1:40)
     print *, "oerr(1:40) = ", oerr(1:40)
   endif
 
-  if (dodebug) print *, "deallocate obs_data..."
+  if (dodebug1) print *, "deallocate obs_data..."
   DEALLOCATE(obs_data)
 
   !-----------------------------------------------------------------------------
@@ -157,8 +170,8 @@ PROGRAM obsop_bufr_tprof
   ! (Stolen from common_obs_mom4.f90::read_obs
   !-----------------------------------------------------------------------------
   if (remap_obs_coords) then
-    if (dodebug) print *, "Update lon coordinate to match model grid..."
-    CALL center_obs_coords(rlon,oerr,nobs)
+    if (dodebug1) print *, "Update lon coordinate to match model grid..."
+  !  CALL center_obs_coords(rlon,oerr,nobs)
   endif
 
   !-----------------------------------------------------------------------------
@@ -176,6 +189,7 @@ PROGRAM obsop_bufr_tprof
   WRITE(6,*) "Cycling through observations..."
   ohx=0.0d0
   oqc=0
+
   DO n=1,nobs
     !---------------------------------------------------------------------------
     ! Count bad obs errors associated with observations, and skip the ob
@@ -185,12 +199,19 @@ PROGRAM obsop_bufr_tprof
       cnt_oerlt0 = cnt_oerlt0 + 1
       CYCLE
     endif
+    
+!    if (rlon(n).le. -53.1 .and. rlon(n).ge.-98.0 .and. rlat(n) .le. 32.0 .and.rlat(n) .ge. 5.8) then
+!      write (322,*) rlon(n),rlat(n),rlev(n)                           
+!    end if
 
     !---------------------------------------------------------------------------
     ! Convert the physical coordinate to model grid coordinate (note: real, not integer)
     !---------------------------------------------------------------------------
-    CALL phys2ijk(elem(n),rlon(n),rlat(n),rlev(n),ri,rj,rk) !(OCEAN)
-   
+!JILI For HYCOM just get i and j, vertical interpolation will be done later
+!wihout rk 
+!    CALL phys2ijk(elem(n),rlon(n),rlat(n),rlev(n),ri,rj,rk) !(OCEAN)
+    CALL phys2ij(elem(n),rlon(n),rlat(n),rlev(n),ri,rj) !(OCEAN)
+
     !---------------------------------------------------------------------------
     ! Filter in the tripolar region until localization is examined in the arctic !(ISSUE)
     !---------------------------------------------------------------------------
@@ -203,31 +224,46 @@ PROGRAM obsop_bufr_tprof
     !---------------------------------------------------------------------------
     ! Filter out observations that are out of range for the grid
     !---------------------------------------------------------------------------
-    if (CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) then
+    ! JILI for HYCOM, use observations further from the boundary to be safe             
+!    if (CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) then
+    if (CEILING(ri) < 2 .OR. nlon-1 < CEILING(ri)) then
       if (verbose) WRITE(6,'(A)') '* X-coordinate out of range'
       if (verbose) WRITE(6,'(A,F6.2,A,F6.2)') '*   ri=',ri,', olon=', rlon(n)
       cnt_xout = cnt_xout + 1
       CYCLE
     endif
-    if (CEILING(rj) < 2 .OR. nlat < CEILING(rj)) then
+!    if (CEILING(rj) < 2 .OR. nlat < CEILING(rj)) then
+    if (CEILING(rj) < 2 .OR. nlat-1 < CEILING(rj)) then
       if (verbose) WRITE(6,'(A)') '* Y-coordinate out of range'
       if (verbose) WRITE(6,'(A,F6.2,A,F6.2)') '*   rj=',rj,', olat=',rlat(n)
       cnt_yout = cnt_yout + 1
       CYCLE
     endif
     !STEVE: check against kmt, not nlev (OCEAN)
-    if (CEILING(rk) > nlev) then
-      CALL itpl_2d(kmt0,ri,rj,dk)
+    !JILI: For HYCOM, use four neighbouring points bathymetry
+    !to check if obs. is above the shallowest bathymetry
+!    if (CEILING(rk) > nlev) then
+     rim1=FLOOR(ri) 
+     rjm1=FLOOR(rj)
+!      CALL itpl_2d(kmt0,ri,rj,dk)
+    if (minval(phi0(rim1:rim1+1,rjm1:rjm1+1)) < rlev(n)) THEN                        
       WRITE(6,'(A)') '* Z-coordinate out of range'
-      WRITE(6,'(A,F6.2,A,F10.2,A,F6.2,A,F6.2,A,F10.2)') &
-           & '*   rk=',rk,', olev=',rlev(n),&
-           & ', (lon,lat)=(',rlon(n),',',rlat(n),'), kmt0=',dk
+!      WRITE(6,'(A,F6.2,A,F10.2,A,F6.2,A,F6.2,A,F10.2)') &
+!           & '*   rk=',rk,', olev=',rlev(n),&
+!           & ', (lon,lat)=(',rlon(n),',',rlat(n),'), kmt0=',dk
+
+      WRITE(6,'(A,A,F10.2,A,F6.2,A,F6.2,A)') &
+           & '* ',', olev=',rlev(n),&
+           & ', (lon,lat)=(',rlon(n),',',rlat(n),')'
+
+
       cnt_zout = cnt_zout + 1
       CYCLE
     endif
-    if (CEILING(rk) < 2 .AND. rk < 1.00001d0) then   !(OCEAN)
-      rk = 1.00001d0                                 !(OCEAN)
-    endif                                            !(OCEAN)
+! JILI remove the rk part
+!    if (CEILING(rk) < 2 .AND. rk < 1.00001d0) then   !(OCEAN)
+!      rk = 1.00001d0                                 !(OCEAN)
+!    endif                                            !(OCEAN)
 
     !---------------------------------------------------------------------------
     ! Check the observation against boundaries
@@ -239,7 +275,7 @@ PROGRAM obsop_bufr_tprof
     boundary_points : if (ri > nlon) then
       !STEVE: I have to check what it does for this case...
       !       but it causes an error in the next line if ri > nlon
-      if (verbose) WRITE(6,'(A)') '* coordinate is not on mom4 model grid: ri > nlon'
+      if (verbose) WRITE(6,'(A)') '* coordinate is not on ocean model grid: ri > nlon'
       cnt_rigtnlon = cnt_rigtnlon + 1
       if (cnt_rigtnlon <= 1) then
         WRITE(6,*) "STEVE: ri > nlon (cnt_rigtnlon)"
@@ -250,7 +286,7 @@ PROGRAM obsop_bufr_tprof
         WRITE(6,*) "rlon(n) = ", rlon(n)
         WRITE(6,*) "rlat(n) = ", rlat(n)
         WRITE(6,*) "rlev(n) = ", rlev(n)
-        WRITE(6,*) "rk = ", rk
+!        WRITE(6,*) "rk = ", rk
       endif
       CYCLE
     else
@@ -275,10 +311,17 @@ PROGRAM obsop_bufr_tprof
           CYCLE
         endif
       case(2)
+      ! JILI kmt is now = kdm so use bathymetry
+      ! JILI kmt=0 for land and kmt=nlev for ocean
         if(kmt(CEILING(ri),CEILING(rj)) .lt. 1 .or. &
              kmt(CEILING(ri),FLOOR(rj)) .lt. 1 .or. &
              kmt(FLOOR(ri),CEILING(rj)) .lt. 1 .or. &
              kmt(FLOOR(ri),FLOOR(rj)) .lt. 1) THEN
+      !  if(phi0(CEILING(ri),CEILING(rj)) .gt. 100000.0 .or. &
+      !       phi0(CEILING(ri),FLOOR(rj)) .gt. 100000.0 .or. &
+      !       phi0(FLOOR(ri),CEILING(rj)) .gt. 100000.0 .or. &
+      !       phi0(FLOOR(ri),FLOOR(rj)) .gt. 100000.0) THEN
+
 
           if (debug_obsfilter) then
             WRITE(6,'(A)') '* coordinate is too close to land, according to kmt'
@@ -287,21 +330,23 @@ PROGRAM obsop_bufr_tprof
           endif
           cnt_nearland = cnt_nearland + 1
           CYCLE
-        elseif(kmt(CEILING(ri),CEILING(rj)) .lt. rk .or. &
-                  kmt(CEILING(ri),FLOOR(rj)) .lt. rk .or. &
-                  kmt(FLOOR(ri),CEILING(rj)) .lt. rk .or. &
-                  kmt(FLOOR(ri),FLOOR(rj)) .lt. rk) THEN
+        ! JILI THis is already in the previous code
+        !elseif(kmt(CEILING(ri),CEILING(rj)) .lt. rk .or. &
+        !          kmt(CEILING(ri),FLOOR(rj)) .lt. rk .or. &
+        !          kmt(FLOOR(ri),CEILING(rj)) .lt. rk .or. &
+        !          kmt(FLOOR(ri),FLOOR(rj)) .lt. rk) THEN
 
-          if (debug_obsfilter) then
-            WRITE(6,'(A)') '* coordinate is too close to underwater topography, according to kmt'
-            WRITE(6,'(A,F6.2,A,F6.2,A,F6.2)') '*   ri=',ri,', rj=',rj, ', rk=',rk
-            WRITE(6,*) "kmt cell = ", kmt(FLOOR(ri):CEILING(ri),FLOOR(rj):CEILING(rj))
-          endif
-          cnt_nearland = cnt_nearland + 1
-          CYCLE
+        !  if (debug_obsfilter) then
+        !    WRITE(6,'(A)') '* coordinate is too close to underwater topography, according to kmt'
+        !    WRITE(6,'(A,F6.2,A,F6.2,A,F6.2)') '*   ri=',ri,', rj=',rj, ', rk=',rk
+        !    WRITE(6,*) "kmt cell = ", kmt(FLOOR(ri):CEILING(ri),FLOOR(rj):CEILING(rj))
+        !  endif
+        !  cnt_nearland = cnt_nearland + 1
+        !  CYCLE
         endif
       end select
     endif boundary_points
+
 
     !---------------------------------------------------------------------------
     ! (OPTIONAL) Scale the observation errors
@@ -319,10 +364,13 @@ PROGRAM obsop_bufr_tprof
       if (rand(1) > obs_randselect) CYCLE
     endif thin_obs
 
+
     !---------------------------------------------------------------------------
     ! observation operator (computes H(x)) for specified member
     !---------------------------------------------------------------------------
-    CALL Trans_XtoY(elem(n),ri,rj,rk,v3d,v2d,ohx(n))
+    ! JILI change rk to rlev for HYCOM
+    !CALL Trans_XtoY(elem(n),ri,rj,rk,v3d,v2d,ohx(n))
+    CALL Trans_XtoY(elem(n),ri,rj,rlev(n),v3d,v2d,ohx(n))
 
     if (DO_POTTEMP_to_INSITU .and. elem(n) .eq. id_t_obs) then
       !STEVE: eventually use pressure from model output,
@@ -333,7 +381,10 @@ PROGRAM obsop_bufr_tprof
       pt = ohx(n)
 
       ! Need the salinity value here too:
-      CALL Trans_XtoY(REAL(id_s_obs,r_size),ri,rj,rk,v3d,v2d,sp)
+      !JILI change rk to rlev for HYCOM
+      !CALL Trans_XtoY(REAL(id_s_obs,r_size),ri,rj,rk,v3d,v2d,sp)
+      CALL Trans_XtoY(REAL(id_s_obs,r_size),ri,rj,rlev(n),v3d,v2d,sp)
+
 
       !STEVE: for some reason, realtime GTS data is
       !       distributed using depth as the vertical
@@ -372,7 +423,8 @@ PROGRAM obsop_bufr_tprof
   !-----------------------------------------------------------------------------
   ! Write the observations and their associated innovations to file
   !-----------------------------------------------------------------------------
-  CALL write_obs2(obsoutfile,nobs,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
+!JILI  skip all obs with bad qc flag by setting qcflag_in as true in write_obs2
+  CALL write_obs2(obsoutfile,nobs,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,.true.)
 
   DEALLOCATE( elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,v3d,v2d )
 

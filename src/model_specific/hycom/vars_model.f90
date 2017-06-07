@@ -15,9 +15,15 @@ PUBLIC
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE   :: lon !(nlon)
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE   :: lat !(nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE   :: lev !(nlev)                     !(OCEAN)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lon2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lon2d !(nlon,nlat)      !(2DGRID)(For irregular grids)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lat2d !(nlon,nlat)      !(2DGRID)(For irregular grids)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lev2d !(nlon,nlat)      !(2DGRID)(For irregular grids)
+
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: ulon2d !(nlon,nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: ulat2d !(nlon,nlat)
+
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: vlon2d !(nlon,nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: vlat2d !(nlon,nlat)
 
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dx !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dy !(nlon,nlat)
@@ -25,12 +31,14 @@ PUBLIC
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: depth !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: wet !(nlon,nlat)
 
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE     :: fcori   !(nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE   :: fcori2d !(nlon,nlat)
   INTEGER,ALLOCATABLE,DIMENSION(:,:),SAVE        :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
+  INTEGER,ALLOCATABLE,DIMENSION(:,:),SAVE        :: pmsk    ! JILI HYCOM mask 
+  INTEGER,ALLOCATABLE,DIMENSION(:,:),SAVE        :: umsk
+  INTEGER,ALLOCATABLE,DIMENSION(:,:),SAVE        :: vmsk
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE   :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
   ! For AMOC computation
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE :: zb !(nlev)
@@ -44,18 +52,26 @@ PUBLIC
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
 
+  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: ulon2d !(nlon,nlat)
+  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: ulat2d !(nlon,nlat)
+
+  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: vlon2d !(nlon,nlat)
+  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: vlat2d !(nlon,nlat)
+
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dx !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dy !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: area_t !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
   REAL(r_size),DIMENSION(nlon,nlat,nlev),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: depth !(nlon,nlat)               !(OCEAN)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: wet !(nlon,nlat)               !(OCEAN)
 
   REAL(r_size),DIMENSION(nlat),SAVE      :: fcori !(nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: fcori2d !(nlon,nlat)
   INTEGER,DIMENSION(nlon,nlat),SAVE      :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
+  INTEGER,DIMENSION(nlon,nlat),SAVE        :: pmsk    ! JILI HYCOM mask 
+  INTEGER,DIMENSION(nlon,nlat),SAVE        :: umsk
+  INTEGER,DIMENSION(nlon,nlat),SAVE        :: vmsk
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
   ! For AMOC computation
   REAL(r_size),DIMENSION(nlev),SAVE :: zb !(nlev)
@@ -100,8 +116,13 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(lon(nlon))
   ALLOCATE(lat(nlat))
   ALLOCATE(lev(nlev))
-  ALLOCATE(lon2d(nlon,nlev))
-  ALLOCATE(lat2d(nlon,nlev))
+  ALLOCATE(lon2d(nlon,nlat))
+  ALLOCATE(lat2d(nlon,nlat))
+  ALLOCATE(ulon2d(nlon,nlat))
+  ALLOCATE(ulat2d(nlon,nlat))
+  ALLOCATE(vlon2d(nlon,nlat))
+  ALLOCATE(vlat2d(nlon,nlat))
+
   ALLOCATE(dx(nlon,nlat))
   ALLOCATE(dy(nlon,nlat))
   ALLOCATE(phi0(nlon,nlat))
@@ -109,6 +130,10 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(SSHclm_m(nlon,nlat))
 
   ALLOCATE(kmt(nlon,nlat))
+  ALLOCATE(pmsk(nlon,nlat))
+  ALLOCATE(umsk(nlon,nlat))
+  ALLOCATE(vmsk(nlon,nlat))
+
 
   ALLOCATE(fcori(nlat))
   ALLOCATE(zb(nlev))
