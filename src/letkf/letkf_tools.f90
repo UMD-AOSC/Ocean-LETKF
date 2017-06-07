@@ -346,7 +346,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) + gues3d(ij,ilev,k,n) * trans(k,m,n)
 
             !STEVE: debug - check for bad values
-            ! JILI skip updating h for now (add n<5)
+            ! JILI skip checking h for now (add n<5)
             if ( anal3d(ij,ilev,m,n) < -10 .and. n < 5) then
             !if ( anal3d(ij,ilev,m,n) < -10 ) then
 
