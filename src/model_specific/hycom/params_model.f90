@@ -1,6 +1,6 @@
 MODULE params_model
 
-USE common, ONLY: r_size
+USE common, ONLY: r_size, slen
 
 IMPLICIT NONE
 
@@ -14,12 +14,12 @@ PUBLIC
 
   ! HYCOM 1/4º global grid, 32 levels:
 #ifdef DYNAMIC
-  INTEGER :: nlon=1500
-  INTEGER :: nlat=1100
+  INTEGER :: nlon=563
+  INTEGER :: nlat=351
   INTEGER :: nlev=32
 #else
-  INTEGER,PARAMETER :: nlon=1500
-  INTEGER,PARAMETER :: nlat=1100
+  INTEGER,PARAMETER :: nlon=563
+  INTEGER,PARAMETER :: nlat=351
   INTEGER,PARAMETER :: nlev=32
 #endif
 
@@ -84,6 +84,8 @@ PUBLIC
 
   !For input/output of model binary files (converted form HYCOM ab-format):
   CHARACTER(8) :: base  = '.fsd.bin'! (HYCOM)(All variables assembled in one binary file)
+  CHARACTER(2) :: base_a  = '.a'! (HYCOM)(All variables assembled in one
+  CHARACTER(2) :: base_b  = '.b'! (HYCOM)(All variables assembled in one
 
   !model input and output file direct/sequential
   INTEGER, PARAMETER :: hycom_io_access = 1  ! 0 == direct, 1 == sequential
@@ -109,12 +111,16 @@ PUBLIC
   CHARACTER(6) :: ebase = 'fsd.nc' ! Sea Surface Height
   CHARACTER(6) :: drbase           ! (DRIFTERS)
 
-  ! Bounds checking (for output by common_mom4.f90::write_restart)
+  ! Bounds checking (for output by common_hycom.f90::write_restart)
   LOGICAL :: do_physlimit=.true.
-  REAL(r_size) :: max_t = 40.0d0 ! ÂC
-  REAL(r_size) :: min_t = -4.0d0 ! ÂC
+  REAL(r_size) :: max_t = 50.0d0 ! degC
+  REAL(r_size) :: min_t = 0.0d0 ! degC
   REAL(r_size) :: max_s = 50.0d0 ! psu
   REAL(r_size) :: min_s =  0.0d0 ! psu
+  REAL(r_size) :: max_uv = 10.0 ! psu
+  REAL(r_size) :: min_uv =  -10.0d0 ! psu
+  REAL(r_size) :: max_h = 100000.0 ! psu
+  REAL(r_size) :: min_h =  0.0d0 ! psu
   
   !STEVE: for filtering undef values from netcdf file
   REAL(r_size), PARAMETER :: ncundef = 1.267650600228229E+030 !1.0e18
