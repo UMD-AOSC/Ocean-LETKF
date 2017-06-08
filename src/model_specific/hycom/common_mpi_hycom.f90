@@ -503,6 +503,7 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d)
   INTEGER :: l,n,ll,im
   CHARACTER(slen) :: filename='file000'
+  CHARACTER(slen) :: filename_gs='file000'
   INTEGER :: i,j,k,m !STEVE: for debugging
   LOGICAL :: verbose = .true.
   INTEGER :: mstart,mend
@@ -519,6 +520,7 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
     im = myrank+1 + (l-1)*nprocs
     if (im <= member) then
       WRITE(filename(1:7),'(A4,I3.3)') file,im
+      WRITE(filename_gs(1:7),'(A4,I3.3)') "gs00",im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing file: ',filename
 
       !STEVE: debug
@@ -527,14 +529,14 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
       WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v3dg(:,:,:,iv3d_t))) = ", MINVAL(ABS(v3dg(:,:,:,iv3d_t)))
       WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v3dg(:,:,:,iv3d_s))) = ", MINVAL(ABS(v3dg(:,:,:,iv3d_s)))
 
-      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MAXVAL(ABS(v2dg(:,:,iv3d_t))) = ", MAXVAL(ABS(v2dg(:,:,iv3d_t)))
-      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MAXVAL(ABS(v2dg(:,:,iv3d_s))) = ", MAXVAL(ABS(v2dg(:,:,iv3d_s)))
-      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v2dg(:,:,iv3d_t))) = ", MINVAL(ABS(v2dg(:,:,iv3d_t)))
-      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v2dg(:,:,iv3d_s))) = ", MINVAL(ABS(v2dg(:,:,iv3d_s)))
+      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MAXVAL(ABS(v2dg(:,:,iv2d_ssh))) = ", MAXVAL(ABS(v2dg(:,:,1)))
+      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MAXVAL(ABS(v2dg(:,:,iv2d_ssh))) = ", MAXVAL(ABS(v2dg(:,:,1)))
+      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v2dg(:,:,iv2d_ubt))) = ", MINVAL(ABS(v2dg(:,:,2)))
+      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v2dg(:,:,iv2d_ubt))) = ", MINVAL(ABS(v2dg(:,:,2)))
 
 
       WRITE(6,*) "write_ens_mpi:: Calling write_restart..."
-      CALL write_restart(filename,v3dg,v2dg)
+      CALL write_restart(filename,filename_gs,v3dg,v2dg)
       WRITE(6,*) "write_ens_mpi:: Finished calling write_restart."
     endif
   enddo
@@ -648,6 +650,9 @@ SUBROUTINE write_ensmspr_mpi(file,member,v3d,v2d)
   INTEGER :: cnt2d(nij1,nv2d)
   INTEGER :: i,k,m,n,j,l,ll,im,mstart,mend
   CHARACTER(11) :: filename='file000.grd'
+
+! JILI For now, skip output mean and spread
+  RETURN
 
   ALLOCATE(v3dm(nij1,nlev,nv3d),v2dm(nij1,nv2d))
   ALLOCATE(v3ds(nij1,nlev,nv3d),v2ds(nij1,nv2d))

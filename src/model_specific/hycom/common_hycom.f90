@@ -15,7 +15,9 @@ MODULE common_oceanmodel
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_SLA
   USE vars_model,   ONLY: lon, lat, lev, lon2d, lat2d, lon0, lonf, lat0, latf, wrapgap, dx, dy, kmt, kmt0, phi0
+  USE vars_model,   ONLY: pmsk,umsk,vmsk 
   USE hycom_io,     ONLY: read_blkdat
+  USE hycom_io,     ONLY: get_hycom_depth,get_hycom_sample 
   USE params_model, ONLY: SSHclm_file
   USE vars_model,   ONLY: SSHclm_m
 
@@ -37,6 +39,7 @@ SUBROUTINE set_common_oceanmodel
   USE params_model, ONLY: gridfile, gridfile1, gridfile2, gridfile3, ncundef
   USE vars_model,   ONLY: area_t
   USE vars_model,   ONLY: fcori, fcori2d
+  !USE vars_model,   ONLY: pmsk, umsk, vmsk 
   USE params_model, ONLY: initialize_params_model
   USE vars_model,   ONLY: initialize_vars_model
 
@@ -44,9 +47,7 @@ SUBROUTINE set_common_oceanmodel
 
   INTEGER :: i,j,k
   INTEGER :: ncid,ncid2,ncid3,istat,varid,dimid
-  CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
-  REAL(r_size) :: dx0,dy0
 
   ! For temporary dx and dy computations:
   REAL(r_size) :: dlon, dlat, d1, d2, d3
@@ -61,89 +62,36 @@ SUBROUTINE set_common_oceanmodel
   CALL initialize_params_model ! (checks to make sure it is initialized)
   CALL initialize_vars_model   ! (checks to make sure it is initialized)
 
-!  !
-!  ! Elements
-!  !
-!  element(iv3d_u) = 'U   '
-!  element(iv3d_v) = 'V   '
-!  element(iv3d_t) = 'T   '
-!  element(iv3d_s) = 'S   '             !(OCEAN)
-!  element(iv3d_h) = 'H   '             !(OCEAN)(MOM6)(HYCOM)
-!  element(nv3d+iv2d_ssh) = 'SSH '      !(OCEAN)
-!  element(nv3d+iv2d_ubt) = 'UBT '      !(OCEAN)(HYCOM)
-!  element(nv3d+iv2d_vbt) = 'VBT '      !(OCEAN)(HYCOM)
-!! element(nv3d+iv2d_sst) = 'SST '      !(OCEAN)
-!! element(nv3d+iv2d_sss) = 'SSS '      !(OCEAN)
-!  if (DO_DRIFTERS) then
-!    element(nv3d+nv2d+iv4d_x) = 'X   '             !(OCEAN) (DRIFTERS)
-!    element(nv3d+nv2d+iv4d_y) = 'Y   '             !(OCEAN) (DRIFTERS)
-!    element(nv3d+nv2d+iv4d_z) = 'Z   '             !(OCEAN) (DRIFTERS)
-!  endif
-
-  if (DO_ALTIMETRY) then
-    INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
-    IF(ex .and. DO_SLA) THEN
-      ! Read in the model climatology
-      CALL read_etaclm
-    ELSE
-      WRITE(6,*) "The file does not exist: ", SSHclm_file
-      WRITE(6,*) "Exiting common_hycom.f90..."
-      STOP(1)
-    ENDIF
-  else
-    SSHclm_m = 0.0d0
-  endif
-
   !STEVE: needed to index the observations, because HYCOM does not have a regular grid above 45ºN
   !       Instead, HYCOM has a 2D-field for the representation of the lon/lat coordinate.
   !       This requires an update to the lon and lat arrays to lon2d and lat2d, with subsequent
   !       updates in letkf_local.f90 and letkf_obs.f90. These are primarily used to sort and store
   !       observation locations for later lookup at the localization phase.
-  dx0 = 0.239990234375 !360.0/nlon  !0.23999
-! lon(1) = 74.23999
-! lon(1) = 74.12024 !434.11975
-  lon(1) = 74.2399902343750 
-  do i=2,nlon
-    lon(i) = lon(i-1) + dx0
-  enddo
-! dy0 = (180.0)/nlat  !0.096
-! lat(1) = -78.608
-! dy0 = (78.6080017089844 + 89.93317)/nlat
-  dy0 = (78.6080017089844 + 90.0)/nlat
-! lat(1) = -78.60800
-  lat(1) = -78.6080017089844
-  do j=2,nlat
-    lat(j) = lat(j-1) + dy0
-  enddo
 
   !
   ! Lon, Lat, f, orography
   !
 !STEVE: this part adapted from ROMS, update for MOM4 (and later MOM6) netcdf files:
 !STEVE: GOAL: to utilize all netcdf grid data to completely define the grid and all grid-dependent operations
-  INQUIRE(FILE=trim(gridfile),EXIST=ex)
+  INQUIRE(FILE=trim("regional.grid.a"),EXIST=ex)
   IF(.not. ex) THEN
-    WRITE(6,*) "The file does not exist: ", gridfile 
+    WRITE(6,*) "The file does not exist: ", "regional.grid.a" 
     WRITE(6,*) "Exiting common_hycom.f90..."
     STOP(2)
   ENDIF
-  WRITE(6,'(A)') '  >> accessing file: ', gridfile
-  CALL check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
-
-  CALL check( NF90_INQ_VARID(ncid,'Longitude',varid) )   ! Longitude for T-cell
-  CALL check( NF90_GET_VAR(ncid,varid,lon2d) )
+  call get_hycom_depth(phi0,lat2d,lon2d,dx,dy) 
+  WRITE(6,'(A)') '  >> accessing file: ', "regional.grid.a" 
   WRITE(6,*) "lon2d(1,1) = ", lon2d(1,1)
   WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
-  CALL check( NF90_INQ_VARID(ncid,'Latitude',varid) )   ! Latitude for T-cell
-  CALL check( NF90_GET_VAR(ncid,varid,lat2d) )
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
   WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
+
+  lat=lat2d(2,:)
+  lon=lon2d(:,2)
 
   !-----------------------------------------------------------------------------
   ! Get the reference density levels:
   !-----------------------------------------------------------------------------
-! CALL check( NF90_INQ_VARID(ncid,'Depth',varid) )      ! depth of T-cell
-! CALL check( NF90_GET_VAR(ncid,varid,lev) )
   CALL read_blkdat(gridfile1,sigma)
   lev = sigma
   WRITE(6,*) "lev(1) = ", lev(1)
@@ -152,8 +100,10 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
   !(HYCOM) Sample temperature to make kmt field (2d land-sea depth mask)
   !-----------------------------------------------------------------------------
-  CALL check( NF90_INQ_VARID(ncid,'temperature',varid) )      
-  CALL check( NF90_GET_VAR(ncid,varid,sample_t) )
+
+  ! JILI read HYCOM sample to get mask, which is needed by HYCOM output 
+  CALL get_hycom_sample(sample_t,pmsk,umsk,vmsk)
+
   WRITE(6,*) "sample_t(1,1,1) = ", sample_t(1,1,1)
   WRITE(6,*) "sample_t(nlon,nlat,nlev) = ", sample_t(nlon,nlat,nlev)
 
@@ -174,96 +124,12 @@ SUBROUTINE set_common_oceanmodel
   !
   ! dx and dy
   !
-!!STEVE:MOM6: open new gridfile (ocean_hgrid.nc, gridfile3)
-  INQUIRE(FILE=trim(gridfile3),EXIST=ex)
-  IF(.not. ex) THEN
-    WRITE(6,*) "The file does not exist: ", gridfile3
-    WRITE(6,*) "Exiting common_hycom.f90..."
-    STOP(2)
-  ENDIF
-  WRITE(6,'(A)') '  >> accessing file: ', gridfile3
-  CALL check( NF90_OPEN(gridfile3,NF90_NOWRITE,ncid3) )
-
-  if (.false.) then !STEVE: for MOM6: this is TEMPORARY, until I figure out how to use the ocean_hgrid.nc data
-    dx=0.0
-    dy=0.0
-    area_t=0.0
-    do j=2,nlat-1
-      dlat = (lat(j+1) - lat(j-1))/2.0
-      d2 = (sin(dlat/2.0))**2 
-      d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) )
-      dy(:,j) = re * d3
- 
-      do i=2,nlon-1
-        dlon = (lon(i+1) - lon(i-1))/2.0
-        d2 = cos(lat(i-1)) * cos(lat(i+1)) * (sin(dlon/2.0))**2
-        d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) ) 
-        dx(i,j) = re * d3
-        area_t(i,j) = dx(i,j)*dy(i,j)
-      enddo
-    enddo
-  endif
 
   if (.true.) then !STEVE: for HYCOM: this is TEMPORARY, better if it's read in
-    WRITE(6,*) "Computing dx and dy for area_t..."
-    dx=0.0
-    dy=0.0
-    area_t=0.0
-    do i=1,nlon
-      ! South pole: (j==1)
-      dlat = abs( lat2d(i,2) - lat2d(i,1) )
-      d2 = (sin(dlat/2.0))**2 
-      d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) )
-      dy(i,1) = re * d3
-      ! All middle latitudes:
-      do j=2,nlat-2
-        dlat = abs( lat2d(i,j+1) - lat2d(i,j-1) )/2.0
-        d2 = (sin(dlat/2.0))**2 
-        d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) )
-        dy(i,j) = re * d3
-      enddo
-      ! North pole: (j==nlat)
-      dlat = abs( lat2d(i,nlat) - lat2d(i,nlat-1) )
-      d2 = (sin(dlat/2.0))**2 
-      d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) )
-      dy(i,nlat) = re * d3
-      j=nlat
-
-      if (dodebug .and. i==nlon .and. j==nlat) then
-        WRITE(6,*) "common_hycom.f90:: debug the area_t computation for dy:"
-        WRITE(6,*) "i = ", i
-        WRITE(6,*) "j = ", j
-        WRITE(6,*) "lat2d(i,nlat)   = ", lat2d(i,nlat)
-        WRITE(6,*) "lat2d(i,nlat-1) = ", lat2d(i,nlat-1)
-        WRITE(6,*) "dlat = ", dlat
-        WRITE(6,*) "d2 = ", d2
-        WRITE(6,*) "d3 = ", d3
-        WRITE(6,*) "dy(i,j) = ", dy(i,j)
-      endif
-
-      ! Compute dx and area_t for ALL latitudes:
-      do j=1,nlat
-        dlon = modulo( lon2d(modulo(i+1-1,nlon)+1,j) - lon2d(modulo(i-1-1,nlon)+1,j), 360.0 )/2.0
-        d2 = cos(lat2d(modulo(i-1-1,nlon)+1,j)) * cos(lat2d(modulo(i+1-1,nlon)+1,j)) * (sin(dlon/2.0))**2
-        d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) ) 
-        dx(i,j) = re * d3
-        area_t(i,j) = dx(i,j)*dy(i,j)
-        if (dodebug .and. i==1 .and. j==1) then
-          WRITE(6,*) "common_hycom.f90:: debug the area_t computation for dx:"
-          WRITE(6,*) "i = ", i
-          WRITE(6,*) "j = ", j
-          WRITE(6,*) "modulo(i+1-1,nlon)+1 = ", modulo(i+1-1,nlon)+1
-          WRITE(6,*) "modulo(i-1-1,nlon)+1 = ", modulo(i-1-1,nlon)+1
-          WRITE(6,*) "dlon = ", dlon
-          WRITE(6,*) "d2 = ", d2
-          WRITE(6,*) "d3 = ", d3
-          WRITE(6,*) "dx(1,1) = ", dx(i,j)
-          WRITE(6,*) "dy(1,1) = ", dy(i,j)
-          WRITE(6,*) "area_t(1,1) = ", area_t(i,j)
-        endif
-      enddo
-
-    enddo
+    WRITE(6,*) "Computing area_t..."
+!    dx=0.0
+!    dy=0.0
+    area_t=dx*dy
   endif
 
 ! WRITE(6,*) "Using dx and dy from netcdf file: ", gridfile3
@@ -282,34 +148,32 @@ SUBROUTINE set_common_oceanmodel
   !             for now, it does not since the layers have been interpolated
   !             from 32 layer to 40 depths in the netcdf files.
 
-  INQUIRE(FILE=trim(gridfile2),EXIST=ex)
-  IF(.not. ex) THEN
-    WRITE(6,*) "The file does not exist: ", gridfile2
-    WRITE(6,*) "Exiting common_hycom.f90..."
-    STOP(2)
-  ENDIF
-  WRITE(6,'(A)') '  >> accessing file: ', gridfile2
-  CALL check( NF90_OPEN(trim(gridfile2),NF90_NOWRITE,ncid2) )
 
-  CALL check( NF90_INQ_VARID(ncid2,'bathymetry',varid) ) ! number of vertical T-cells
-  CALL check( NF90_GET_VAR(ncid2,varid,phi0) )
   WRITE(6,*) "phi0(1,1) = ", phi0(1,1)
   WRITE(6,*) "phi0(nlon,nlat) = ", phi0(nlon,nlat)
 
   ! Find the 'kmt' value for the depth of the ocean grid cells (phi0)
   ! sum the layer thicknesses where depth > 0
   kmt=0
-  do k=nlev,1,-1
+!  do k=nlev,1,-1
     do j=1,nlat
       do i=1,nlon
 !       if (height(i,j,k) > 0 .and. wet(i,j) > 0 .and. kmt(i,j) == 0 ) then
-        if (kmt(i,j) == 0 .and. sample_t(i,j,k) < ncundef-2 ) then
-!         phi0(i,j) = sum(height(i,j,1:k))
-          kmt(i,j) = k
-        endif
+!        if (kmt(i,j) == 0 .and. sample_t(i,j,k) < ncundef-2 ) then
+! JILI change undef to a smaller number
+! JILI kmt=0 for land and nlev for ocean
+!        if (kmt(i,j) == 0 .and. sample_t(i,j,k) < 100000.0 ) then
+!!         phi0(i,j) = sum(height(i,j,1:k))
+!          kmt(i,j) = k
+         if (phi0(i,j) > 100000.0) then
+            kmt(i,j)=0
+         else
+            kmt(i,j)=nlev
+         endif
       enddo
     enddo
-  enddo
+!  enddo
+  !kmt=nlev
   kmt0 = REAL(kmt,r_size)
 
   !
@@ -322,11 +186,6 @@ SUBROUTINE set_common_oceanmodel
     enddo
   enddo
 
-  ! Close the grid files:
-  CALL check( NF90_CLOSE(ncid) )
-!!CALL check( NF90_CLOSE(ncid1) )
-  CALL check( NF90_CLOSE(ncid2) )
-  CALL check( NF90_CLOSE(ncid3) )
 
   ! STEVE: for (more) generalized (longitude) grid:
   lon0 = lon(1)
@@ -386,8 +245,8 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !       by the obsop.f90 program prior to running letkf.f90, so the diagnostic files do not have 
   !       to be touched during letkf runtime.
   USE netcdf
-  USE hycom_io, ONLY: read_hycom, hycom_undef
-  USE params_model, ONLY: base
+  USE hycom_io, ONLY: read_hycom, hycom_undef,get_hycom
+  USE params_model, ONLY: base,base_a,base_b
   USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv3d_h
 
   IMPLICIT NONE
@@ -403,10 +262,12 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   INTEGER :: ncid,istat,varid
   INTEGER :: iunit,iolen,n,irec
   LOGICAL, PARAMETER :: dodebug = .true.
-  CHARACTER(slen) :: varname, binfile
+  CHARACTER(slen) :: varname, binfile,infile_a,infile_b
 
   ALLOCATE(v3d(nlon,nlat,nlev,nv3d))
   ALLOCATE(v2d(nlon,nlat,nv2d))
+
+  ALLOCATE(buf8(nlon,nlat,nlev))
 
   ! Check for input argument for precision
   if (PRESENT(prec_in)) then
@@ -428,38 +289,47 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 
   ! STEVE: this is provided externally at the moment
   binfile = trim(infile)//trim(base)
+  infile_a = trim(infile)//trim(base_a)
+  infile_b = trim(infile)//trim(base_b)
+
+
   if (dodebug) WRITE(6,*) "read_diag:: Pre-read_hycom: Reading file: ", trim(binfile)
-  CALL read_hycom(binfile,v3d,v2d)
+! JILI Read HYCOM a and b files
+  CALL get_hycom(infile_a,infile_b,v3d,v2d)
+
   if (dodebug) WRITE(6,*) "read_diag:: Post-read_hycom: Just read file: ", trim(binfile)
 
+! JILI hycom_undef is a smaller threshold 1e10 now, so use >= 
   if (dodebug) then
     WRITE(6,*) "read_diag:: Post-read_hycom"
     buf8 = v3d(:,:,:,iv3d_t)
-    where (buf8 == hycom_undef) buf8 = 0.0d0
+    where (buf8 >= hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_t)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_t)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_s)
-    where (buf8 == hycom_undef) buf8 = 0.0d0
+    where (buf8 >= hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_s)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_s)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_u)
-    where (buf8 == hycom_undef) buf8 = 0.0d0
+    where (buf8 >= hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_u)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_u)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_v)
-    where (buf8 == hycom_undef) buf8 = 0.0d0
+    where (buf8 >= hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_v)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_v)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_h)
-    where (buf8 == hycom_undef) buf8 = 0.0d0
+    where (buf8 >= hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_h)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_h)) = ", MINVAL(buf8(:,:,1))
     WRITE(6,*)
   endif
+  
+  DEALLOCATE(buf8)
 
 END SUBROUTINE read_diag
 
@@ -516,29 +386,116 @@ end subroutine check
 !-----------------------------------------------------------------------
 ! Write a set of MOM6 restart files to initialize the next model run
 !-----------------------------------------------------------------------
-SUBROUTINE write_restart(outfile,v3d,v2d)
+SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
   !STEVE: This writes out the analysis to a pre-existing template netcdf file.
   !       IN THE FUTURE: output directly as a HYCOM restart file
   USE netcdf
-  USE hycom_io, ONLY: write_hycom, hycom_undef
-  USE params_model, ONLY: base
+  USE hycom_io, ONLY: write_hycom, hycom_undef,put_hycom
+  USE vars_model, ONLY:pmsk,umsk,vmsk
+  !USE params_model, ONLY: base, base_a,base_b,do_physlimit,nlev,nlat,nlon
+  USE params_model
+
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
-  CHARACTER(*),INTENT(IN) :: outfile
-  REAL(r_sngl),DIMENSION(:,:,:,:),INTENT(IN) :: v3d !(nlon,nlat,nlev,nv3d)
-  REAL(r_sngl),DIMENSION(:,:,:),  INTENT(IN) :: v2d !(nlon,nlat,nv2d)
+  CHARACTER(*),INTENT(IN) :: outfile,gues_file
+  !REAL(r_sngl),DIMENSION(:,:,:,:),INTENT(IN) :: v3d !(nlon,nlat,nlev,nv3d)
+  !REAL(r_sngl),DIMENSION(:,:,:),  INTENT(IN) :: v2d !(nlon,nlat,nv2d)
+  REAL(r_sngl),DIMENSION(:,:,:,:) :: v3d !(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl),DIMENSION(:,:,:)   :: v2d !(nlon,nlat,nv2d)
+
   INTEGER :: ncid,istat,varid
   INTEGER :: m,k,j,i !STEVE: for debugging
-  LOGICAL, PARAMETER :: do_physlimit=.true.
-  CHARACTER(slen) :: binfile
+  CHARACTER(slen) :: binfile,infile_a,infile_b
   CHARACTER(3) :: MEM3
 
   ! STEVE: this is provided externally at the moment
   binfile = trim(outfile)//trim(base)
+  infile_a = trim(gues_file)//trim(base_a)
+  infile_b = trim(gues_file)//trim(base_b)
+  
+  ! STEVE: for safety, clean up the variables for output:
+  ! JILI for land grids, also set variables to undef
+  ! JILI a potential probelm: bottom layers large spread-need to be very careful
+  if (do_physlimit) then
+  do k=1,nlev
+    do j=1,nlat
+      do i=1,nlon
+        if (v3d(i,j,k,iv3d_t) < min_t) then
+
+          WRITE(6,*) "WARNING: Bad temp value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
+          v3d(i,j,k,iv3d_t) = min_t
+        endif
+
+
+        if (v3d(i,j,k,iv3d_t) > max_t) then
+          WRITE(6,*) "WARNING: Bad temp value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
+          v3d(i,j,k,iv3d_t) = max_t
+        endif
+
+
+        if (v3d(i,j,k,iv3d_s) < min_s ) then
+          WRITE(6,*) "WARNING: Bad salt value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
+          v3d(i,j,k,iv3d_s) = min_s
+        endif
+
+
+        if (v3d(i,j,k,iv3d_s) > max_s) then
+          WRITE(6,*) "WARNING: Bad salt value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
+          v3d(i,j,k,iv3d_s) = max_s
+        endif
+
+        if (v3d(i,j,k,iv3d_u) < min_uv) then
+          WRITE(6,*) "WARNING: Bad u-vel value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
+          v3d(i,j,k,iv3d_u) = min_uv
+        endif
+
+        if (v3d(i,j,k,iv3d_u) > max_uv) then
+          WRITE(6,*) "WARNING: Bad u-vel value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
+          v3d(i,j,k,iv3d_u) = max_uv
+        endif
+
+        if (v3d(i,j,k,iv3d_v) < min_uv) then
+          WRITE(6,*) "WARNING: Bad v-vel value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
+          v3d(i,j,k,iv3d_v) = min_uv
+        endif
+
+        if (v3d(i,j,k,iv3d_v) > max_uv) then
+          WRITE(6,*) "WARNING: Bad v-vel value in analysis output:"
+          WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
+          v3d(i,j,k,iv3d_v) = max_uv
+        endif
+
+        if (phi0(i,j) > 100000) then
+          v3d(i,j,k,1:4)=ncundef
+        endif
+
+      enddo
+    enddo
+  enddo
+
+    do j=1,nlat
+      do i=1,nlon
+        if (phi0(i,j) > 100000.0) then
+          v2d(i,j,:)=ncundef
+        endif
+      end do
+    end do
+
+  endif
+
+
   WRITE(6,*) "common_hycom.f90::write_restart:: writing file: ", trim(binfile)
 
   WRITE(6,*) "common_hycom.f90::write_restart:: calling write_hycom..."
-  CALL write_hycom(binfile,v3d,v2d)
+  !JILI HYCOM archive file output 
+  CALL put_hycom(infile_a,infile_b,v3d,v2d,pmsk,umsk,vmsk)
   WRITE(6,*) "common_hycom.f90::write_restart:: Finished calling write_hycom."
 
 END SUBROUTINE write_restart

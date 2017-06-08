@@ -1,0 +1,19 @@
+Document runtime files needed and name convention
+by Jili Dong 06/06/2017
+
+Files needed:
+
+1. fixed file:
+input.nml 
+gsw_data_v3_0.dat
+
+2. hycom_sample.a, hycom_sample.b
+This two hycom sample files will provide mask for p, u and v points.
+
+3. ensemble members:
+gs$time_slots$mem.a and b
+$time_slots: two digits for time slots such as 01, 02...05
+$mem: 3 digits for members such as 001, 002...
+
+4. observations:
+fort.20
