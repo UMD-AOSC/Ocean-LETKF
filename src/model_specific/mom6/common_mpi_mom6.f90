@@ -3,10 +3,6 @@ MODULE common_mpi_oceanmodel
 !
 ! [PURPOSE:] MPI procedures
 !
-! [ATTENTION:]
-!   DO NOT COMPILE WITH BOTH INLINE EXPANSION AND OMP OPTIONS TOGETHER
-!    (Use ONE if you want, but DON'T USE BOTH AT THE SAME TIME)
-!
 ! [HISTORY:]
 !   01/23/2009 Takemasa Miyoshi  created
 !   04/26/2011 Steve Penny converted to OCEAN for use with MOM4
@@ -45,8 +41,6 @@ SUBROUTINE set_common_mpi_oceanmodel
   USE vars_model,   ONLY: dx, dy
   USE vars_model,   ONLY: lon, lat, kmt0, phi0
   USE vars_model,   ONLY: lon2d, lat2d !, lev2d !STEVE: I'm assuming I'll need this one day
-
-  IMPLICIT NONE
 
   REAL(r_sngl), ALLOCATABLE :: v3dg(:,:,:,:) !(nlon,nlat,nlev,nv3d) != 0 !STEVE: initializing
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d) != 0      !STEVE: initializing
@@ -101,7 +95,6 @@ SUBROUTINE set_common_mpi_oceanmodel
   ALLOCATE(v2d(nij1,nv0))
   ALLOCATE(v2dg(nlon,nlat,nv0))
 
-!(UPDATE) with lon2d/lat2d search for observation (LON2D/LAT2D)
   ! Distribute that data to the appropriate processors
   if (dodebug) WRITE(6,*) "Converting dx, dy, lon, lat, i, j, phi0, and kmt0 to vectorized form..."
   v2dg=0.0
@@ -109,8 +102,6 @@ SUBROUTINE set_common_mpi_oceanmodel
     ! 2D and 1D Data stored in first layer:
     v2dg(:,j,1) = SNGL(dx(:,j))
     v2dg(:,j,2) = SNGL(dy(:,j))
-!   v2dg(:,j,3) = SNGL(lon(:))
-!   v2dg(:,j,4) = SNGL(lat(j)) !(Single value promoted to array)
     ! 2D Data stored in second layer:
     v2dg(:,j,3) = SNGL(lon2d(:,j))
     v2dg(:,j,4) = SNGL(lat2d(:,j))
@@ -149,8 +140,6 @@ SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
 
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
 
-  IMPLICIT NONE
-
   INTEGER,INTENT(IN) :: nrank
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
@@ -180,8 +169,6 @@ END SUBROUTINE scatter_grd_mpi
 SUBROUTINE scatter_grd_mpi_safe(nrank,v3dg,v2dg,v3d,v2d)
 
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
-
-  IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: nrank
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
@@ -263,8 +250,6 @@ SUBROUTINE scatter_grd_mpi_fast(nrank,v3dg,v2dg,v3d,v2d)
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_model, ONLY: nlevall
 
-  IMPLICIT NONE
-
   INTEGER,INTENT(IN) :: nrank
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
@@ -324,8 +309,6 @@ SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
 
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
 
-  IMPLICIT NONE
-
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
@@ -354,8 +337,6 @@ END SUBROUTINE gather_grd_mpi
 SUBROUTINE gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
 
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
-
-  IMPLICIT NONE
 
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
@@ -437,8 +418,6 @@ SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_model, ONLY: nlevall
 
-  IMPLICIT NONE
-
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
@@ -493,16 +472,14 @@ END SUBROUTINE gather_grd_mpi_fast
 !-----------------------------------------------------------------------
 ! Read ensemble data and distribute to processes
 !-----------------------------------------------------------------------
-SUBROUTINE read_ens_mpi(file,member,v3d,v2d)
+SUBROUTINE read_ens_mpi(file,nbv,v3d,v2d)
 
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
 
-  IMPLICIT NONE
-
   CHARACTER(4),INTENT(IN) :: file
-  INTEGER,INTENT(IN) :: member
-  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,member,nv3d)
-  REAL(r_size),INTENT(OUT) :: v2d(nij1,member,nv2d)
+  INTEGER,INTENT(IN) :: nbv
+  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,nbv,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2d(nij1,nbv,nv2d)
   REAL(r_sngl), ALLOCATABLE :: v3dg(:,:,:,:) !(nlon,nlat,nlev,nv3d)
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d)
   INTEGER :: l,n,ll,im,mstart,mend
@@ -512,10 +489,10 @@ SUBROUTINE read_ens_mpi(file,member,v3d,v2d)
 
   ALLOCATE(v3dg(nlon,nlat,nlev,nv3d),v2dg(nlon,nlat,nv2d))
 
-  ll = CEILING(REAL(member)/REAL(nprocs))
+  ll = CEILING(REAL(nbv)/REAL(nprocs))
   do l=1,ll
     im = myrank+1 + (l-1)*nprocs
-    if (im <= member) then
+    if (im <= nbv) then
       WRITE(filename(1:7),'(A4,I3.3)') file,im
       WRITE(6,'(A,I3.3,2A)') 'In common_mpi_mom4.f90::read_ens_mpi, MYRANK ',myrank,' is reading a file ',filename
       CALL read_restart(filename,v3dg,v2dg,2) !STEVE: 20150317, trying this out...
@@ -525,9 +502,9 @@ SUBROUTINE read_ens_mpi(file,member,v3d,v2d)
     endif
 
     mstart = 1 + (l-1)*nprocs
-    mend = MIN(l*nprocs, member)
+    mend = MIN(l*nprocs, nbv)
     if (dodebug) WRITE(6,*) "In common_mpi_mom4.f90::read_ens_mpi, calling scatter_grd_mpi_alltoall..."
-    CALL scatter_grd_mpi_alltoall(mstart,mend,member,v3dg,v2dg,v3d,v2d)
+    CALL scatter_grd_mpi_alltoall(mstart,mend,nbv,v3dg,v2dg,v3d,v2d)
 
   enddo
 
@@ -538,17 +515,15 @@ END SUBROUTINE read_ens_mpi
 !-----------------------------------------------------------------------
 ! Write ensemble data after collecting data from processes
 !-----------------------------------------------------------------------
-SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
+SUBROUTINE write_ens_mpi(file,nbv,v3d,v2d)
 
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
 
-  IMPLICIT NONE
-
 ! INCLUDE 'netcdf.inc' !STEVE: for NaN correction (OCEAN)
   CHARACTER(4),INTENT(IN) :: file
-  INTEGER,INTENT(IN) :: member
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,member,nv2d)
+  INTEGER,INTENT(IN) :: nbv
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nbv,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nbv,nv2d)
   REAL(r_sngl), ALLOCATABLE :: v3dg(:,:,:,:) !(nlon,nlat,nlev,nv3d)
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d)
   INTEGER :: l,n,ll,im
@@ -560,14 +535,14 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
 
   ALLOCATE(v3dg(nlon,nlat,nlev,nv3d),v2dg(nlon,nlat,nv2d))
 
-  ll = CEILING(REAL(member)/REAL(nprocs))
+  ll = CEILING(REAL(nbv)/REAL(nprocs))
   do l=1,ll
     mstart = 1 + (l-1)*nprocs
-    mend = MIN(l*nprocs, member)
-    CALL gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
+    mend = MIN(l*nprocs, nbv)
+    CALL gather_grd_mpi_alltoall(mstart,mend,nbv,v3d,v2d,v3dg,v2dg)
 
     im = myrank+1 + (l-1)*nprocs
-    if (im <= member) then
+    if (im <= nbv) then
       WRITE(filename(1:7),'(A4,I3.3)') file,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing file: ',filename
 
@@ -587,13 +562,14 @@ END SUBROUTINE write_ens_mpi
 !!!!!!!!!
 !STEVE: for debugging grid:
 !!!!!!!!!
-SUBROUTINE write_ens_mpi_grd(file,member,v3d,v2d)
+SUBROUTINE write_ens_mpi_grd(file,nbv,v3d,v2d)
+
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
-  IMPLICIT NONE
+  
   CHARACTER(4),INTENT(IN) :: file
-  INTEGER,INTENT(IN) :: member
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,member,nv2d)
+  INTEGER,INTENT(IN) :: nbv
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nbv,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nbv,nv2d)
   REAL(r_sngl), ALLOCATABLE :: v3dg(:,:,:,:) !(nlon,nlat,nlev,nv3d)
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d)
   INTEGER :: l,n,ll,im
@@ -604,17 +580,17 @@ SUBROUTINE write_ens_mpi_grd(file,member,v3d,v2d)
 
   ALLOCATE(v3dg(nlon,nlat,nlev,nv3d),v2dg(nlon,nlat,nv2d))
 
-  ll = CEILING(REAL(member)/REAL(nprocs))
+  ll = CEILING(REAL(nbv)/REAL(nprocs))
   do l=1,ll
     do n=0,nprocs-1
       im = n+1 + (l-1)*nprocs
-      if (im <= member) then
+      if (im <= nbv) then
         CALL gather_grd_mpi(n,v3d(:,:,im,:),v2d(:,im,:),v3dg,v2dg)
       endif
     enddo
 
     im = myrank+1 + (l-1)*nprocs
-    if (im <= member) then
+    if (im <= nbv) then
       WRITE(filename(1:7),'(A4,I3.3)') file,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
 
@@ -635,8 +611,9 @@ END SUBROUTINE write_ens_mpi_grd
 ! gridded data -> buffer
 !-----------------------------------------------------------------------
 SUBROUTINE grd_to_buf(grd,buf)
+
   USE params_model, ONLY: nlon, nlat
-  IMPLICIT NONE
+  
   REAL(r_sngl),INTENT(IN) :: grd(nlon,nlat)
   REAL(r_sngl),INTENT(OUT) :: buf(nij1max,nprocs)
   INTEGER :: i,j,m,ilon,ilat
@@ -657,8 +634,9 @@ END SUBROUTINE grd_to_buf
 ! buffer -> gridded data
 !-----------------------------------------------------------------------
 SUBROUTINE buf_to_grd(buf,grd)
+
   USE params_model, ONLY: nlon, nlat
-  IMPLICIT NONE
+  
   REAL(r_sngl),INTENT(IN) :: buf(nij1max,nprocs)
   REAL(r_sngl),INTENT(OUT) :: grd(nlon,nlat)
   INTEGER :: i,j,m,ilon,ilat
@@ -678,13 +656,14 @@ END SUBROUTINE buf_to_grd
 !-----------------------------------------------------------------------
 ! STORING DATA (ensemble mean and spread)
 !-----------------------------------------------------------------------
-SUBROUTINE write_ensmspr_mpi(file,member,v3d,v2d)
+SUBROUTINE write_ensmspr_mpi(file,nbv,v3d,v2d)
+
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
-  IMPLICIT NONE
+  
   CHARACTER(4),INTENT(IN) :: file
-  INTEGER,INTENT(IN) :: member
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,member,nv2d)
+  INTEGER,INTENT(IN) :: nbv
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nbv,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nbv,nv2d)
   REAL(r_size), ALLOCATABLE :: v3dm(:,:,:) !(nij1,nlev,nv3d)
   REAL(r_size), ALLOCATABLE :: v2dm(:,:) !(nij1,nv2d)
   REAL(r_size), ALLOCATABLE :: v3ds(:,:,:) !(nij1,nlev,nv3d)
@@ -698,14 +677,8 @@ SUBROUTINE write_ensmspr_mpi(file,member,v3d,v2d)
   ALLOCATE(v3ds(nij1,nlev,nv3d),v2ds(nij1,nv2d))
   ALLOCATE(v3dg(nlon,nlat,nlev,nv3d),v2dg(nlon,nlat,nv2d))
 
-  CALL ensmean_grd(member,nij1,v3d,v2d,v3dm,v2dm)
+  CALL ensmean_grd(nbv,nij1,v3d,v2d,v3dm,v2dm)
 
-! ll = CEILING(REAL(member)/REAL(nprocs))
-! do l=1,ll
-!   mstart = 1 + (l-1)*nprocs
-!   mend = MIN(l*nprocs, member)
-!   CALL gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
-! enddo
   CALL gather_grd_mpi(0,v3dm,v2dm,v3dg,v2dg)
 
   if (myrank == 0) then
@@ -719,10 +692,10 @@ SUBROUTINE write_ensmspr_mpi(file,member,v3d,v2d)
     do k=1,nlev
       do i=1,nij1
         v3ds(i,k,n) = (v3d(i,k,1,n)-v3dm(i,k,n))**2
-        do m=2,member
+        do m=2,nbv
           v3ds(i,k,n) = v3ds(i,k,n) + (v3d(i,k,m,n)-v3dm(i,k,n))**2
         enddo
-        v3ds(i,k,n) = SQRT(v3ds(i,k,n) / REAL(member-1,r_size))
+        v3ds(i,k,n) = SQRT(v3ds(i,k,n) / REAL(nbv-1,r_size))
       enddo
     enddo
   enddo
@@ -730,18 +703,13 @@ SUBROUTINE write_ensmspr_mpi(file,member,v3d,v2d)
   do n=1,nv2d
     do i=1,nij1
       v2ds(i,n) = (v2d(i,1,n)-v2dm(i,n))**2
-      do m=2,member
+      do m=2,nbv
         v2ds(i,n) = v2ds(i,n) + (v2d(i,m,n)-v2dm(i,n))**2
       enddo
-      v2ds(i,n) = SQRT(v2ds(i,n) / REAL(member-1,r_size))
+      v2ds(i,n) = SQRT(v2ds(i,n) / REAL(nbv-1,r_size))
     enddo
   enddo
 
-! do l=1,ll
-!   mstart = 1 + (l-1)*nprocs
-!   mend = MIN(l*nprocs, member)
-!   CALL gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
-! enddo
   CALL gather_grd_mpi(0,v3ds,v2ds,v3dg,v2dg)
 
   if (myrank == 0) then
@@ -759,14 +727,15 @@ END SUBROUTINE write_ensmspr_mpi
 !-----------------------------------------------------------------------
 ! Scatter gridded data using MPI_ALLTOALL(V) (mstart~mend -> all)
 !-----------------------------------------------------------------------
-SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,member,v3dg,v2dg,v3d,v2d)
+SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,nbv,v3dg,v2dg,v3d,v2d)
+
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
-  IMPLICIT NONE
-  INTEGER,INTENT(IN) :: mstart,mend,member
+  
+  INTEGER,INTENT(IN) :: mstart,mend,nbv
   REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
-  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,member,nv3d)
-  REAL(r_size),INTENT(OUT) :: v2d(nij1,member,nv2d)
+  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,nbv,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2d(nij1,nbv,nv2d)
   REAL(r_sngl),ALLOCATABLE :: bufs3(:,:,:) , bufr3(:,:,:)
   REAL(r_sngl),ALLOCATABLE :: bufs2(:,:)   , bufr2(:,:)
   INTEGER :: k,n,m,mcount,ierr
@@ -853,12 +822,14 @@ END SUBROUTINE scatter_grd_mpi_alltoall
 !-----------------------------------------------------------------------
 ! Gather gridded data using MPI_ALLTOALL(V) (all -> mstart~mend)
 !-----------------------------------------------------------------------
-SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
+SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,nbv,v3d,v2d,v3dg,v2dg)
+
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
-  IMPLICIT NONE
-  INTEGER,INTENT(IN) :: mstart,mend,member
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,member,nv2d)
+  
+  INTEGER,INTENT(IN) :: mstart,mend ! Subset indices of the ensemble members. Allows parallelizing I/O of members
+  INTEGER,INTENT(IN) :: nbv         ! Size of the full ensemble
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nbv,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nbv,nv2d)
   REAL(r_sngl),INTENT(OUT) :: v3dg(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
   REAL(r_sngl),ALLOCATABLE :: bufs3(:,:,:) , bufr3(:,:,:)
@@ -866,15 +837,23 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
   INTEGER :: k,n,m,mcount,ierr
   INTEGER :: ns(nprocs),nst(nprocs),nr(nprocs),nrt(nprocs)
 
-  mcount = mend - mstart + 1
-  if (mcount > nprocs .OR. mcount <= 0) STOP
+  ! Specify the indices of the ensemble members through which to cycle
+  mcount = mend - mstart + 1  
+  if (mcount > nprocs .OR. mcount <= 0) then
+    STOP
+  endif
 
+  ! Allocate memory for the buffers to transfer 3d and 2d variable data
+  ! 's' for send and 'r' for receive
+  ! Note: for some processes, the size of v3d and v2d will be 1 less than nij1max
   ALLOCATE( bufs3(nij1max,nlev,mcount) , bufr3(nij1max,nlev,nprocs) )
-  ALLOCATE( bufs2(nij1max,mcount)    , bufr2(nij1max,nprocs) )
+  ALLOCATE( bufs2(nij1max,mcount)      , bufr2(nij1max,nprocs) )
 
+  ! Loop through each 3d variable
   do n=1,nv3d
     do m = mstart,mend
       do k=1,nlev
+        ! Reminder: nij1 may be 1 less than nij1max
         bufs3(1:nij1,k,m-mstart+1) = REAL(v3d(:,k,m,n),r_sngl)
       enddo
     enddo
@@ -894,8 +873,10 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,member,v3d,v2d,v3dg,v2dg)
         CALL buf_to_grd(bufr3(:,k,:),v3dg(:,:,k,n))
       enddo
     endif
+
   enddo
 
+  ! Loop through each 2d variable
   do n=1,nv2d
     do m = mstart,mend
       bufs2(1:nij1,m-mstart+1) = REAL(v2d(:,m,n),r_sngl)
@@ -926,7 +907,7 @@ END SUBROUTINE gather_grd_mpi_alltoall
 ! Set the send/recieve counts of MPI_ALLTOALLV
 !-----------------------------------------------------------------------
 SUBROUTINE set_alltoallv_counts(mcount,ngpblock,n_ens,nt_ens,n_mem,nt_mem)
-  IMPLICIT NONE
+  
   INTEGER,INTENT(IN)  :: mcount,ngpblock
   INTEGER,INTENT(OUT) :: n_ens(nprocs),nt_ens(nprocs),n_mem(nprocs),nt_mem(nprocs)
   INTEGER :: p
@@ -950,69 +931,11 @@ END SUBROUTINE set_alltoallv_counts
 
 
 !-----------------------------------------------------------------------
-! Scatter a smaller sized gridded data using MPI_ALLTOALL(V) (mstart~mend -> all)
-!STEVE: not using at the moment, didn't lead to better performance.
-!-----------------------------------------------------------------------
-SUBROUTINE scatter_grd_mpi_smalltoall(mstart,mend,member,v2dg,v2d,nx,ny,nv)
-  IMPLICIT NONE
-  INTEGER,INTENT(IN) :: mstart,mend,member
-  INTEGER,INTENT(IN) :: nx,ny,nv
-  REAL(r_sngl),INTENT(IN) :: v2dg(nx,ny,nv)
-  REAL(r_size),INTENT(OUT) :: v2d(nij1,member,nv)
-  REAL(r_sngl),ALLOCATABLE :: bufs2(:,:)   , bufr2(:,:)
-  INTEGER :: k,n,m,mcount,ierr
-  INTEGER :: ns(nprocs),nst(nprocs),nr(nprocs),nrt(nprocs)
-  LOGICAL :: dodebug = .true.
-
-  mcount = mend - mstart + 1
-  if (mcount > nprocs .OR. mcount <= 0) STOP
-
-  if (dodebug) WRITE(6,*) "ALLOCATE bufs2,bufr2..."
-  ALLOCATE( bufs2(nij1max,nprocs)    , bufr2(nij1max,mcount) )
-
-  if (dodebug) WRITE(6,*) "Cycling n=1,nv..."
-  do n=1,nv
-    if (myrank < mcount) then
-      if (dodebug) WRITE(6,*) "grd_to_buf :: 2D"
-      CALL grd_to_buf(v2dg(:,:,n),bufs2(:,:)) !,nlon,nlat,nij1max,nij1node)
-    endif
-
-    if (dodebug) WRITE(6,*) "==MPI_BARRIER=="
-    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-    if (mcount == nprocs) then
-      if (dodebug) WRITE(6,*) "==MPI_ALLTOALL=="
-      CALL MPI_ALLTOALL(bufs2, nij1max, MPI_REAL, &
-                        bufr2, nij1max, MPI_REAL, MPI_COMM_WORLD, ierr)
-    else
-      if (dodebug) WRITE(6,*) "set_alltoallv_counts..."
-      CALL set_alltoallv_counts(mcount,nij1max,nr,nrt,ns,nst)
-      if (dodebug) WRITE(6,*) "==MPI_ALLTOALLV=="
-      CALL MPI_ALLTOALLV(bufs2, ns, nst, MPI_REAL, &
-                         bufr2, nr, nrt, MPI_REAL, MPI_COMM_WORLD, ierr)
-    endif
-
-    do m = mstart,mend
-      if (dodebug) WRITE(6,*) "m,n = ", m,n
-      if (dodebug) WRITE(6,*) "Assigning v2d(:,m,n) = REAL(bufr2(1:nij1,m-mstart+1),r_size)"
-      if (dodebug) WRITE(6,*) "nij1,m-mstart+1 = ", nij1,m-mstart+1
-      v2d(:,m,n) = REAL(bufr2(1:nij1,m-mstart+1),r_size)
-    enddo
-  enddo
-
-  if (dodebug) WRITE(6,*) "==MPI_BARRIER=="
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  DEALLOCATE(bufr2,bufs2)
-  
-END SUBROUTINE scatter_grd_mpi_smalltoall
-
-
-!-----------------------------------------------------------------------
 ! Scatter grid but use only the 2D arrays for improved performance
 ! (since in the initialization, that is all we need)
 !-----------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
-! USE params_model, ONLY: nlevall
-  IMPLICIT NONE
+  
   INTEGER,INTENT(IN) :: nrank               ! root process
   INTEGER,INTENT(IN) :: nx,ny,nv            ! number of lons, lats, and variables
   REAL(r_sngl),INTENT(IN) :: v2dg(nx,ny,nv)
@@ -1022,10 +945,8 @@ SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
   INTEGER :: j,k,n,ierr,ns,nr
   INTEGER :: dodebug = .true.
 
-! if (dodebug) WRITE(6,*) "nij1max,nlevall,nprocs = ", nij1max,nlevall,nprocs
   if (dodebug) WRITE(6,*) "nij1max,nv,nprocs = ", nij1max,nv,nprocs
   if (dodebug) WRITE(6,*) "scatter_grd_mpi_small:: pre-ALLOCATE..."
-! ALLOCATE(bufs(nij1max,nlevall,nprocs), bufr(nij1max,nlevall))
   ALLOCATE(bufs(nij1max,nv,nprocs), bufr(nij1max,nv))
   if (dodebug) WRITE(6,*) "scatter_grd_mpi_small:: post-ALLOCATE."
 

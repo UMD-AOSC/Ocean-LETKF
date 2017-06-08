@@ -113,8 +113,8 @@ PROGRAM obsop_adt
                                   !      the cnt_adt variable counts kept observations.
   INTEGER :: typ = id_eta_obs
   LOGICAL :: DO_SUPEROBS = .false.
-  REAL(r_size), DIMENSION(nlon,nlat) :: superobs, delta, M2 ! for online computation of the mean and variance
-  INTEGER, DIMENSION(nlon,nlat) :: supercnt
+  REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: superobs, delta, M2 ! for online computation of the mean and variance
+  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: supercnt
   INTEGER :: idx
   INTEGER :: cnt_obs_thinning = 0
   INTEGER :: days_since = -1 ! 1-1-1950
@@ -124,9 +124,15 @@ PROGRAM obsop_adt
                         ! days_since=$(( ( $day1 - $day0 ) / ( 86400 ) ))
   REAL(r_size) :: min_oerr = 0.04 !STEVE: 0.04 is generally cited as an 'instrument error', so add this onto superob stdev estimate of representativeness error
 
+  !----------------------------------------------------------------------------
+  ! Read in namelist parameters
+  !----------------------------------------------------------------------------
+  CALL read_input_namelist !STEVE: this has been moved to input_nml_{oceanmodel}.f90 since it needed to be slightly different for each model
+
   !STEVE: Set these to true to ensure that the I/O routines read the necessary files for the background data:
   DO_ALTIMETRY = .true.
   DO_ADT = .true.
+  ALLOCATE(superobs(nlon,nlat),delta(nlon,nlat),M2(nlon,nlat),supercnt(nlon,nlat))
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_oceanmodel module, and process command line options
@@ -492,6 +498,18 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
   PRINT *, "Argument ", i, " = ",TRIM(arg1)
 
   select case (arg1)
+    case('-nlon')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) nlon
+    case('-nlat')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) nlat
+    case('-nlev')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) nlev
     case('-obsin')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
