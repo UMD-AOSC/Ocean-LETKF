@@ -44,6 +44,8 @@ PROGRAM obsop_tprof
   USE common_obs_oceanmodel
   USE gsw_pot_to_insitu,         ONLY: t_from_pt, p_from_z, sa_from_sp, pt_from_t
   USE read_argo,                 ONLY: obs_data, read_argo_nc
+  ! For dynamic instantiation and use of namelists:
+  USE input_nml_oceanmodel, ONLY: read_input_namelist
 
   IMPLICIT NONE
 
@@ -118,6 +120,11 @@ PROGRAM obsop_tprof
   INTEGER :: nobs_s ! number of salinity obs (should match number of temperature obs)
   LOGICAL :: DO_REMOVE_BLACKSEA=.true.
   INTEGER :: cnt_blacksea=0
+  
+  !----------------------------------------------------------------------------
+  ! Read in namelist parameters
+  !----------------------------------------------------------------------------
+  CALL read_input_namelist !STEVE: this has been moved to input_nml_{oceanmodel}.f90 since it needed to be slightly different for each model
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_oceanmodel module, and process command line options
@@ -503,6 +510,18 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
   PRINT *, "Argument ", i, " = ",TRIM(arg1)
 
   select case (arg1)
+    case('-nlon')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) nlon
+    case('-nlat')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) nlat
+    case('-nlev')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) nlev
     case('-obsin')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)

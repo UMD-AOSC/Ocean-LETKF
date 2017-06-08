@@ -24,6 +24,7 @@ cp $MODELDIR/vars_model.f90 ./
 if [ -f $MODELDIR/${model}_io.f90 ]; then
   cp $MODELDIR/${model}_io.f90 ./
 fi
+cp $MODELDIR/input_nml_${model}.f90 ./
 
 LETKFDIR=$root/src/letkf
 cp $LETKFDIR/params_letkf.f90 ./
