@@ -299,31 +299,30 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 
   if (dodebug) WRITE(6,*) "read_diag:: Post-read_hycom: Just read file: ", trim(binfile)
 
-! JILI hycom_undef is a smaller threshold 1e10 now, so use >= 
   if (dodebug) then
     WRITE(6,*) "read_diag:: Post-read_hycom"
     buf8 = v3d(:,:,:,iv3d_t)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_t)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_t)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_s)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_s)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_s)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_u)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_u)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_u)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_v)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_v)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_v)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_h)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_h)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_h)) = ", MINVAL(buf8(:,:,1))
     WRITE(6,*)
