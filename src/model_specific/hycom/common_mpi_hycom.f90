@@ -13,7 +13,7 @@ MODULE common_mpi_oceanmodel
   USE common
   USE common_mpi
   USE params_letkf, ONLY: nbv
-  USE params_model, ONLY: nlon, nlev, nlat, nv3d, nv2d, nlevall, iv3d_t, iv3d_s !, base
+  USE params_model, ONLY: nlon, nlev, nlat, nv3d, nv2d, nlevall, iv3d_t, iv3d_s,iv2d_ssh,iv2d_ubt !, base
   USE vars_model,   ONLY: dx, dy, lon2d, lat2d, kmt0, phi0
   USE common_oceanmodel, ONLY: read_restart, write_restart, ensmean_grd, write_grd
 
@@ -527,10 +527,10 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
       WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v3dg(:,:,:,iv3d_t))) = ", MINVAL(ABS(v3dg(:,:,:,iv3d_t)))
       WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v3dg(:,:,:,iv3d_s))) = ", MINVAL(ABS(v3dg(:,:,:,iv3d_s)))
 
-      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MAXVAL(ABS(v2dg(:,:,iv2d_ssh))) = ", MAXVAL(ABS(v2dg(:,:,1)))
-      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MAXVAL(ABS(v2dg(:,:,iv2d_ssh))) = ", MAXVAL(ABS(v2dg(:,:,1)))
-      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v2dg(:,:,iv2d_ubt))) = ", MINVAL(ABS(v2dg(:,:,2)))
-      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v2dg(:,:,iv2d_ubt))) = ", MINVAL(ABS(v2dg(:,:,2)))
+      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MAXVAL(ABS(v2dg(:,:,iv2d_ssh))) = ", MAXVAL(ABS(v2dg(:,:,iv2d_ssh)))
+      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MAXVAL(ABS(v2dg(:,:,iv2d_ssh))) = ", MAXVAL(ABS(v2dg(:,:,iv2d_ssh)))
+      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v2dg(:,:,iv2d_ubt))) = ", MINVAL(ABS(v2dg(:,:,iv2d_ubt)))
+      WRITE(6,*) "common_mpi_hycom.f90::write_ens_mpi:: MINVAL(ABS(v2dg(:,:,iv2d_ubt))) = ", MINVAL(ABS(v2dg(:,:,iv2d_ubt)))
 
 
       WRITE(6,*) "write_ens_mpi:: Calling write_restart..."
