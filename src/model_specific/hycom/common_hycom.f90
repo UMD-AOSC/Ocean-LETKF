@@ -385,7 +385,7 @@ end subroutine check
 !-----------------------------------------------------------------------
 ! Write a set of MOM6 restart files to initialize the next model run
 !-----------------------------------------------------------------------
-SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
+SUBROUTINE write_restart(outfile,v3d,v2d)
   !STEVE: This writes out the analysis to a pre-existing template netcdf file.
   !       IN THE FUTURE: output directly as a HYCOM restart file
   USE netcdf
@@ -396,7 +396,7 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
 
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
-  CHARACTER(*),INTENT(IN) :: outfile,gues_file
+  CHARACTER(*),INTENT(IN) :: outfile
   !REAL(r_sngl),DIMENSION(:,:,:,:),INTENT(IN) :: v3d !(nlon,nlat,nlev,nv3d)
   !REAL(r_sngl),DIMENSION(:,:,:),  INTENT(IN) :: v2d !(nlon,nlat,nv2d)
   REAL(r_sngl),DIMENSION(:,:,:,:) :: v3d !(nlon,nlat,nlev,nv3d)
@@ -409,8 +409,8 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
 
   ! STEVE: this is provided externally at the moment
   binfile = trim(outfile)//trim(base)
-  infile_a = trim(gues_file)//trim(base_a)
-  infile_b = trim(gues_file)//trim(base_b)
+  infile_a = "gs01"//outfile(5:7)//trim(base_a)
+  infile_b = "gs01"//outfile(5:7)//trim(base_b)
   
   ! STEVE: for safety, clean up the variables for output:
   ! JILI for land grids, also set variables to undef

@@ -503,7 +503,6 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
   REAL(r_sngl), ALLOCATABLE :: v2dg(:,:,:) !(nlon,nlat,nv2d)
   INTEGER :: l,n,ll,im
   CHARACTER(slen) :: filename='file000'
-  CHARACTER(slen) :: filename_gs='file000'
   INTEGER :: i,j,k,m !STEVE: for debugging
   LOGICAL :: verbose = .true.
   INTEGER :: mstart,mend
@@ -520,7 +519,6 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
     im = myrank+1 + (l-1)*nprocs
     if (im <= member) then
       WRITE(filename(1:7),'(A4,I3.3)') file,im
-      WRITE(filename_gs(1:7),'(A4,I3.3)') "gs00",im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing file: ',filename
 
       !STEVE: debug
@@ -536,7 +534,7 @@ SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
 
 
       WRITE(6,*) "write_ens_mpi:: Calling write_restart..."
-      CALL write_restart(filename,filename_gs,v3dg,v2dg)
+      CALL write_restart(filename,v3dg,v2dg)
       WRITE(6,*) "write_ens_mpi:: Finished calling write_restart."
     endif
   enddo
