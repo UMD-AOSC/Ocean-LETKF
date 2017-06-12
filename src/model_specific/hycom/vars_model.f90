@@ -19,12 +19,6 @@ PUBLIC
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lat2d !(nlon,nlat)      !(2DGRID)(For irregular grids)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lev2d !(nlon,nlat)      !(2DGRID)(For irregular grids)
 
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: ulon2d !(nlon,nlat)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: ulat2d !(nlon,nlat)
-
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: vlon2d !(nlon,nlat)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: vlat2d !(nlon,nlat)
-
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dx !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dy !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: area_t !(nlon,nlat)
@@ -51,12 +45,6 @@ PUBLIC
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lon2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
-
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: ulon2d !(nlon,nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: ulat2d !(nlon,nlat)
-
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: vlon2d !(nlon,nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: vlat2d !(nlon,nlat)
 
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dx !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dy !(nlon,nlat)
@@ -118,10 +106,6 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(lev(nlev))
   ALLOCATE(lon2d(nlon,nlat))
   ALLOCATE(lat2d(nlon,nlat))
-  ALLOCATE(ulon2d(nlon,nlat))
-  ALLOCATE(ulat2d(nlon,nlat))
-  ALLOCATE(vlon2d(nlon,nlat))
-  ALLOCATE(vlat2d(nlon,nlat))
 
   ALLOCATE(dx(nlon,nlat))
   ALLOCATE(dy(nlon,nlat))
