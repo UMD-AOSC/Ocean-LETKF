@@ -27,6 +27,7 @@ if [ -f $MODELDIR/${model}_io.f90 ]; then
   cp $MODELDIR/${model}_io.f90 ./
 fi
 cp $MODELDIR/input_nml_${model}.f90 ./
+cp $MODELDIR/common_debug_${model}.f90 ./
 
 # Link letkf source files
 LDIR=$root/src/letkf/
@@ -46,7 +47,6 @@ if [ ${model} == "hycom" ]; then
    cp $MODELDIR/hycom_intrp.f ./
    cp $MODELDIR/layer2z.f ./
 fi
-
 
 OBSDIR=$root/src/obs
 cp $OBSDIR/params_obs.f90 ./
