@@ -299,31 +299,30 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 
   if (dodebug) WRITE(6,*) "read_diag:: Post-read_hycom: Just read file: ", trim(binfile)
 
-! JILI hycom_undef is a smaller threshold 1e10 now, so use >= 
   if (dodebug) then
     WRITE(6,*) "read_diag:: Post-read_hycom"
     buf8 = v3d(:,:,:,iv3d_t)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_t)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_t)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_s)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_s)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_s)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_u)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_u)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_u)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_v)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_v)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_v)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_h)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (buf8 == hycom_undef) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_h)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_h)) = ", MINVAL(buf8(:,:,1))
     WRITE(6,*)
@@ -386,7 +385,7 @@ end subroutine check
 !-----------------------------------------------------------------------
 ! Write a set of MOM6 restart files to initialize the next model run
 !-----------------------------------------------------------------------
-SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
+SUBROUTINE write_restart(outfile,v3d,v2d)
   !STEVE: This writes out the analysis to a pre-existing template netcdf file.
   !       IN THE FUTURE: output directly as a HYCOM restart file
   USE netcdf
@@ -397,7 +396,7 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
 
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
-  CHARACTER(*),INTENT(IN) :: outfile,gues_file
+  CHARACTER(*),INTENT(IN) :: outfile
   !REAL(r_sngl),DIMENSION(:,:,:,:),INTENT(IN) :: v3d !(nlon,nlat,nlev,nv3d)
   !REAL(r_sngl),DIMENSION(:,:,:),  INTENT(IN) :: v2d !(nlon,nlat,nv2d)
   REAL(r_sngl),DIMENSION(:,:,:,:) :: v3d !(nlon,nlat,nlev,nv3d)
@@ -410,8 +409,8 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
 
   ! STEVE: this is provided externally at the moment
   binfile = trim(outfile)//trim(base)
-  infile_a = trim(gues_file)//trim(base_a)
-  infile_b = trim(gues_file)//trim(base_b)
+  infile_a = "gs01"//outfile(5:7)//trim(base_a)
+  infile_b = "gs01"//outfile(5:7)//trim(base_b)
   
   ! STEVE: for safety, clean up the variables for output:
   ! JILI for land grids, also set variables to undef

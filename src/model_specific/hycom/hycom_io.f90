@@ -17,7 +17,7 @@ MODULE hycom_io
 
   PUBLIC
 
-  REAL, PARAMETER :: hycom_undef=1e10
+  REAL, PARAMETER :: hycom_undef=2.0**100
   
 CONTAINS 
 

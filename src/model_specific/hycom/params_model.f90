@@ -117,10 +117,10 @@ PUBLIC
   REAL(r_size) :: min_t = 0.0d0 ! degC
   REAL(r_size) :: max_s = 50.0d0 ! psu
   REAL(r_size) :: min_s =  0.0d0 ! psu
-  REAL(r_size) :: max_uv = 10.0 ! psu
-  REAL(r_size) :: min_uv =  -10.0d0 ! psu
-  REAL(r_size) :: max_h = 100000.0 ! psu
-  REAL(r_size) :: min_h =  0.0d0 ! psu
+  REAL(r_size) :: max_uv = 10.0 ! m/s 
+  REAL(r_size) :: min_uv =  -10.0d0 ! m/s 
+  REAL(r_size) :: max_h = 1000.0d0 !m 
+  REAL(r_size) :: min_h =  -1000.0d0 !m 
   
   !STEVE: for filtering undef values from netcdf file
   REAL(r_size), PARAMETER :: ncundef = 1.267650600228229E+030 !1.0e18
