@@ -11,6 +11,7 @@ MODULE hycom_io
 
   USE common, ONLY: r_size, r_sngl, slen
   USE params_model
+  USE mod_za
 
   IMPLICIT NONE
 
@@ -460,5 +461,952 @@ SUBROUTINE read_blkdat(infile,sigma)
   enddo
 
 END SUBROUTINE read_blkdat
+
+SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
+
+!
+! --- hycom/micom field extractor
+!
+! Added by Jili Dong Jan. 2017
+
+  CHARACTER(slen), INTENT(IN) :: file_in_a,file_in_b
+  REAL(r_size), INTENT(OUT)   :: v3d(nlon,nlat,nlev,nv3d)
+  REAL(r_size), INTENT(OUT)   :: v2d(nlon,nlat,nv2d)
+  INTEGER                     :: k,n,nrec
+  INTEGER, PARAMETER          :: fid=12
+  INTEGER, PARAMETER, DIMENSION(nv2d) :: input_order_2d = (/ 1,2,3 /),output_order_2d = (/ 1,2,3 /)                           
+  INTEGER, PARAMETER, DIMENSION(nv3d) :: input_order_3d = (/ 1,2,3,4,5 /),output_order_3d = (/ 1,2,5,3,4/)                                            
+
+  character cline*80
+  character ctitle(4)*80
+  real :: dummy_2d(nlon,nlat)
+  integer :: jversn,iexpt,yrflag
+  INTEGER :: MSK(nlon,nlat)
+  real :: density(nlon,nlat,nlev)
+  real :: HMINA,HMAXA,hminb,hmaxb,thbase
+  integer :: i,nstep,nz,layer
+  double precision :: time(3)
+
+        call XCSPMD
+        ! JILI skip ZAIOST
+        !CALL ZAIOST
+
+! Please make sure the variables in "a" file are in the right order
+! Check "b" file to make sure
+ 
+! open archive file
+        CALL ZAIOPF(file_in_a,'OLD',21)
+        open(110,file=file_in_b,form='formatted',&
+         &status='old',action='read')
+
+        read(110,116) ctitle,jversn,iexpt,yrflag,idm,jdm
+116    format (a80/a80/a80/a80/&
+        &i5,4x,'''iversn'' = hycom version number x10'/&
+        &i5,4x,'''iexpt '' = experiment number x10'/&
+        &i5,4x,'''yrflag'' = days in year flag'/&
+        &i5,4x,'''idm   '' = longitudinal array size'/&
+        &i5,4x,'''jdm   '' = latitudinal  array size'/&
+        &'field       time step  model day',&
+        &'  k  dens        min              max')
+
+! read montg1
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read srfhgt
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("srfhgt  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        v2d(:,:,output_order_2d(1))=dummy_2d/9.806
+
+! read steric
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read surflx
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read salflx
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read bl_dpth
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read mix_dpth
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read tmix
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read smix 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read thmix 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read umix 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read vmix 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+
+! read u_batro
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("u_btrop ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        v2d(:,:,output_order_2d(2))=dummy_2d
+
+
+! read v_batro
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("v_btrop ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        v2d(:,:,output_order_2d(3))=dummy_2d
+
+
+!***************************************************
+!    v2d(i,j,1) = SSH
+!    v2d(i,j,2) = x_barotropic velocity  (not eastward) 
+!    v2d(i,j,3) = y_barotropic velocity (not northward)
+!    u(i,j,k) = x_baroclinic velocity (k=1 is top layer)
+!    v(i,j,k) = y_baroclinic velocity  
+!    dp(i,j,k) = layer thickness
+!    temp(i,j,k) = temperature
+!    saln(i,j,k) = salinity
+!***************************************************
+        do k=1,nlev
+! total u
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("u-vel.  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+!        v3d(:,:,k,output_order_3d(1))=dummy_2d+v2d(:,:,output_order_2d(2))
+! For now, use u perturbation
+        v3d(:,:,k,output_order_3d(1))=dummy_2d
+
+! total v   
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("v-vel.  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+!        v3d(:,:,k,output_order_3d(2))=dummy_2d+v2d(:,:,output_order_2d(3))
+! For now, use v perturbation
+        v3d(:,:,k,output_order_3d(2))=dummy_2d
+
+
+
+! dp
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("thknss  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        v3d(:,:,k,output_order_3d(3))=dummy_2d/9806.
+
+
+! temp    
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("temp    ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        v3d(:,:,k,output_order_3d(4))=dummy_2d
+
+
+! saln
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("salin   ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        v3d(:,:,k,output_order_3d(5))=dummy_2d
+
+
+! dens 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        call check_ab("density ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        density(:,:,k)=dummy_2d
+
+        enddo
+
+
+      call zaiocl(21)
+      close (110)
+
+
+END SUBROUTINE get_hycom 
+
+SUBROUTINE get_hycom_sample(sample_3d,pmsk,umsk,vmsk)
+
+!
+! --- hycom/micom field extractor
+!
+! Added by Jili Dong Jan. 2017
+
+  REAL(r_size), INTENT(OUT)   :: sample_3d(nlon,nlat,nlev)
+  INTEGER,INTENT(OUT)  :: pmsk(nlon,nlat),umsk(nlon,nlat),vmsk(nlon,nlat)
+  INTEGER                     :: k,n,nrec
+  INTEGER, PARAMETER          :: fid=12
+
+  character cline*80
+  character ctitle(4)*80
+  real :: dummy_2d(nlon,nlat)
+  integer :: jversn,iexpt,yrflag
+  INTEGER :: MSK(nlon,nlat)
+  real :: HMINA,HMAXA,hminb,hmaxb,thbase
+  integer :: i,nstep,nz,layer,ni,nj
+  double precision :: time(3)
+
+        call XCSPMD
+! JILI skip zaiost
+!        CALL ZAIOST
+! Please make sure the variables in "a" file are in the right order
+! Check "b" file to make sure
+
+pmsk=1
+umsk=1
+vmsk=1
+
+! open archive file
+        CALL ZAIOPF("hycom_sample.a",'OLD',21)
+        open(110,file="hycom_sample.b",form='formatted',&
+         &status='old',action='read')
+
+        read(110,116) ctitle,jversn,iexpt,yrflag,idm,jdm
+116    format (a80/a80/a80/a80/&
+        &i5,4x,'''iversn'' = hycom version number x10'/&
+        &i5,4x,'''iexpt '' = experiment number x10'/&
+        &i5,4x,'''yrflag'' = days in year flag'/&
+        &i5,4x,'''idm   '' = longitudinal array size'/&
+        &i5,4x,'''jdm   '' = latitudinal  array size'/&
+        &'field       time step  model day',&
+        &'  k  dens        min              max')
+
+! read montg1
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read srfhgt
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read steric
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read surflx
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read salflx
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read bl_dpth
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read mix_dpth
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read tmix
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do ni=1,nlon
+          do nj=1,nlat
+            if (dummy_2d(ni,nj) > 100000.0) pmsk(ni,nj)=0
+          enddo
+        enddo
+
+! read smix 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read thmix 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! read umix 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do ni=1,nlon
+          do nj=1,nlat
+            if (dummy_2d(ni,nj) > 100000.0) umsk(ni,nj)=0
+          enddo
+        enddo
+
+
+! read vmix 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do ni=1,nlon
+          do nj=1,nlat
+            if (dummy_2d(ni,nj) > 100000.0) vmsk(ni,nj)=0
+          enddo
+        enddo
+
+
+
+! read u_batro
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+
+! read v_batro
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+!***************************************************
+!    v2d(i,j,1) = SSH
+!    v2d(i,j,2) = x_barotropic velocity  (not eastward) 
+!    v2d(i,j,3) = y_barotropic velocity (not northward)
+!    u(i,j,k) = x_baroclinic velocity (k=1 is top layer)
+!    v(i,j,k) = y_baroclinic velocity  
+!    dp(i,j,k) = layer thickness
+!    temp(i,j,k) = temperature
+!    saln(i,j,k) = salinity
+!***************************************************
+        do k=1,nlev
+! total u
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! total v   
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! dp
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+
+! temp    
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        sample_3d(:,:,k)=dummy_2d
+
+
+! saln
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+! dens 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        enddo
+
+
+      call zaiocl(21)
+      close (110)
+
+
+END SUBROUTINE get_hycom_sample
+
+
+
+SUBROUTINE get_hycom_depth(phi0,lat2d,lon2d,dx,dy)
+
+!
+! --- hycom/micom grid depth field extractor
+!
+! Added by Jili Dong Jan. 2017
+
+  REAL(r_size), INTENT(OUT)   :: phi0(nlon,nlat)
+  REAL(r_size), INTENT(OUT)   :: lon2d(nlon,nlat)
+  REAL(r_size), INTENT(OUT)   :: lat2d(nlon,nlat)
+  REAL(r_size), INTENT(OUT)   :: dx(nlon,nlat)
+  REAL(r_size), INTENT(OUT)   :: dy(nlon,nlat)
+!  REAL(r_size), INTENT(OUT)   :: ulon2d(nlon,nlat)
+!  REAL(r_size), INTENT(OUT)   :: ulat2d(nlon,nlat)
+!  REAL(r_size), INTENT(OUT)   :: vlon2d(nlon,nlat)
+!  REAL(r_size), INTENT(OUT)   :: vlat2d(nlon,nlat)
+
+
+  INTEGER                     :: k,n,nrec
+  INTEGER, PARAMETER          :: fid=12
+
+  character cline*80
+  character ctitle(4)*80
+  real :: dummy_2d(nlon,nlat)
+  INTEGER :: MSK(nlon,nlat)
+  real :: HMINA,HMAXA,hminb,hmaxb,thbase
+  integer :: i
+  character preambl(5)*79
+
+
+        call XCSPMD
+        CALL ZAIOST
+
+! Please make sure the variables in "a" file are in the right order
+! Check "b" file to make sure
+
+      open (9,file="regional.depth.b",   &
+           form='formatted',status='old',action='read')
+      read (9, '(a79)') preambl
+      read (9, '(a)')   cline
+      i = index(cline,'=')
+      read (cline(i+1:),*)   hminb,hmaxb
+      close(9)
+
+
+      call zaiopf("regional.depth.a",'old', 9)
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      call zaiocl(9)
+      if     (abs(hmina-hminb).gt.max(abs(hmina),   &
+                                     abs(hminb))*1.e-4 .or.   &
+             abs(hmaxa-hmaxb).gt.max(abs(hmaxa),   &
+                                     abs(hmaxb))*1.e-4     ) then
+        write(*,'(/ a / a,1p3e14.6 / a,1p3e14.6 /)')   &
+         'depth error - .a and .b files not consistent:',   &
+         '.a,.b min = ',hmina,hminb,hmina-hminb,      &
+         '.a,.b max = ',hmaxa,hmaxb,hmaxa-hmaxb
+        stop
+      endif
+
+      phi0 = dummy_2d
+
+!
+!     grid location.
+!
+      open (unit=9,file='regional.grid.b',   &
+           form='formatted',status='old',action='read')
+
+      read(9,*) ! skip idm
+      read(9,*) ! skip jdm
+      read(9,*) ! skip mapflg
+
+! read plon
+      call zaiopf('regional.grid.a','old', 9)
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+      call check_grid_ab("plon",cline(1:4),hmina,hminb,hmaxa,hmaxb)
+      lon2d=dummy_2d
+
+
+! read plat
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+      call check_grid_ab("plat",cline(1:4),hmina,hminb,hmaxa,hmaxb)
+      lat2d=dummy_2d
+
+! skip qlon
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+
+
+! skip qlat
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+
+
+! skip ulon
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+
+
+! skip ulat
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+
+
+! skip vlon
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+
+
+! skip vlat
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+
+! skip pang 
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+
+! read dx (pscx) 
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+      call check_grid_ab("pscx",cline(1:4),hmina,hminb,hmaxa,hmaxb)
+      dx=dummy_2d
+
+! read dy (pscy) 
+      call zaiord(dummy_2d,MSK,.false., hmina,hmaxa, 9)
+      read(  9,'(a)') cline
+      i = index(cline,'=')
+      read(cline(i+1:),*) hminb,hmaxb
+      call check_grid_ab("pscy",cline(1:4),hmina,hminb,hmaxa,hmaxb)
+      dy=dummy_2d
+
+      close(9)
+      call zaiocl(9)
+
+end subroutine get_hycom_depth 
+
+
+
+subroutine check_ab(var_name_a,var_name_b,hmina,hminb,hmaxa,hmaxb)
+
+! Check HYCOM a and b files consistency
+! Added by Jili Dong Jan. 2017
+
+real :: hmina,hminb,hmaxa,hmaxb
+character(8) :: var_name_a,var_name_b 
+
+!write(6,*),"read ",var_name_b," as ",var_name_a
+
+if (var_name_a .ne. var_name_b) then
+   write(6,*),var_name_a," not consistent with ",var_name_b 
+   stop
+endif
+
+        if     (abs(hmina-hminb).gt.max(abs(hmina),     &
+                                       abs(hminb))*1.e-4 .or.   &
+               abs(hmaxa-hmaxb).gt.max(abs(hmaxa),     &
+                                       abs(hmaxb))*1.e-4     ) then
+          write(*,'(/ a / a,1p3e14.6 / a,1p3e14.6 /)')     &
+           'error - .a and .b files not consistent:',      &
+           '.a,.b min = ',hmina,hminb,hmina-hminb,         &
+           '.a,.b max = ',hmaxa,hmaxb,hmaxa-hmaxb
+          stop
+        endif
+
+end subroutine check_ab
+
+subroutine check_grid_ab(var_name_a,var_name_b,hmina,hminb,hmaxa,hmaxb)
+
+! Check HYCOM a and b files consistency
+! Added by JILI DONG Jan. 2017
+
+
+real :: hmina,hminb,hmaxa,hmaxb
+character(4) :: var_name_a,var_name_b
+
+
+write(6,*),"read ",var_name_b," as ",var_name_a
+
+if (var_name_a .ne. var_name_b) then
+   write(6,*),var_name_a," not consistent with ",var_name_b
+   stop
+endif
+
+        if     (abs(hmina-hminb).gt.max(abs(hmina),     &
+                                       abs(hminb))*1.e-4 .or.   &
+               abs(hmaxa-hmaxb).gt.max(abs(hmaxa),     &
+                                       abs(hmaxb))*1.e-4     ) then
+          write(*,'(/ a / a,1p3e14.6 / a,1p3e14.6 /)')     &
+           'grid error - .a and .b files not consistent:',      &
+           '.a,.b min = ',hmina,hminb,hmina-hminb,         &
+           '.a,.b max = ',hmaxa,hmaxb,hmaxa-hmaxb
+          stop
+        endif
+
+end subroutine check_grid_ab
+
+
+SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
+
+!
+! --- hycom output 
+!
+! Added by Jili Dong Apr. 2017
+! Open an old archive as a template and write out updated T/S/U/V
+
+  CHARACTER(slen), INTENT(IN) :: file_in_a,file_in_b
+  REAL(r_sngl),DIMENSION(:,:,:,:) :: v3d !(nlon,nlat,nlev,nv3d)
+  REAL(r_sngl),DIMENSION(:,:,:) :: v2d !(nlon,nlat,nv2d)
+  INTEGER                     :: k,n,nrec
+  INTEGER, PARAMETER          :: fid=12
+  INTEGER, PARAMETER, DIMENSION(nv2d) :: input_order_2d = (/ 1,2,3/),output_order_2d = (/ 1,2,3 /)                           
+  INTEGER, PARAMETER, DIMENSION(nv3d) :: input_order_3d = (/ 1,2,3,4,5/),output_order_3d = (/ 1,2,5,3,4/)     
+  character cline*80
+  character ctitle(4)*80
+  real :: dummy_2d(nlon,nlat)
+  integer :: jversn,iexpt,yrflag
+  real(r_size) :: hycom_depth(nlon,nlat)
+  INTEGER :: mskp(nlon,nlat),msku(nlon,nlat),mskv(nlon,nlat)
+  INTEGER :: MSK(nlon,nlat)
+  real :: HMINA,HMAXA,hminb,hmaxb,thbase
+  real :: xmin, xmax
+  integer :: i,i1,j1,nstep,nz,layer
+  double precision :: time(3)
+
+        call XCSPMD
+        ! JILI skip ZAIOST
+        !CALL ZAIOST
+
+
+! Please make sure the variables in "a" file are in the right order
+! Check "b" file to make sure
+
+! open old archive file
+        CALL ZAIOPF(file_in_a,'OLD',21)
+        open(110,file=file_in_b,form='formatted',&
+         &status='old',action='read')
+
+! open new archive file
+        open (unit=24,file='anal'//file_in_b(5:7)//'.b',form='formatted',  &
+     &          status='new',action='write')
+        call zaiopf('anal'//file_in_b(5:7)//'.a','new', 24)
+
+        read(110,116) ctitle,jversn,iexpt,yrflag,idm,jdm
+116    format (a80/a80/a80/a80/&
+        &i5,4x,'''iversn'' = hycom version number x10'/&
+        &i5,4x,'''iexpt '' = experiment number x10'/&
+        &i5,4x,'''yrflag'' = days in year flag'/&
+        &i5,4x,'''idm   '' = longitudinal array size'/&
+        &i5,4x,'''jdm   '' = latitudinal  array size'/&
+        &'field       time step  model day',&
+        &'  k  dens        min              max')
+
+! write header
+        write(24,116) ctitle,jversn,iexpt,yrflag,idm,jdm
+
+! read montg1
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'montg1  ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read srfhgt 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        v2d(:,:,1)=v2d(:,:,1)*9.806
+
+        do i1=1,nlon
+         do j1=1,nlat
+          if (v2d(i1,j1,1) > 1000000.0) v2d(i1,j1,1) = dummy_2d(i1,j1)
+         end do
+        end do
+
+        CALL ZAIOWR(v2d(:,:,1),mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'srfhgt  ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read steric 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'steric  ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read surflx 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'surflx  ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read salflx 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'salflx  ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read bl_dpth 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'bl_dpth ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read mix_dpth 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'mix_dpth',nstep,time(1),layer,thbase,xmin,xmax
+
+! read tmix 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'tmix    ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read smix 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'smix    ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read thmix 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'thmix   ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read umix 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,msku,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'umix    ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read vmix 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskv,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'vmix    ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read u_batro 
+        CALL ZAIORD(dummy_2d,MSK,.false.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do i1=1,nlon
+         do j1=1,nlat
+          if (v2d(i1,j1,2) > 1000000.0) v2d(i1,j1,2) = dummy_2d(i1,j1)
+         end do
+        end do
+
+        CALL ZAIOWR(v2d(:,:,2),msku,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'u_btrop ',nstep,time(1),layer,thbase,xmin,xmax
+
+! read v_batro 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do i1=1,nlon
+         do j1=1,nlat
+          if (v2d(i1,j1,3) > 1000000.0) v2d(i1,j1,3) = dummy_2d(i1,j1)
+         end do
+        end do
+
+        CALL ZAIOWR(v2d(:,:,3),mskv,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'v_btrop ',nstep,time(1),layer,thbase,xmin,xmax
+
+! 3d variables
+
+        do k=1,nlev
+
+! u pert
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do i1=1,nlon
+         do j1=1,nlat
+          if (v3d(i1,j1,k,1) > 1000000.0) v3d(i1,j1,k,1) = dummy_2d(i1,j1)
+         end do
+        end do
+
+
+        CALL ZAIOWR(v3d(:,:,k,1),msku,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'u-vel.  ',nstep,time(1),layer,thbase,xmin,xmax
+
+! v pert
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do i1=1,nlon
+         do j1=1,nlat
+          if (v3d(i1,j1,k,2) > 1000000.0) v3d(i1,j1,k,2) = dummy_2d(i1,j1)
+         end do
+        end do
+
+        CALL ZAIOWR(v3d(:,:,k,2),mskv,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'v-vel.  ',nstep,time(1),layer,thbase,xmin,xmax
+
+
+! thickness (not updated for now) 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'thknss  ',nstep,time(1),layer,thbase,xmin,xmax
+
+! temp 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do i1=1,nlon
+         do j1=1,nlat
+          if (v3d(i1,j1,k,3) > 1000000.0) v3d(i1,j1,k,3) = dummy_2d(i1,j1)
+         end do
+        end do
+
+        CALL ZAIOWR(v3d(:,:,k,3),mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'temp    ',nstep,time(1),layer,thbase,xmin,xmax
+
+! saln 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        do i1=1,nlon
+         do j1=1,nlat
+          if (v3d(i1,j1,k,4) > 1000000.0) v3d(i1,j1,k,4) = dummy_2d(i1,j1)
+         end do
+        end do
+
+        CALL ZAIOWR(v3d(:,:,k,4),mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'salin    ',nstep,time(1),layer,thbase,xmin,xmax
+
+! density 
+        CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
+        read(110,'(a)') cline
+        i= index(cline,'=')
+        read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+
+        CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
+        write(24,117) 'density ',nstep,time(1),layer,thbase,xmin,xmax
+
+        enddo
+
+ 117  format (a8,' =',i11,f11.3,i3,f7.3,1p2e16.7)
+
+      call zaiocl(21)
+      close (110)
+      call zaiocl(24)
+      close (24)
+
+end subroutine put_hycom 
+
 
 END MODULE hycom_io

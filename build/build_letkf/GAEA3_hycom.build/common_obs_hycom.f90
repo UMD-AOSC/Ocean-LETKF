@@ -7,6 +7,7 @@ MODULE common_obs_oceanmodel
 !   01/23/2009 Takemasa MIYOSHI  created
 !   04/26/2011 Steve PENNY converted to OCEAN for use with MOM4. grep '(OCEAN)' for changes.
 !   01/18/2015 Steve Penny converted for use with MOM6
+!   06/05/2017 Jili Dong modified for use with HYCOM 
 !
 !=======================================================================
   USE common
@@ -15,7 +16,7 @@ MODULE common_obs_oceanmodel
   USE kdtree
 
   IMPLICIT NONE
-  PUBLIC Trans_XtoY, phys2ijk, read_obs, get_nobs, read_obs2, write_obs2, itpl_2d, itpl_3d, monit_dep
+  PUBLIC Trans_XtoY, phys2ijk, phys2ij,read_obs, get_nobs, read_obs2, write_obs2, itpl_2d, itpl_3d, monit_dep
   PUBLIC center_obs_coords
 
   PRIVATE
@@ -38,34 +39,45 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Transformation from model space to observation space (i.e. H-operator)
 !-----------------------------------------------------------------------
-SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
+SUBROUTINE Trans_XtoY(elm,ri,rj,rlev,v3d,v2d,yobs)        !(OCEAN)
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
-  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_eta, iv2d_sst, iv2d_sss
+  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_ssh, iv2d_eta, iv2d_sst, iv2d_sss
+  USE vars_model,   ONLY: lat2d,phi0
+
   IMPLICIT NONE
 
   REAL(r_size),INTENT(IN) :: elm
-  REAL(r_size),INTENT(IN) :: ri,rj,rk
+  REAL(r_size),INTENT(IN) :: ri,rj,rlev
   REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   REAL(r_size),INTENT(OUT) :: yobs
+  REAL(r_size)  :: temp_obs(2,2)
   INTEGER :: i,j,k,n
-  INTEGER :: intelm
+  INTEGER :: intelm,obs_id_hycom
 
   intelm = NINT(elm)
   SELECT CASE (intelm)
   CASE(id_u_obs)  ! U
-    CALL itpl_3d(v3d(:,:,:,iv3d_u),ri,rj,rk,yobs)
+    obs_id_hycom=1
+    CALL hycom_intrp(v3d(:,:,:,:),ri,rj,rlev,temp_obs,obs_id_hycom)
+    CALL itpl_2d_4pts(temp_obs,ri,rj,yobs)
   CASE(id_v_obs)  ! V
-    CALL itpl_3d(v3d(:,:,:,iv3d_v),ri,rj,rk,yobs)
+    obs_id_hycom=2
+    CALL hycom_intrp(v3d(:,:,:,:),ri,rj,rlev,temp_obs,obs_id_hycom)
+    CALL itpl_2d_4pts(temp_obs,ri,rj,yobs)
   CASE(id_t_obs)  ! T
-    CALL itpl_3d(v3d(:,:,:,iv3d_t),ri,rj,rk,yobs)
+    obs_id_hycom=3
+    CALL hycom_intrp(v3d(:,:,:,:),ri,rj,rlev,temp_obs,obs_id_hycom)
+    CALL itpl_2d_4pts(temp_obs,ri,rj,yobs)
   CASE(id_s_obs)  ! S                             !(OCEAN)
-    CALL itpl_3d(v3d(:,:,:,iv3d_s),ri,rj,rk,yobs) !(OCEAN)
+    obs_id_hycom=4
+    CALL hycom_intrp(v3d(:,:,:,:),ri,rj,rlev,temp_obs,obs_id_hycom)
+    CALL itpl_2d_4pts(temp_obs,ri,rj,yobs)
   CASE(id_eta_obs) ! SSH                          !(OCEAN)
     !STEVE: use mom6 surface height to form Yb (i.e. hdxf)
-    CALL itpl_2d(v2d(:,:,iv2d_eta),ri,rj,yobs)    !(OCEAN)
+    CALL itpl_2d(v2d(:,:,iv2d_ssh),ri,rj,yobs)    !(OCEAN)
   CASE(id_sst_obs) ! SST                          !(OCEAN)
-    CALL itpl_2d(v2d(:,:,iv2d_sst),ri,rj,yobs)    !(OCEAN)
+    CALL itpl_2d(v3d(:,:,1,iv3d_t),ri,rj,yobs)    !(OCEAN)
   CASE(id_sss_obs) ! SSS                          !(OCEAN)
     CALL itpl_2d(v2d(:,:,iv2d_sss),ri,rj,yobs)    !(OCEAN)
   CASE DEFAULT
@@ -299,6 +311,163 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   
 END SUBROUTINE phys2ijk
 
+!-----------------------------------------------------------------------
+! Coordinate conversion just for 2D
+!-----------------------------------------------------------------------
+SUBROUTINE phys2ij(elem,rlon,rlat,rlev,ri,rj)     !(OCEAN)
+  USE params_model, ONLY: nlon, nlat
+  USE vars_model,   ONLY: lon2d, lat2d, lev2d, lon, lat
+  USE vars_model,   ONLY: lon0, lonf, lat0, latf, wrapgap
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: elem
+  REAL(r_size),INTENT(IN) :: rlon
+  REAL(r_size),INTENT(IN) :: rlat
+  REAL(r_size),INTENT(IN) :: rlev ! pressure levels
+  REAL(r_size),INTENT(OUT) :: ri
+  REAL(r_size),INTENT(OUT) :: rj
+  REAL(r_size) :: aj,ai, rrlon, glon,glat,xlon,xlat
+! REAL(r_size) :: lnps(nlon,nlat)
+  INTEGER :: i,j,n, ni,nj, ii,jj
+  LOGICAL, PARAMETER :: dodebug = .false.
+
+  !-----------------------------------------------------------------------------
+  ! Initialize the KD-tree for the model-grid
+  !-----------------------------------------------------------------------------
+  !STEVE: NOTE: this is replicated for each process
+  if (initialized == 0) then
+    WRITE(6,*) "Initializing the obs_local()"
+    initialized = 1
+    call kd_init( kdtree_root, RESHAPE(lon2d(:,:),(/nlon*nlat/)), RESHAPE(lat2d(:,:),(/nlon*nlat/)) )
+    WRITE(6,*) "Done constructing KD search tree."
+    WRITE(6,*) "nlon*nlat = ", nlon*nlat
+    ALLOCATE(dist(k_sought))
+    ALLOCATE( idx(k_sought))
+    prev_lon = -1e10
+    prev_lat = -1e10
+
+    ! To debug kdtree:
+    if (dodebug) then
+      ALLOCATE(lon2ij(nlon*nlat),lat2ij(nlon*nlat))
+      lon2ij = RESHAPE(lon2d(:,:),(/nlon*nlat/))
+      lat2ij = RESHAPE(lat2d(:,:),(/nlon*nlat/))
+    endif
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! query the KD-tree
+  !-----------------------------------------------------------------------------
+  if (rlon .ne. prev_lon .or. rlat .ne. prev_lat) then
+    CALL kd_search_nnearest(kdtree_root,  (/rlon, rlat/), k_sought, idx, dist, k_found, .false.)
+    prev_lon = rlon
+    prev_lat = rlat
+    if (dodebug) then
+      WRITE(6,*) "common_obs_mom6.f90::phys2ijk ---------------------------- "
+      WRITE(6,*) "base observation point (lon/lat) :: ", rlon, rlat
+      WRITE(6,*) "k_sought = ", k_sought
+      WRITE(6,*) "k_found  = ", k_found
+      WRITE(6,*) "Grid points found by kd_search_nnearest = "
+      WRITE(6,*) "idx,ni,nj,lon,lat,dist"
+      do n=1,k_found
+        ni = MODULO(idx(n)-1,nlon)+1
+        nj = idx(n)/nlon+1 ! Integer division
+        WRITE(6,*) idx(n), ni,nj, lon2d(ni,nj), lat2d(ni,nj), dist(n)
+      enddo
+    endif
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! rlon -> ri, rlat -> rj
+  !-----------------------------------------------------------------------------
+
+  ! Find the appropriate grid box containing this observation
+
+  ! First, find the index of the nearest grid point
+  ni = MODULO(idx(1)-1,nlon)+1
+  nj = FLOOR(REAL(idx(1))/REAL(nlon))+1 ! Integer division
+  glon = lon2d(ni,nj)
+  glat = lat2d(ni,nj)
+
+  ! For debugging:
+  if (dodebug) then
+    xlon = lon2ij(idx(1))
+    xlat = lat2ij(idx(1))
+  endif
+
+  !STEVE: initialize to something that will throw errors if it's not changed within
+  ri = -1
+  rj = -1
+
+  ! Second, check to see whether the observation is to the left/right, up/down from this point
+
+  !-----------------------------------------------------------------------------
+  ! Get longitude scaling
+  !-----------------------------------------------------------------------------
+  if (glon == rlon) then
+    ai = 0.0
+  elseif (glon < rlon) then
+    ai = (rlon - lon2d(ni,nj)) / (lon2d(ni+1,nj) - lon2d(ni,nj))
+  elseif (rlon < glon) then
+    ai = (rlon - lon2d(ni,nj)) / (lon2d(ni,nj) - lon2d(ni-1,nj))
+  endif
+  ri = REAL(ni,r_size) + ai
+
+  !-----------------------------------------------------------------------------
+  ! Get latitude scaling
+  !-----------------------------------------------------------------------------
+  if (glat == rlat) then
+    aj = 0.0
+  elseif (glat < rlat) then
+    aj = (rlat - lat2d(ni,nj)) / (lat2d(ni,nj+1) - lat2d(ni,nj))
+  elseif (rlat < glat) then
+    aj = (rlat - lat2d(ni,nj)) / (lat2d(ni,nj) - lat2d(ni,nj-1))
+    !STEVE: should be negative
+  endif
+  rj = REAL(nj,r_size) + aj
+
+  ! Set flags to mark rlon outside of map range:
+  if (ri < 1) then
+    ri = 0
+  elseif(ri >= nlon+1) then
+    ri = nlon+1
+  endif
+
+  if (rj < 1) then
+    rj = 0
+  elseif (rj >= nlat+1) then
+    rj = nlat+1
+  endif
+
+  ! if (dodebug .and. (ri > nlon .or. ri < 1)) then
+  if (dodebug) then
+    WRITE(6,*) "================="
+    WRITE(6,*) "In common_obs_hycom.f90::phys2ij,"
+    WRITE(6,*) "-----------------"
+    WRITE(6,*) "rlon = ", rlon
+    if (dodebug) WRITE(6,*) "xlon = ", xlon
+    WRITE(6,*) "glon = ", glon
+    WRITE(6,*) "ni = ", ni
+    WRITE(6,*) "ai = ", ai
+    WRITE(6,*) "ri = ", ri
+    WRITE(6,*) "lon0 = ", lon0
+    WRITE(6,*) "lonf = ", lonf
+    WRITE(6,*) "-----------------"
+    WRITE(6,*) "rlat = ", rlat
+    if (dodebug) WRITE(6,*) "xlat = ", xlat
+    WRITE(6,*) "glat = ", glat
+    WRITE(6,*) "nj = ", nj
+    WRITE(6,*) "aj = ", aj
+    WRITE(6,*) "rj = ", rj
+    WRITE(6,*) "lat0 = ", lat0
+    WRITE(6,*) "latf = ", latf
+    WRITE(6,*) "================="
+  endif
+
+  if (CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) RETURN
+  if (CEILING(rj) < 2 .OR. nlat < CEILING(rj)) RETURN
+
+
+  
+END SUBROUTINE phys2ij
 
 !-----------------------------------------------------------------------
 ! Interpolation
@@ -345,6 +514,47 @@ SUBROUTINE itpl_2d(var,ri,rj,var5)
   endif
 
 END SUBROUTINE itpl_2d
+
+!-----------------------------------------------------------------------
+! Interpolation
+!-----------------------------------------------------------------------
+SUBROUTINE itpl_2d_4pts(var,ri,rj,var5)
+  USE params_model, ONLY: nlon, nlat
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: var(2,2)
+  REAL(r_size),INTENT(IN) :: ri
+  REAL(r_size),INTENT(IN) :: rj
+  REAL(r_size),INTENT(OUT) :: var5
+  REAL(r_size) :: ai,aj
+  INTEGER :: i,j
+
+  i = CEILING(ri)
+  ai = ri - REAL(i-1,r_size)
+  j = CEILING(rj)
+  aj = rj - REAL(j-1,r_size)
+
+    var5 = var(1,1) * (1-ai) * (1-aj) &
+       & + var(2  ,1) *    ai  * (1-aj) &
+       & + var(1,2  ) * (1-ai) *    aj  &
+       & + var(2  ,2  ) *    ai  *    aj
+
+!   if (.true.) then
+!     print *, "common_obs_mom6.f90::itpl_2d::"
+!     print *, "var(i-1,j-1) = ", var(i-1,j-1)
+!     print *, "(1-ai) = ", (1-ai)
+!     print *, "(1-aj) = ", (1-aj)
+!     print *, "var(i  ,j-1) = ", var(i  ,j-1)
+!     print *, "ai = ", ai
+!     print *, "var(i-1,j  ) = ", var(i-1,j  )
+!     print *, "aj = ", aj
+!     print *, "var(i  ,j  ) = ", var(i  ,j  )
+!     print *, "var5 = ", var5
+!   endif
+
+
+END SUBROUTINE itpl_2d_4pts
+
+
 
 
 SUBROUTINE itpl_3d(var,ri,rj,rk,var5)

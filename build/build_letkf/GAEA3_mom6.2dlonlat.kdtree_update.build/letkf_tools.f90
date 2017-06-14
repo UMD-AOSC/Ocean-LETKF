@@ -45,6 +45,8 @@ MODULE letkf_tools
   IMPLICIT NONE
 
   PRIVATE
+  CHARACTER(15) :: thisfile = "letkf_tools.f90"
+
   PUBLIC ::  das_letkf
 
   INTEGER,SAVE :: nobstotal
@@ -76,6 +78,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   USE params_model, ONLY: iv3d_t !STEVE: for debugging
   USE params_letkf, ONLY: DO_MLD, DO_NO_VERT_LOC, DO_MLD_MAXSPRD
   USE vars_model,   ONLY: lev
+  USE common_debug_oceanmodel, ONLY: debug_post_obslocal, debug_post_obslocal2d
+  USE common_debug_oceanmodel, ONLY: debug_post_letkfcore, debug_ens_diversity, debug_post_anal3d
 
   IMPLICIT NONE
 
@@ -115,6 +119,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !STEVE: for DO_MLD
   REAL(r_size) :: max_sprd, mld_sprd
   REAL(r_size) :: mld=0
+  CHARACTER(9) :: calling_routine = 'das_letkf'
 
   WRITE(6,'(A)') 'Hello from das_letkf'
   nobstotal = nobs
@@ -170,15 +175,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   enddo
 
   !STEVE: Check to make sure user supplied a set of non-identical ensemble members:
-  if (dodebug) then
-    WRITE(6,*) "letkf_tools.f90:: After computing perturbations..."
-    WRITE(6,*) "min val for level gues3d(:,1,:,1) = ", MINVAL(gues3d(:,1,:,1))
-    WRITE(6,*) "max val for level gues3d(:,1,:,1) = ", MAXVAL(gues3d(:,1,:,1))
-  endif
-  if (MAXVAL(gues3d(:,1,:,1)) == MINVAL(gues3d(:,1,:,1))) then
-    WRITE(6,*) "letkf_tools.f90::das_letkf:: It appears that all the ensemble members are identical. EXITING..."
-    STOP(833)
-  endif
+  call debug_ens_diversity(trim(thisfile)//'::'//trim(calling_routine),gues3d,dodebug)
 
   !-----------------------------------------------------------------------------
   ! multiplicative inflation
@@ -237,7 +234,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         max_sprd=0
         do k=1,nlev
 !         mld_sprd = SQRT(SUM(gues3d(ij,k,:,iv3d_t)**2)/(nbv-1))
-          mld_sprd = SUM(gues3d(ij,k,:,iv3d_t)**2) !STEVE: since we're just finding the max, sqrt and division are not really necessary.
+          mld_sprd = SUM(gues3d(ij,k,:,iv3d_t)**2) !STEVE: since we're just using the max, sqrt and division are not really necessary.
           if (mld_sprd > max_sprd) then
             ! find the max spread in the column, use this as the 'mixed layer depth' for SST assimilation
             max_sprd = mld_sprd
@@ -295,29 +292,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
           parm = work3d(ij,ilev,n)
 
-          !STEVE: debug
-          if ( debug_hdxf_0 .and. MINVAL(hdxf(1:nobsl,1:nbv)) == 0 ) then
-            WRITE(6,*) "letkf_tools.f90:: (3D) ij = ", ij
-            WRITE(6,*) "letkf_tools.f90:: inputs to letkf_core:"
-            WRITE(6,*) "nobstotal = ", nobstotal
-            WRITE(6,*) "nobsl = ", nobsl
-            WRITE(6,*) "hdxf(1:nobsl,1:nbv) = ", hdxf(1:nobsl,:)
-            WRITE(6,*) "rdiag(1:nobsl) = ", rdiag(1:nobsl)
-            WRITE(6,*) "rloc(1:nobsl) = ", rloc(1:nobsl)
-            WRITE(6,*) "dep(1:nobsl) = ", dep(1:nobsl) 
-            WRITE(6,*) "parm = ", parm
-            WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
-            STOP(630)
-          endif
-          !STEVE: end
-
-          !STEVE: debug
-          if ( MINVAL(rdiag(1:nobsl)) .le. 0.0 ) then
-            WRITE(6,*) "common_letkf.f90:: ERROR: rdiag <=0 (i.e. there is an obserr <= 0)"
-            WRITE(6,*) "nbv = ", nbv
-            WRITE(6,*) "MINVAL(rdiag) = ",MINVAL(rdiag)
-            STOP(1)
-          endif
+          call debug_post_obslocal(trim(thisfile)//'::'//trim(calling_routine),ij,debug_hdxf_0,nobstotal,nobsl,hdxf(1:nobsl,:),rdiag(1:nobsl),rloc(1:nobsl),dep(1:nobsl),parm,trans(:,:,n))
 
           !-------------------------------------------------------------------------
           ! Call LETKF MAIN subroutine
@@ -325,13 +300,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           if (doverbose) WRITE(6,*) "Calling letkf_core..."
           CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))
 
-          if ( debug_zeroinc .and. nobsl > 0 ) then 
-            WRITE(6,*) "letkf_tools.f90::das_letkf:: post-letkf_core"
-            WRITE(6,*) "n = ", n
-            WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
-            WRITE(6,*) "letkf_tools.f90::das_letkf:: EXITING on purpose..."
-            STOP(318)
-          endif
+          call debug_post_letkfcore(trim(thisfile)//'::'//trim(calling_routine),debug_zeroinc,nobsl,n,trans(:,:,n))
 
           ! (if doing adaptive inflation) 
           work3d(ij,ilev,n) = parm
@@ -346,26 +315,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) + gues3d(ij,ilev,k,n) * trans(k,m,n)
 
             !STEVE: debug - check for bad values
-            if ( anal3d(ij,ilev,m,n) < -10 ) then
-              WRITE(6,*) "Problem in letkf_das after letkf_core. k = ", k
-              WRITE(6,*) "ij, ilev, m, n = ", ij,ilev,m,n
-              WRITE(6,*) "anal3d(ij,ilev,m,n) = ", anal3d(ij,ilev,m,n)
-              WRITE(6,*) "gues3d(ij,ilev,m,n) = ", gues3d(ij,ilev,m,n)
-              !ij = 895
-              WRITE(6,*) "lon = ", lon1(ij)
-              WRITE(6,*) "lat = ", lat1(ij)
-              WRITE(6,*) "letkf_tools.f90:: (3D) ij = ", ij
-              WRITE(6,*) "letkf_tools.f90:: inputs to letkf_core:"
-              WRITE(6,*) "nobstotal = ", nobstotal
-              WRITE(6,*) "nobsl = ", nobsl
-              WRITE(6,*) "hdxf(1:nobsl,1:nbv) = ", hdxf(1:nobsl,:)
-              WRITE(6,*) "rdiag(1:nobsl) = ", rdiag(1:nobsl)
-              WRITE(6,*) "rloc(1:nobsl) = ", rloc(1:nobsl)
-              WRITE(6,*) "dep(1:nobsl) = ", dep(1:nobsl)
-              WRITE(6,*) "parm = ", parm
-              WRITE(6,*) "trans(:,:,n) = ", trans(:,:,n)
-              STOP(6)
-            endif
+            call debug_post_anal3d(trim(thisfile)//'::'//trim(calling_routine),anal3d(ij,ilev,m,n),gues3d(ij,ilev,k,n),lon1(ij),lat1(ij),k,ij,ilev,m,n,nobstotal,nobsl,hdxf(1:nobsl,:),rdiag(1:nobsl),rloc(1:nobsl),dep(1:nobsl),parm,trans(k,m,n))
+
           enddo
         enddo
 
@@ -388,12 +339,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             if (dodebug .and. nobsl > 0) WRITE(6,*) "letkf_tools.f90::post-obs_local(2d):: Assimilating ", nobsl, " observations."
 
             parm = work2d(ij,n)
+
             !STEVE: check rdiag for > 0
-            if (MINVAL(rdiag(1:nobsl)) .le. 0) then
-              WRITE(6,*) "letkf.f90:: after obs_local, before letkf_core, for 2D, MINVAL(rdiag(1:nobsl)) <= 0"
-              WRITE(6,*) "rdiag(1:nobsl) = ", rdiag(1:nobsl)
-              STOP(43)
-            endif
+            call debug_post_obslocal2d(trim(thisfile)//'::'//trim(calling_routine),nobsl,rdiag(1:nobsl))
 
             CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n))
 
