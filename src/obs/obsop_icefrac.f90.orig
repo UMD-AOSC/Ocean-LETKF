@@ -170,7 +170,7 @@ PROGRAM obsop_icefrac
   ALLOCATE( v3d(nlon,nlat,nlev,nv3d) )
   ALLOCATE( v2d(nlon,nlat,nv2d) )
   WRITE(6,*) "Reading background/forecast data on model grid..."
-  CALL read_diag(guesfile,v3d,v2d,2)
+  CALL read_diag(guesfile,v3d,v2d)
   WRITE(6,*) '****************'
 
   !-----------------------------------------------------------------------------

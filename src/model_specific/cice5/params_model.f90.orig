@@ -1,6 +1,6 @@
 MODULE params_model
 
-USE common, ONLY: r_size, slen
+USE common, ONLY: r_size
 
 IMPLICIT NONE
 
@@ -38,15 +38,15 @@ PUBLIC
 
 !
 ! 3D Variables:
-  INTEGER,PARAMETER :: iv3d_hs=1    ! Snow volume (vsnon)
-  INTEGER,PARAMETER :: iv3d_hi=2    ! Ice volume (vicen)
-  INTEGER,PARAMETER :: iv3d_t1=3    ! Surface temp (Tsfcn)
+  INTEGER,PARAMETER :: iv3d_hs=1    ! Snow volume
+  INTEGER,PARAMETER :: iv3d_hi=2    ! Ice volume
+  INTEGER,PARAMETER :: iv3d_t1=3    ! Surface temp
 ! INTEGER,PARAMETER :: iv3d_t2=4   
-  INTEGER,PARAMETER :: iv3d_ps=4    ! cat-specific Concentration (aicen)
+  INTEGER,PARAMETER :: iv3d_ps=4    ! cat-specific Concentration
 ! 2D Variables:
   INTEGER,PARAMETER :: iv2d_cn=1    ! 2D ice concentration as measured
-  INTEGER,PARAMETER :: iv2d_ui=2    ! 2D ice drift (zonal) (uvel)
-  INTEGER,PARAMETER :: iv2d_vi=3    ! 2D ice drift (meridional) (vvel)
+  INTEGER,PARAMETER :: iv2d_ui=2    ! 2D ice drift (zonal)
+  INTEGER,PARAMETER :: iv2d_vi=3    ! 2D ice drift (meridional)
 
   REAL(r_size) :: obs_noise_coeff = 0.01  !(SIS)  !STEVE: can set in namelist
 
@@ -60,7 +60,7 @@ PUBLIC
   CHARACTER(20), SAVE :: element(nv3d+nv2d+nv4d)
 
   !For input/output model files:
-  CHARACTER(slen) :: basefile = 'cice5_model.res.nc'
+  CHARACTER(16) :: basefile = 'cice5_model.res.nc'
 
 ! CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
 ! CHARACTER(32) :: ts_basefile = 'ocean_temp_salt.res.nc'
