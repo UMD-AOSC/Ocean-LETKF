@@ -612,7 +612,7 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
     do k=1,nlev
       do i=1,nij
         do m=1,member
-          if (v3d(i,k,m,n) < hycom_undef) then
+          if (v3d(i,k,m,n) < 1e20) then
             v3dm(i,k,n) = v3dm(i,k,n) + v3d(i,k,m,n)
             cnt3d(i,k,n) = cnt3d(i,k,n) + 1
           endif
@@ -627,7 +627,7 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
   do n=1,nv2d
     do i=1,nij
       do m=1,member
-        if (v2d(i,m,n) < hycom_undef) then
+        if (v2d(i,m,n) < 1e20) then
           v2dm(i,n) = v2dm(i,n) + v2d(i,m,n)
           cnt2d(i,n) = cnt2d(i,n) + 1
         endif
