@@ -1184,12 +1184,6 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         v2d(:,:,1)=v2d(:,:,1)*9.806
 
-        do i1=1,nlon
-         do j1=1,nlat
-          if (v2d(i1,j1,1) > 1000000.0) v2d(i1,j1,1) = dummy_2d(i1,j1)
-         end do
-        end do
-
         CALL ZAIOWR(v2d(:,:,1),mskp,.true.,xmin,xmax,24,.false.)
         write(24,117) 'srfhgt  ',nstep,time(1),layer,thbase,xmin,xmax
 
@@ -1289,12 +1283,6 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        do i1=1,nlon
-         do j1=1,nlat
-          if (v2d(i1,j1,2) > 1000000.0) v2d(i1,j1,2) = dummy_2d(i1,j1)
-         end do
-        end do
-
         CALL ZAIOWR(v2d(:,:,2),msku,.true.,xmin,xmax,24,.false.)
         write(24,117) 'u_btrop ',nstep,time(1),layer,thbase,xmin,xmax
 
@@ -1303,12 +1291,6 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         read(110,'(a)') cline
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
-
-        do i1=1,nlon
-         do j1=1,nlat
-          if (v2d(i1,j1,3) > 1000000.0) v2d(i1,j1,3) = dummy_2d(i1,j1)
-         end do
-        end do
 
         CALL ZAIOWR(v2d(:,:,3),mskv,.true.,xmin,xmax,24,.false.)
         write(24,117) 'v_btrop ',nstep,time(1),layer,thbase,xmin,xmax
@@ -1323,13 +1305,6 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        do i1=1,nlon
-         do j1=1,nlat
-          if (v3d(i1,j1,k,1) > 1000000.0) v3d(i1,j1,k,1) = dummy_2d(i1,j1)
-         end do
-        end do
-
-
         CALL ZAIOWR(v3d(:,:,k,1),msku,.true.,xmin,xmax,24,.false.)
         write(24,117) 'u-vel.  ',nstep,time(1),layer,thbase,xmin,xmax
 
@@ -1338,12 +1313,6 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         read(110,'(a)') cline
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
-
-        do i1=1,nlon
-         do j1=1,nlat
-          if (v3d(i1,j1,k,2) > 1000000.0) v3d(i1,j1,k,2) = dummy_2d(i1,j1)
-         end do
-        end do
 
         CALL ZAIOWR(v3d(:,:,k,2),mskv,.true.,xmin,xmax,24,.false.)
         write(24,117) 'v-vel.  ',nstep,time(1),layer,thbase,xmin,xmax
@@ -1364,12 +1333,6 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        do i1=1,nlon
-         do j1=1,nlat
-          if (v3d(i1,j1,k,3) > 1000000.0) v3d(i1,j1,k,3) = dummy_2d(i1,j1)
-         end do
-        end do
-
         CALL ZAIOWR(v3d(:,:,k,3),mskp,.true.,xmin,xmax,24,.false.)
         write(24,117) 'temp    ',nstep,time(1),layer,thbase,xmin,xmax
 
@@ -1378,12 +1341,6 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         read(110,'(a)') cline
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
-
-        do i1=1,nlon
-         do j1=1,nlat
-          if (v3d(i1,j1,k,4) > 1000000.0) v3d(i1,j1,k,4) = dummy_2d(i1,j1)
-         end do
-        end do
 
         CALL ZAIOWR(v3d(:,:,k,4),mskp,.true.,xmin,xmax,24,.false.)
         write(24,117) 'salin    ',nstep,time(1),layer,thbase,xmin,xmax
