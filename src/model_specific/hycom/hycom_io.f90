@@ -17,7 +17,8 @@ MODULE hycom_io
 
   PUBLIC
 
-  REAL, PARAMETER :: hycom_undef=2.0**100
+  REAL(r_size), PARAMETER :: hycom_undef=2.0**100
+  REAL(r_size), PARAMETER :: hycom_eps = EPSILON(1.0)  !(intentionally at real precision)              
   
 CONTAINS 
 
