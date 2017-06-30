@@ -522,6 +522,7 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("srfhgt  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        v2d(:,:,output_order_2d(1))=dummy_2d
         where (abs(dummy_2d-hycom_undef) > hycom_eps) v2d(:,:,output_order_2d(1))=dummy_2d/9.806  
 
 ! read steric
@@ -642,6 +643,7 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("thknss  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
+        v3d(:,:,k,output_order_3d(3))=dummy_2d
         where (abs(dummy_2d-hycom_undef) > hycom_eps) v3d(:,:,k,output_order_3d(3))=dummy_2d/9806.                  
 
 ! temp    
