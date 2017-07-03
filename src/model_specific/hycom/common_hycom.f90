@@ -419,73 +419,60 @@ SUBROUTINE write_restart(outfile,v3d,v2d)
   do k=1,nlev
     do j=1,nlat
       do i=1,nlon
-        if (v3d(i,j,k,iv3d_t) < min_t) then
-
+        if (v3d(i,j,k,iv3d_t) < min_t .and. pmsk(i,j) == 1) then
           WRITE(6,*) "WARNING: Bad temp value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
           v3d(i,j,k,iv3d_t) = min_t
         endif
 
 
-        if (v3d(i,j,k,iv3d_t) > max_t) then
+        if (v3d(i,j,k,iv3d_t) > max_t .and. pmsk(i,j) == 1) then
           WRITE(6,*) "WARNING: Bad temp value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
           v3d(i,j,k,iv3d_t) = max_t
         endif
 
 
-        if (v3d(i,j,k,iv3d_s) < min_s ) then
+        if (v3d(i,j,k,iv3d_s) < min_s .and. pmsk(i,j) == 1) then
           WRITE(6,*) "WARNING: Bad salt value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
           v3d(i,j,k,iv3d_s) = min_s
         endif
 
 
-        if (v3d(i,j,k,iv3d_s) > max_s) then
+        if (v3d(i,j,k,iv3d_s) > max_s .and. pmsk(i,j) == 1) then
           WRITE(6,*) "WARNING: Bad salt value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
           v3d(i,j,k,iv3d_s) = max_s
         endif
 
-        if (v3d(i,j,k,iv3d_u) < min_uv) then
+        if (v3d(i,j,k,iv3d_u) < min_uv .and. umsk(i,j) == 1) then
           WRITE(6,*) "WARNING: Bad u-vel value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
           v3d(i,j,k,iv3d_u) = min_uv
         endif
 
-        if (v3d(i,j,k,iv3d_u) > max_uv) then
+        if (v3d(i,j,k,iv3d_u) > max_uv .and. umsk(i,j) == 1) then
           WRITE(6,*) "WARNING: Bad u-vel value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
           v3d(i,j,k,iv3d_u) = max_uv
         endif
 
-        if (v3d(i,j,k,iv3d_v) < min_uv) then
+        if (v3d(i,j,k,iv3d_v) < min_uv .and. vmsk(i,j) == 1) then
           WRITE(6,*) "WARNING: Bad v-vel value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
           v3d(i,j,k,iv3d_v) = min_uv
         endif
 
-        if (v3d(i,j,k,iv3d_v) > max_uv) then
+        if (v3d(i,j,k,iv3d_v) > max_uv .and. vmsk(i,j) == 1) then
           WRITE(6,*) "WARNING: Bad v-vel value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
           v3d(i,j,k,iv3d_v) = max_uv
         endif
 
-        if (phi0(i,j) > 100000) then
-          v3d(i,j,k,1:4)=ncundef
-        endif
-
       enddo
     enddo
   enddo
-
-    do j=1,nlat
-      do i=1,nlon
-        if (phi0(i,j) > 100000.0) then
-          v2d(i,j,:)=ncundef
-        endif
-      end do
-    end do
 
   endif
 
