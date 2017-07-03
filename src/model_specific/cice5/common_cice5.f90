@@ -216,17 +216,19 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !STEVE: for debugging:
   CHARACTER(32) :: testfile
   INTEGER :: iunit,iolen,n,irec
-  LOGICAL, PARAMETER :: dodebug = .false.
   CHARACTER(3) :: MEM3
   CHARACTER(slen) :: varname
   INTEGER :: ivid
+  LOGICAL, PARAMETER :: dodebug = .true.
 
   ncfile = trim(infile)//'.'//trim(basefile)
 
   select case(prec)
     case(1)
+      if (dodebug) print *, "read_restart:: using single precision"
       ALLOCATE(buf4(nlon,nlat,nlev))
     case(2)
+      if (dodebug) print *, "read_restart:: using double precision"
       ALLOCATE(buf8(nlon,nlat,nlev))
   end select
 
@@ -254,8 +256,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
       v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
   end select
 
-  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable part_size"
-  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable part_size"
+  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable vsnon"
+  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable vsnon"
 
   ! !STEVE: debug
   if (dodebug) then
@@ -283,8 +285,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
       v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
   end select
 
-  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable salt"
-  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable salt"
+  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable vicen"
+  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable vicen"
 
  !STEVE: debug
   if (dodebug) then
@@ -312,8 +314,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
       v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
   end select
 
-  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable t_ice1"
-  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable t_ice1"
+  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable ", varname
+  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable ", varname
 
   ! !STEVE: debug
   if (dodebug) then
@@ -333,10 +335,10 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   select case(prec)
     case(1)
       DEALLOCATE(buf4)
-      ALLOCATE(buf4(nlon,nlat,nlev+1))
+      ALLOCATE(buf4(nlon,nlat,nlev))
     case(2)
       DEALLOCATE(buf8)
-      ALLOCATE(buf8(nlon,nlat,nlev+1))
+      ALLOCATE(buf8(nlon,nlat,nlev))
   end select
 
   call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
@@ -344,11 +346,11 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
     case(1)
       buf4=0.0
       call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = buf4(:,:,2:nlev+1)
+      v3d(:,:,:,ivid) = buf4(:,:,:)
     case(2)
       buf8=0.0d0
       call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = REAL(buf8(:,:,2:nlev+1),r_sngl)
+      v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
   end select
 
 ! !STEVE: debug
@@ -361,9 +363,10 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   endif
 ! !STEVE: end
 
-  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable part_size"
-  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable part_size"
+  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable aicen"
+  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable aicen"
 
+  ! CLOSE NETCDF FILE
   call check( NF90_CLOSE(ncid) )
 
   !STEVE: assign concentration as integral of part size across all categories:
