@@ -419,52 +419,52 @@ SUBROUTINE write_restart(outfile,v3d,v2d)
   do k=1,nlev
     do j=1,nlat
       do i=1,nlon
-        if (v3d(i,j,k,iv3d_t) < min_t .and. pmsk(i,j) == 1) then
+        if (v3d(i,j,k,iv3d_t) < min_t) then
           WRITE(6,*) "WARNING: Bad temp value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
           v3d(i,j,k,iv3d_t) = min_t
         endif
 
 
-        if (v3d(i,j,k,iv3d_t) > max_t .and. pmsk(i,j) == 1) then
+        if (v3d(i,j,k,iv3d_t) > max_t) then
           WRITE(6,*) "WARNING: Bad temp value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
           v3d(i,j,k,iv3d_t) = max_t
         endif
 
 
-        if (v3d(i,j,k,iv3d_s) < min_s .and. pmsk(i,j) == 1) then
+        if (v3d(i,j,k,iv3d_s) < min_s) then
           WRITE(6,*) "WARNING: Bad salt value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
           v3d(i,j,k,iv3d_s) = min_s
         endif
 
 
-        if (v3d(i,j,k,iv3d_s) > max_s .and. pmsk(i,j) == 1) then
+        if (v3d(i,j,k,iv3d_s) > max_s) then
           WRITE(6,*) "WARNING: Bad salt value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
           v3d(i,j,k,iv3d_s) = max_s
         endif
 
-        if (v3d(i,j,k,iv3d_u) < min_uv .and. umsk(i,j) == 1) then
+        if (v3d(i,j,k,iv3d_u) < min_uv) then
           WRITE(6,*) "WARNING: Bad u-vel value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
           v3d(i,j,k,iv3d_u) = min_uv
         endif
 
-        if (v3d(i,j,k,iv3d_u) > max_uv .and. umsk(i,j) == 1) then
+        if (v3d(i,j,k,iv3d_u) > max_uv) then
           WRITE(6,*) "WARNING: Bad u-vel value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_u)
           v3d(i,j,k,iv3d_u) = max_uv
         endif
 
-        if (v3d(i,j,k,iv3d_v) < min_uv .and. vmsk(i,j) == 1) then
+        if (v3d(i,j,k,iv3d_v) < min_uv) then
           WRITE(6,*) "WARNING: Bad v-vel value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
           v3d(i,j,k,iv3d_v) = min_uv
         endif
 
-        if (v3d(i,j,k,iv3d_v) > max_uv .and. vmsk(i,j) == 1) then
+        if (v3d(i,j,k,iv3d_v) > max_uv) then
           WRITE(6,*) "WARNING: Bad v-vel value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_v)
           v3d(i,j,k,iv3d_v) = max_uv
@@ -481,7 +481,7 @@ SUBROUTINE write_restart(outfile,v3d,v2d)
 
   WRITE(6,*) "common_hycom.f90::write_restart:: calling write_hycom..."
   !JILI HYCOM archive file output 
-  CALL put_hycom(infile_a,infile_b,v3d,v2d,pmsk,umsk,vmsk)
+  CALL put_hycom(infile_a,infile_b,v3d,v2d)
   WRITE(6,*) "common_hycom.f90::write_restart:: Finished calling write_hycom."
 
 END SUBROUTINE write_restart

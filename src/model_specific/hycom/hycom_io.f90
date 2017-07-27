@@ -475,7 +475,7 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
   REAL(r_size), INTENT(OUT)   :: v2d(nlon,nlat,nv2d)
   INTEGER                     :: k,n,nrec
   INTEGER, PARAMETER          :: fid=12
-  INTEGER, PARAMETER, DIMENSION(nv2d) :: input_order_2d = (/ 1,2,3 /),output_order_2d = (/ 1,2,3 /)                           
+  INTEGER, PARAMETER, DIMENSION(nv2d) :: input_order_2d = (/ 1,2,3 /),output_order_2d = (/ 1,2,3 /)                  
   INTEGER, PARAMETER, DIMENSION(nv3d) :: input_order_3d = (/ 1,2,3,4,5 /),output_order_3d = (/ 1,2,5,3,4/)                                            
 
   character cline*80
@@ -1112,7 +1112,7 @@ endif
 end subroutine check_grid_ab
 
 
-SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
+SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d)
 
 !
 ! --- hycom output 
@@ -1125,7 +1125,7 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
   REAL(r_sngl),DIMENSION(:,:,:) :: v2d !(nlon,nlat,nv2d)
   INTEGER                     :: k,n,nrec
   INTEGER, PARAMETER          :: fid=12
-  INTEGER, PARAMETER, DIMENSION(nv2d) :: input_order_2d = (/ 1,2,3/),output_order_2d = (/ 1,2,3 /)                           
+  INTEGER, PARAMETER, DIMENSION(nv2d) :: input_order_2d = (/ 1,2,3/),output_order_2d = (/ 1,2,3/)                       
   INTEGER, PARAMETER, DIMENSION(nv3d) :: input_order_3d = (/ 1,2,3,4,5/),output_order_3d = (/ 1,2,5,3,4/)     
   character cline*80
   character ctitle(4)*80
@@ -1142,6 +1142,10 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         call XCSPMD
         ! JILI skip ZAIOST
         !CALL ZAIOST
+
+mskp=0
+msku=0
+mskv=0
 
 
 ! Please make sure the variables in "a" file are in the right order
@@ -1175,6 +1179,8 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         read(110,'(a)') cline
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        where (abs(dummy_2d-hycom_undef) > hycom_eps) mskp=1
+
 
         CALL ZAIOWR(dummy_2d,mskp,.true.,xmin,xmax,24,.false.)
         write(24,117) 'montg1  ',nstep,time(1),layer,thbase,xmin,xmax
@@ -1266,6 +1272,7 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         read(110,'(a)') cline
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        where (abs(dummy_2d-hycom_undef) > hycom_eps) msku=1
 
         CALL ZAIOWR(dummy_2d,msku,.true.,xmin,xmax,24,.false.)
         write(24,117) 'umix    ',nstep,time(1),layer,thbase,xmin,xmax
@@ -1275,6 +1282,7 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d,mskp,msku,mskv)
         read(110,'(a)') cline
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
+        where (abs(dummy_2d-hycom_undef) > hycom_eps) mskv=1
 
         CALL ZAIOWR(dummy_2d,mskv,.true.,xmin,xmax,24,.false.)
         write(24,117) 'vmix    ',nstep,time(1),layer,thbase,xmin,xmax
