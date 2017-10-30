@@ -188,6 +188,7 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   !  scale the weight of the observation error based on distance from gridpoint.
   !  Outside of a maximum radius, set the obs impact to zero (i.e. remove the ob)
   !-----------------------------------------------------------------------------
+  cnt_sst = 0
   cnt_sst0 = 0
   nobsl=0        
   do n = 1, nn
