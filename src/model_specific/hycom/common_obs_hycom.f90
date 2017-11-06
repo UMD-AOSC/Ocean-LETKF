@@ -846,7 +846,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 
   if (nn .eq. 0) then
     WRITE(6,*) "get_nobs:: No observations have been found. Exiting..."
-    STOP(60)
+    !STOP(60)
   endif
 
 END SUBROUTINE get_nobs
