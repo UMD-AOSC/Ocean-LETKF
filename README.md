@@ -1,6 +1,9 @@
 # Ocean-LETKF:  
 Main repository for the Ocean-LETKF development
 
+# Getting started with git:
+https://gist.github.com/blackfalcon/8428401
+
 # Configuration:  
 All machine-specific details have been moved to 'config/'
 For a new machine, create a set of files following the same format.
