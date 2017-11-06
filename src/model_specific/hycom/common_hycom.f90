@@ -245,7 +245,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !       by the obsop.f90 program prior to running letkf.f90, so the diagnostic files do not have 
   !       to be touched during letkf runtime.
   USE netcdf
-  USE hycom_io, ONLY: read_hycom, hycom_undef,get_hycom
+  USE hycom_io, ONLY: read_hycom, hycom_undef,hycom_eps,get_hycom
   USE params_model, ONLY: base,base_a,base_b
   USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv3d_h
 
@@ -299,31 +299,30 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 
   if (dodebug) WRITE(6,*) "read_diag:: Post-read_hycom: Just read file: ", trim(binfile)
 
-! JILI hycom_undef is a smaller threshold 1e10 now, so use >= 
   if (dodebug) then
     WRITE(6,*) "read_diag:: Post-read_hycom"
     buf8 = v3d(:,:,:,iv3d_t)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (abs(buf8-hycom_undef) < hycom_eps) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_t)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_t)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_s)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (abs(buf8-hycom_undef) < hycom_eps) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_s)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_s)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_u)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (abs(buf8-hycom_undef) < hycom_eps) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_u)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_u)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_v)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (abs(buf8-hycom_undef) < hycom_eps) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_v)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_v)) = ", MINVAL(buf8(:,:,1))
 
     buf8 = v3d(:,:,:,iv3d_h)
-    where (buf8 >= hycom_undef) buf8 = 0.0d0
+    where (abs(buf8-hycom_undef) < hycom_eps) buf8 = 0.0d0
     WRITE(6,*) "MAXVAL(v3d(:,:,1,iv3d_h)) = ", MAXVAL(buf8(:,:,1))
     WRITE(6,*) "MINVAL(v3d(:,:,1,iv3d_h)) = ", MINVAL(buf8(:,:,1))
     WRITE(6,*)
@@ -386,7 +385,7 @@ end subroutine check
 !-----------------------------------------------------------------------
 ! Write a set of MOM6 restart files to initialize the next model run
 !-----------------------------------------------------------------------
-SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
+SUBROUTINE write_restart(outfile,v3d,v2d)
   !STEVE: This writes out the analysis to a pre-existing template netcdf file.
   !       IN THE FUTURE: output directly as a HYCOM restart file
   USE netcdf
@@ -397,7 +396,7 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
 
   IMPLICIT NONE
 !  INCLUDE 'netcdf.inc'
-  CHARACTER(*),INTENT(IN) :: outfile,gues_file
+  CHARACTER(*),INTENT(IN) :: outfile
   !REAL(r_sngl),DIMENSION(:,:,:,:),INTENT(IN) :: v3d !(nlon,nlat,nlev,nv3d)
   !REAL(r_sngl),DIMENSION(:,:,:),  INTENT(IN) :: v2d !(nlon,nlat,nv2d)
   REAL(r_sngl),DIMENSION(:,:,:,:) :: v3d !(nlon,nlat,nlev,nv3d)
@@ -410,8 +409,8 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
 
   ! STEVE: this is provided externally at the moment
   binfile = trim(outfile)//trim(base)
-  infile_a = trim(gues_file)//trim(base_a)
-  infile_b = trim(gues_file)//trim(base_b)
+  infile_a = "gs01"//outfile(5:7)//trim(base_a)
+  infile_b = "gs01"//outfile(5:7)//trim(base_b)
   
   ! STEVE: for safety, clean up the variables for output:
   ! JILI for land grids, also set variables to undef
@@ -421,7 +420,6 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
     do j=1,nlat
       do i=1,nlon
         if (v3d(i,j,k,iv3d_t) < min_t) then
-
           WRITE(6,*) "WARNING: Bad temp value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_t)
           v3d(i,j,k,iv3d_t) = min_t
@@ -435,7 +433,7 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
         endif
 
 
-        if (v3d(i,j,k,iv3d_s) < min_s ) then
+        if (v3d(i,j,k,iv3d_s) < min_s) then
           WRITE(6,*) "WARNING: Bad salt value in analysis output:"
           WRITE(6,*) "v3d(",i,",",j,",",k,") = ", v3d(i,j,k,iv3d_s)
           v3d(i,j,k,iv3d_s) = min_s
@@ -472,21 +470,9 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
           v3d(i,j,k,iv3d_v) = max_uv
         endif
 
-        if (phi0(i,j) > 100000) then
-          v3d(i,j,k,1:4)=ncundef
-        endif
-
       enddo
     enddo
   enddo
-
-    do j=1,nlat
-      do i=1,nlon
-        if (phi0(i,j) > 100000.0) then
-          v2d(i,j,:)=ncundef
-        endif
-      end do
-    end do
 
   endif
 
@@ -495,7 +481,7 @@ SUBROUTINE write_restart(outfile,gues_file,v3d,v2d)
 
   WRITE(6,*) "common_hycom.f90::write_restart:: calling write_hycom..."
   !JILI HYCOM archive file output 
-  CALL put_hycom(infile_a,infile_b,v3d,v2d,pmsk,umsk,vmsk)
+  CALL put_hycom(infile_a,infile_b,v3d,v2d)
   WRITE(6,*) "common_hycom.f90::write_restart:: Finished calling write_hycom."
 
 END SUBROUTINE write_restart
@@ -588,7 +574,7 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
 !-----------------------------------------------------------------------
 ! Ensemble manipulations
 !-----------------------------------------------------------------------
-  use hycom_io, ONLY: hycom_undef
+  use hycom_io, ONLY: hycom_undef,hycom_eps
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: member
   INTEGER,INTENT(IN) :: nij
@@ -613,7 +599,7 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
     do k=1,nlev
       do i=1,nij
         do m=1,member
-          if (v3d(i,k,m,n) < hycom_undef) then
+          if (abs(v3d(i,k,m,n)-hycom_undef) > hycom_eps )  then
             v3dm(i,k,n) = v3dm(i,k,n) + v3d(i,k,m,n)
             cnt3d(i,k,n) = cnt3d(i,k,n) + 1
           endif
@@ -628,7 +614,7 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
   do n=1,nv2d
     do i=1,nij
       do m=1,member
-        if (v2d(i,m,n) < hycom_undef) then
+        if (abs(v2d(i,m,n)-hycom_undef) > hycom_eps )  then
           v2dm(i,n) = v2dm(i,n) + v2d(i,m,n)
           cnt2d(i,n) = cnt2d(i,n) + 1
         endif
