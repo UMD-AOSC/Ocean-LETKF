@@ -24,13 +24,14 @@ PUBLIC
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: area_t !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
+! REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: depth !(nlon,nlat)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: wet !(nlon,nlat)
+! REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: wet !(nlon,nlat)
 
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE     :: fcori   !(nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE   :: fcori2d !(nlon,nlat)
   INTEGER,ALLOCATABLE,DIMENSION(:,:),SAVE        :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
+  INTEGER,ALLOCATABLE,DIMENSION(:,:,:),SAVE      :: kmt3d          !(OCEAN) (NEMO)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE   :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
   ! For AMOC computation
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE :: zb !(nlev)
@@ -49,13 +50,14 @@ PUBLIC
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: area_t !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
-  REAL(r_size),DIMENSION(nlon,nlat,nlev),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
+! REAL(r_size),DIMENSION(nlon,nlat,nlev),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: depth !(nlon,nlat)               !(OCEAN)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: wet !(nlon,nlat)               !(OCEAN)
+! REAL(r_size),DIMENSION(nlon,nlat),SAVE :: wet !(nlon,nlat)               !(OCEAN)
 
   REAL(r_size),DIMENSION(nlat),SAVE      :: fcori !(nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: fcori2d !(nlon,nlat)
   INTEGER,DIMENSION(nlon,nlat),SAVE      :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
+  INTEGER,DIMENSION(nlon,nlat,nlev),SAVE :: kmt3d          !(OCEAN) (NEMO)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
   ! For AMOC computation
   REAL(r_size),DIMENSION(nlev),SAVE :: zb !(nlev)
@@ -115,6 +117,7 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(dz(nlev))
 #endif
 
+  SSHclm_m = 0.0d0
   kmt = -1
 
   vars_model_initialized = .true.
@@ -142,10 +145,11 @@ SUBROUTINE set_vars_model
   fcori(:)   = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
   fcori2d(:,:) = 2.0d0 * r_omega * sin(lat2d(:,:)*pi/180.0d0)
 
-  lon0 = lon(1)
-  lonf = lon(nlon)
-  lat0 = lat(1)
-  latf = lat(nlat)
+  ! Estimate the start and end lon/lat near the equator (NEMO) n/a
+  lon0 = lon2d(1,NINT(nlat/2.0d0))
+  lonf = lon2d(nlon,NINT(nlat/2.0d0))
+  lat0 = lat2d(NINT(nlon/2.0d0),1)
+  latf = lat2d(NINT(nlon/2.0d0),nlat)
 
   if (lon0 .eq. lonf) then
     WRITE(6,*) "ERROR in vars_model.f90::initialize_vars_model(), lon0==lonf==",lon0

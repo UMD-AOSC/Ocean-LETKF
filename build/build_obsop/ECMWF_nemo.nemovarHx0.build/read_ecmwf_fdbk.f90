@@ -35,6 +35,7 @@ REAL(r_size) :: se0, seF
 TYPE argo_data
   REAL(r_size) :: x_grd(3)  ! longitude, latitude, and z depth (m)
   REAL(r_size) :: value     ! actual physical value of the parameter measured at this grid point
+  REAL(r_size) :: hxb       ! Model equivalent ! (NEMO) added
   REAL(r_size) :: lev       ! grid z level
   REAL(r_size) :: oerr      ! observation standard error
   REAL(r_size) :: hour      ! Hour of observation
@@ -42,6 +43,7 @@ TYPE argo_data
   CHARACTER(3) :: ptyp      ! Profile type
   CHARACTER(3) :: sid       ! Source id
   CHARACTER(1) :: qkey      ! Quality key
+  INTEGER :: qc             ! Quality control flag  ! (NEMO) added
   INTEGER :: typ    ! observation variable type (e.g., PRES_TYPE)
   INTEGER :: nlevs  ! number of levels with data, counting from the top, including levels with missing data that have obs below them.
   INTEGER :: id     ! id number used in observation files to identify the observation
@@ -50,11 +52,13 @@ TYPE argo_data
   LOGICAL :: kept   ! tells letkf whether this obs is kept for assimilation
 END TYPE argo_data
 
-CHARACTER(slen) :: tvar_name = 'POTM_OBS' !'POTM_Hx0'
-CHARACTER(slen) :: svar_name = 'PSAL_OBS' !'PSAL_Hx0'
+CHARACTER(slen) :: tvar_name, tobs_name, tmod_name
+CHARACTER(slen) :: svar_name, sobs_name, smod_name
 
 LOGICAL :: DO_READ_OBE      ! Read the observation error estimate from the file
 LOGICAL :: DO_COMPUTE_OBE   ! Compute the observation error estimate using the NCEP approach w/ vertical gradient
+
+INTEGER :: undef = 99999
 
 !! Read temp data
 !infile = trim(indir1)//'/'//YYYY//MM//DD//'tmp.nc' !STEVE: sample
@@ -110,34 +114,40 @@ REAL(r_size), ALLOCATABLE, DIMENSION(:) :: xlon, ylat, hour
 CHARACTER(3), ALLOCATABLE, DIMENSION(:) :: ptyp, sid
 CHARACTER(9), ALLOCATABLE, DIMENSION(:) :: plat
 CHARACTER(1), ALLOCATABLE, DIMENSION(:) :: qkey
-REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: vals, stde
+INTEGER, ALLOCATABLE, DIMENSION(:) :: qc
+REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: ovals, mvals, stde
 REAL(r_size), ALLOCATABLE, DIMENSION(:) :: depth ! profile depths
-REAL(r_size) :: val
+REAL(r_size) :: val, hxb
 INTEGER :: cnt, nlv
 LOGICAL :: dodebug=.true.
-REAL(r_size) :: missing_value=-99.0
+REAL(r_size) :: missing_value=99999 !-99.0
 REAL(r_sngl) :: mvc=999
+REAL(r_sngl) :: max_depth = 9999
 
 ! Set option to identify whether we are reading the observation or the model equivalent
 ! from this NEMOVAR feedback file.
 if (present(opt_in)) then
   opt = opt_in
 else
-  opt = 0
+  opt = 1
 endif
 
-!CHARACTER(slen) :: tvar_name = 'POTM_OBS' !'POTM_Hx0'
-!CHARACTER(slen) :: svar_name = 'PSAL_OBS' !'PSAL_Hx0'
-if (opt==1) then
+tobs_name = 'POTM_OBS'
+sobs_name = 'PSAL_OBS'
+
+if (opt==0) then
+  DO_READ_OBE = .false.
+  DO_COMPUTE_OBE = .false.
+elseif (opt==1) then
   ! To read the fdbk file
-  tvar_name(6:8) = 'Hx0'
-  svar_name(6:8) = 'Hx0'
+  tmod_name = 'POTM_Hx0'
+  smod_name = 'PSAL_Hx0'
   DO_READ_OBE = .false.
   DO_COMPUTE_OBE = .true.
 elseif (opt==2) then
   ! To read the fdbkqc file
-  tvar_name(6:10) = 'Hx0qc'
-  svar_name(6:10) = 'Hx0qc'
+  tmod_name = 'POTM_Hx0qc'
+  smod_name = 'PSAL_Hx0qc'
   DO_READ_OBE = .true.
   DO_COMPUTE_OBE = .false.
 endif
@@ -191,12 +201,12 @@ print *, "**************************"
 ALLOCATE(depth(nlv))
 istat = NF90_INQ_VARID(ncid,'DEPTH',varid)   
 if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID grid_z failed"
+  print *, "NF90_INQ_VARID DEPTH failed"
   STOP
 endif
 istat = NF90_GET_VAR(ncid,varid,depth)
 if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR depth failed"
+  print *, "NF90_GET_VAR DEPTH failed"
   STOP
 ELSE
   print *, "depth(:) = ", depth(:)
@@ -209,12 +219,12 @@ endif
 ALLOCATE(xlon(cnt))
 istat = NF90_INQ_VARID(ncid,'LONGITUDE',varid)  
 if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID xlon failed"
+  print *, "NF90_INQ_VARID LONGITUDE failed"
   STOP
 endif
 istat = NF90_GET_VAR(ncid,varid,xlon)
 if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR xlon failed"
+  print *, "NF90_GET_VAR LONGITUDE failed"
   STOP
 endif
 
@@ -224,12 +234,12 @@ endif
 ALLOCATE(ylat(cnt))
 istat = NF90_INQ_VARID(ncid,'LATITUDE',varid)   
 if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID ylat failed"
+  print *, "NF90_INQ_VARID LATITUDE failed"
   STOP
 endif
 istat = NF90_GET_VAR(ncid,varid,ylat)
 if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR ylat failed"
+  print *, "NF90_GET_VAR LATITUDE failed"
   STOP
 endif
 
@@ -240,72 +250,74 @@ ALLOCATE(hour(cnt))
 istat = NF90_INQ_VARID(ncid,'JULD',varid)   
 ! relative julian days with decimal part (as parts of day)
 if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID hour failed"
+  print *, "NF90_INQ_VARID JULD failed"
   STOP
 endif
 istat = NF90_GET_VAR(ncid,varid,hour)
 if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR hour failed"
+  print *, "NF90_GET_VAR JULD failed"
   STOP
 endif
 ! Assign as an hour:
+!STEVE (ISSUE) - Need the datetime also to give a unique timestamp
+!                if the files contain multiple days of data
 hour = (hour - floor(hour))*24
 
 !-------------------------------------------------------------------------------
 ! Read the platform
 !-------------------------------------------------------------------------------
-ALLOCATE(plat(cnt))
-istat = NF90_INQ_VARID(ncid,'STATION_IDENTIFIER',varid)   
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID STATION_IDENTIFIER failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,plat)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR plat failed"
-  STOP
-else
-  print *, "plat(1) = ", plat(1)
-endif
+!ALLOCATE(plat(cnt))
+!istat = NF90_INQ_VARID(ncid,'STATION_IDENTIFIER',varid)   
+!if (istat /= NF90_NOERR) then
+!  print *, "NF90_INQ_VARID STATION_IDENTIFIER failed"
+!  STOP
+!endif
+!istat = NF90_GET_VAR(ncid,varid,plat)
+!if (istat /= NF90_NOERR) then
+!  print *, "NF90_GET_VAR plat failed"
+!  STOP
+!else
+!  print *, "plat(1) = ", plat(1)
+!endif
 
 !-------------------------------------------------------------------------------
 ! Read the profile type
 !-------------------------------------------------------------------------------
-ALLOCATE(ptyp(cnt))
-istat = NF90_INQ_VARID(ncid,'STATION_TYPE',varid)   
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID STATION_TYPE failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,ptyp)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR ptyp failed"
-  STOP
-else
-  print *, "ptyp(1) = ", ptyp(1)
-endif
+!ALLOCATE(ptyp(cnt))
+!istat = NF90_INQ_VARID(ncid,'STATION_TYPE',varid)   
+!if (istat /= NF90_NOERR) then
+!  print *, "NF90_INQ_VARID STATION_TYPE failed"
+!  STOP
+!endif
+!istat = NF90_GET_VAR(ncid,varid,ptyp)
+!if (istat /= NF90_NOERR) then
+!  print *, "NF90_GET_VAR ptyp failed"
+!  STOP
+!else
+!  print *, "ptyp(1) = ", ptyp(1)
+!endif
 
 !-------------------------------------------------------------------------------
 ! Read the Source ID
 !-------------------------------------------------------------------------------
-ALLOCATE(sid(cnt))
-istat = NF90_INQ_VARID(ncid,'ORIGINAL_FILE_INDEX',varid)   
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID ORIGINAL_FILE_INDEX failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,sid)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR sid failed"
-  STOP
-else
-  print *, "sid(1) = ", sid(1)
-endif
+!ALLOCATE(sid(cnt))
+!istat = NF90_INQ_VARID(ncid,'ORIGINAL_FILE_INDEX',varid)   
+!if (istat /= NF90_NOERR) then
+!  print *, "NF90_INQ_VARID ORIGINAL_FILE_INDEX failed"
+!  STOP
+!endif
+!istat = NF90_GET_VAR(ncid,varid,sid)
+!if (istat /= NF90_NOERR) then
+!  print *, "NF90_GET_VAR sid failed"
+!  STOP
+!else
+!  print *, "sid(1) = ", sid(1)
+!endif
 
 !-------------------------------------------------------------------------------
 ! Read the Quality Key
 !-------------------------------------------------------------------------------
-ALLOCATE(qkey(cnt))
+ALLOCATE(qc(cnt))
 if (typ .eq. id_t_obs) then
   istat = NF90_INQ_VARID(ncid,'POTM_QC',varid)   
 elseif (typ .eq. id_s_obs) then
@@ -315,36 +327,62 @@ if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID PXXX_QC failed"
   STOP
 endif
-istat = NF90_GET_VAR(ncid,varid,qkey)
+istat = NF90_GET_VAR(ncid,varid,qc)
 if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR qkey failed"
+  print *, "NF90_GET_VAR qc failed"
   STOP
 else
-  print *, "qkey(1) = ", qkey(1)
+  print *, "qc(1) = ", qc(1)
 endif
 
 !-------------------------------------------------------------------------------
 ! Read the observed profile data (temperature or salinity)
 !-------------------------------------------------------------------------------
-ALLOCATE(vals(nlv,cnt))
+ALLOCATE(ovals(nlv,cnt))
 if (typ .eq. id_t_obs) then
-  istat = NF90_INQ_VARID(ncid,trim(tvar_name),varid)   
+  istat = NF90_INQ_VARID(ncid,trim(tobs_name),varid)   
   if (istat /= NF90_NOERR) then
-    print *, "NF90_INQ_VARID failed for ", trim(tvar_name)
+    print *, "NF90_INQ_VARID failed for ", trim(tobs_name)
     STOP
   endif
-  istat = NF90_GET_VAR(ncid,varid,vals)
-  if (dodebug) print *, "temp(:,1) = ", vals(:,1)
+  istat = NF90_GET_VAR(ncid,varid,ovals)
+  if (dodebug) print *, "temp(:,1) = ", ovals(:,1)
 elseif (typ .eq. id_s_obs) then
-  istat = NF90_INQ_VARID(ncid,trim(svar_name),varid)   
+  istat = NF90_INQ_VARID(ncid,trim(sobs_name),varid)   
   if (istat /= NF90_NOERR) then
-    print *, "NF90_INQ_VARID failed for ", trim(svar_name)
+    print *, "NF90_INQ_VARID failed for ", trim(sobs_name)
     STOP
   endif
-  istat = NF90_GET_VAR(ncid,varid,vals)
-  if (dodebug) print *, "salt(:,1) = ", vals(:,1)
+  istat = NF90_GET_VAR(ncid,varid,ovals)
+  if (dodebug) print *, "salt(:,1) = ", ovals(:,1)
 endif
 if (istat /= NF90_NOERR) STOP
+
+!-------------------------------------------------------------------------------
+! Read the model equivalanet profile data (temperature or salinity)
+!-------------------------------------------------------------------------------
+ALLOCATE(mvals(nlv,cnt))
+mvals = 0.0d0
+if (opt > 0) then
+  if (typ .eq. id_t_obs) then
+    istat = NF90_INQ_VARID(ncid,trim(tmod_name),varid)   
+    if (istat /= NF90_NOERR) then
+      print *, "NF90_INQ_VARID failed for ", trim(tmod_name)
+      STOP
+    endif
+    istat = NF90_GET_VAR(ncid,varid,mvals)
+    if (dodebug) print *, "temp(:,1) = ", mvals(:,1)
+  elseif (typ .eq. id_s_obs) then
+    istat = NF90_INQ_VARID(ncid,trim(smod_name),varid)   
+    if (istat /= NF90_NOERR) then
+      print *, "NF90_INQ_VARID failed for ", trim(smod_name)
+      STOP
+    endif
+    istat = NF90_GET_VAR(ncid,varid,mvals)
+    if (dodebug) print *, "salt(:,1) = ", mvals(:,1)
+  endif
+  if (istat /= NF90_NOERR) STOP
+endif
 
 !-------------------------------------------------------------------------------
 ! Read the observed profile standard errors (temperature or salinity)
@@ -354,7 +392,7 @@ if (DO_READ_OBE) then
   if (typ .eq. id_t_obs) then
     istat = NF90_INQ_VARID(ncid,'POTM_OBEa1qc',varid)   
     if (istat /= NF90_NOERR) then
-      print *, "NF90_INQ_VARID failed for ", trim(tvar_name)
+      print *, "NF90_INQ_VARID failed for ", trim(tmod_name)
       STOP
     endif
     istat = NF90_GET_VAR(ncid,varid,stde)
@@ -379,7 +417,9 @@ istat = NF90_CLOSE(ncid)
 if (istat /= NF90_NOERR) STOP
 
 !-------------------------------------------------------------------------------
-! STEVE: need to compute the standard error as Dave did based on vertical temperature gradient
+! STEVE: Either compute the standard error as Behringer did at NCEP based on the
+! vertical temperature gradient, OR use the precomputed standard error from the
+! NEMOVAR observation operator.
 !-------------------------------------------------------------------------------
 if (DO_COMPUTE_OBE) then
   ALLOCATE(stde(nlv,cnt))
@@ -403,20 +443,37 @@ n = 0
 do i=1,cnt
   if (dodebug) print *, "i = ", i
   if (DO_COMPUTE_OBE) then
-    CALL cmpTz(stde(:,i),se0,seF,vals(:,i),depth(:),nlv,missing_value)  
+    CALL cmpTz(stde(:,i),se0,seF,ovals(:,i),depth(:),nlv,missing_value)  
       !STEVE: I would prefer to call this in the calling function, but it's
       !       easier here where the data is still organized in profiles
   endif
-  if (dodebug) print *, "read_ecmwf_fdbk.f90:: stde(:,i) = ", stde(:,i)
+  if (DO_COMPUTE_OBE .or. DO_READ_OBE) then
+    if (dodebug) print *, "read_ecmwf_fdbk.f90:: stde(:,i) = ", stde(:,i)
+  endif
 ! if (dodebug) STOP(1)
 
   do k=1,nlv
-    val = vals(k,i)
-    err = stde(k,i)
-    if (val < mvc .and. depth(k) < mvc .and. val > missing_value) then
+
+    ! Assign observation value:
+    val = ovals(k,i)
+    if (opt > 0) then
+      hxb = mvals(k,i)
+    else
+      hxb = missing_value
+    endif
+
+    ! Assign observation error:
+    if (DO_COMPUTE_OBE .or. DO_READ_OBE) then
+      err = stde(k,i)
+    else
+      err = 0.0
+    endif
+
+    if (abs(val) < abs(mvc) .and. abs(val) < abs(missing_value-1)) then
       n = n+1
 
-      if (dodebug) print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
+!     if (dodebug) print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
+      if (dodebug) print *, "n,lon,lat,depth,hour,val,err,hxb,qc = ", n,xlon(i),ylat(i),depth(k),hour(i),val,err,hxb,qc(i)
 
       obs_data(n)%typ = typ
       obs_data(n)%x_grd(1) = xlon(i)
@@ -424,13 +481,15 @@ do i=1,cnt
       obs_data(n)%x_grd(3) = depth(k)
       obs_data(n)%hour = hour(i)
       obs_data(n)%value = val
+      obs_data(n)%hxb   = hxb
       obs_data(n)%oerr = err
       obs_data(n)%rid = i         ! record id
       obs_data(n)%lid = k         ! level id
-      obs_data(n)%plat = plat(i)
-      obs_data(n)%ptyp = ptyp(i)
-      obs_data(n)%sid  = sid(i)
-      obs_data(n)%qkey = qkey(i)
+!     obs_data(n)%plat = plat(i)
+!     obs_data(n)%ptyp = ptyp(i)
+!     obs_data(n)%sid  = sid(i)
+!     obs_data(n)%qkey = qkey(i)
+      obs_data(n)%qc = qc(i)
     endif
   enddo
 enddo
@@ -438,16 +497,18 @@ nobs = n
 if (dodebug) print *, "nobs = ", nobs
 
 ! Explicitly deallocate temporary arrays
-DEALLOCATE(depth)
-DEALLOCATE(xlon)
-DEALLOCATE(ylat)
-DEALLOCATE(hour)
-DEALLOCATE(plat)
-DEALLOCATE(ptyp)
-DEALLOCATE(sid)
-DEALLOCATE(qkey)
-DEALLOCATE(vals)
-DEALLOCATE(stde)
+if (ALLOCATED(depth)) DEALLOCATE(depth)
+if (ALLOCATED(xlon))  DEALLOCATE(xlon)
+if (ALLOCATED(ylat))  DEALLOCATE(ylat)
+if (ALLOCATED(hour))  DEALLOCATE(hour)
+!DEALLOCATE(plat)
+!DEALLOCATE(ptyp)
+!DEALLOCATE(sid)
+!DEALLOCATE(qkey)
+if (ALLOCATED(qc))    DEALLOCATE(qc)
+if (ALLOCATED(ovals))  DEALLOCATE(ovals)
+if (ALLOCATED(mvals))  DEALLOCATE(mvals)
+if (ALLOCATED(stde))  DEALLOCATE(stde)
 
 if (dodebug) print *, "Temporary arrays deallocated."
 if (dodebug) print *, "Returning from read_fdbk_nc..."

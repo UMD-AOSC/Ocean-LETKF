@@ -379,15 +379,6 @@ else
 
 endif quality_control
 
-!STEVE: this removed everything above 65S for some reason...?  
-! N65cut : if (DO_REMOVE_65N) then
-!   do n=1,nobs_in
-!     if (obslat(n) > 65.0) then
-!       obsqc(n) = 0  
-!     endif
-!   enddo 
-! endif N65cut
-
   WRITE(6,'(I10,A)') SUM(obsqc),' OBSERVATIONS TO BE ASSIMILATED'
   !STEVE:
   WRITE(6,*) "cnt_obs_u = ", cnt_obs_u

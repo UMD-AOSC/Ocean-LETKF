@@ -117,6 +117,7 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(dz(nlev))
 #endif
 
+  SSHclm_m = 0.0d0
   kmt = -1
 
   vars_model_initialized = .true.
@@ -144,10 +145,11 @@ SUBROUTINE set_vars_model
   fcori(:)   = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
   fcori2d(:,:) = 2.0d0 * r_omega * sin(lat2d(:,:)*pi/180.0d0)
 
-  lon0 = lon(1)
-  lonf = lon(nlon)
-  lat0 = lat(1)
-  latf = lat(nlat)
+  ! Estimate the start and end lon/lat near the equator (NEMO) n/a
+  lon0 = lon2d(1,NINT(nlat/2.0d0))
+  lonf = lon2d(nlon,NINT(nlat/2.0d0))
+  lat0 = lat2d(NINT(nlon/2.0d0),1)
+  latf = lat2d(NINT(nlon/2.0d0),nlat)
 
   if (lon0 .eq. lonf) then
     WRITE(6,*) "ERROR in vars_model.f90::initialize_vars_model(), lon0==lonf==",lon0

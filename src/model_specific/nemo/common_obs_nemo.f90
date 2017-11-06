@@ -1,6 +1,9 @@
 MODULE common_obs_oceanmodel
 !=======================================================================
 !
+!   *** NOTE: this is not used for NEMO, it is assumed that NEMOVAR
+!             will be run to generate the OMF innovations instead.
+!
 ! [PURPOSE:] Observational procedures
 !
 ! [HISTORY:]
@@ -569,6 +572,12 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
     DO
       READ(iunit,IOSTAT=ios) wk
+
+      if (ios < 0) then
+        WRITE(6,*) "get_nobs:: end of file reached with nn = ", nn
+        EXIT
+      endif
+
       if (dodebug .and. nrec.eq.6) then
         PRINT '(I6,2F7.2,F10.2,2F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6)
       elseif (dodebug .and. nrec .eq. 8) then
@@ -576,7 +585,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
       elseif (dodebug .and. nrec .eq. 9) then
         PRINT '(I6,2F7.2,F10.2,5F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
       endif
-      if (ios /= 0) EXIT
+
       SELECT CASE(NINT(wk(1)))
       CASE(id_u_obs)
         iu = iu + 1
@@ -601,12 +610,15 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
       CASE(id_z_obs)     !(OCEAN)
         iz = iz + 1      !(OCEAN)
       END SELECT
+
       if (wk(2) .ne. lon_m1 .and. wk(3) .ne. lat_m1) then
         nprof=nprof+1
         lon_m1 = wk(2)
         lat_m1 = wk(3)
       endif
+
       nn = nn + 1
+
     enddo
     WRITE(6,'(I10,A)') nprof ,' PROFILES INPUT'
     WRITE(6,'(I10,A)') nn,' TOTAL OBSERVATIONS INPUT (in get_nobs)'
@@ -717,12 +729,24 @@ SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
   INTEGER,INTENT(OUT) :: oqc(nn)
   REAL(r_sngl) :: wk(9)
   INTEGER :: n,iunit
+  INTEGER :: IOstatus
+  LOGICAL :: dodebug = .false.
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
 
   do n=1,nn
-    READ(iunit) wk
+    if (dodebug) WRITE(6,*) "read_obs2:: n = ", n
+    READ(iunit,IOSTAT=IOstatus) wk
+    if (IOstatus<0) then
+      WRITE(6,*) "read_obs2:: reached end of file prematurely."
+      WRITE(6,*) "read_obs2::          n  = ", n
+      WRITE(6,*) "read_obs2:: expected nn = ", nn
+      WRITE(6,*) "Perhaps the observations are not identical across members?"
+      WRITE(6,*) "(They should be - please check your input.)"
+      WRITE(6,*) "read_obs2:: EXITING on purpose..."
+      STOP(9522)
+    endif
     elem(n) = REAL(wk(1),r_size)
     rlon(n) = REAL(wk(2),r_size)
     rlat(n) = REAL(wk(3),r_size)
@@ -793,6 +817,7 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag
   INTEGER :: n,iunit
   LOGICAL, PARAMETER :: dodebug=.false.
 
+  ! Choose to keep or remove observations that have already been qc'd
   if (PRESENT(qcflag_in)) then
     qcflag = qcflag_in
   else
@@ -812,7 +837,7 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag
     wk(6) = REAL(oerr(n),r_sngl)  ! Estimated observation error
     wk(7) = REAL(ohx(n),r_sngl)   ! Model forecast transformed to observation space: H(xb)
     wk(8) = REAL(oqc(n),r_sngl)   ! Quality control ID (1==keep, 0==discard) for use in assimilation
-    wk(9) = REAL(obhr(n),r_sngl)  ! Quality control ID (1==keep, 0==discard) for use in assimilation
+    wk(9) = REAL(obhr(n),r_sngl)  ! (real) hour of the observation, for time-based assimilation
     if (dodebug) PRINT '(I6,2F7.2,F10.2,6F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
     WRITE(iunit) wk
   enddo

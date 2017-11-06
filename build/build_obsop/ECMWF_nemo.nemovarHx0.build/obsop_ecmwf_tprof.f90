@@ -53,7 +53,7 @@ PROGRAM obsop_ecmwf_tprof
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
 
   ! For storing observation data:
-  TYPE(argo_data), ALLOCATABLE, DIMENSION(:) :: obs_data, hxb_data
+  TYPE(argo_data), ALLOCATABLE, DIMENSION(:) :: obs_data
   
   REAL(r_size), ALLOCATABLE :: elem(:)
   REAL(r_size), ALLOCATABLE :: rlon(:)
@@ -101,6 +101,7 @@ PROGRAM obsop_ecmwf_tprof
   INTEGER :: cnt_obs_ssh=0, cnt_obs_sst=0, cnt_obs_sss=0, cnt_obs_eta=0
   INTEGER :: cnt_obs_x=0, cnt_obs_y=0, cnt_obs_z=0
   INTEGER :: cnt_thin=0
+  INTEGER :: cnt_largedep=0 ! (NEMO)
   INTEGER, DIMENSION(nv3d+nv2d), SAVE :: cnt_obs = 0
 
   !STEVE: for debugging observation culling:
@@ -111,9 +112,9 @@ PROGRAM obsop_ecmwf_tprof
   !-----------------------------------------------------------------------------
   ! Instantiations specific to this observation type:
   !-----------------------------------------------------------------------------
-  INTEGER :: nhxb ! number of model equivalent (should match nobs)
   LOGICAL :: DO_REMOVE_BLACKSEA=.false.
   INTEGER :: cnt_blacksea=0
+  REAL(r_size) :: dep_thresh = 100
 
   ! BEGIN
   
@@ -132,24 +133,8 @@ PROGRAM obsop_ecmwf_tprof
   ! Read observations from ECMWF NEMOVAR feedback (fdbk) file
   !-----------------------------------------------------------------------------
   print *, "obsop_ecmwf_tprof.f90:: calling read_fdbk_nc for observations..."
-  CALL read_fdbk_nc(obsinfile,id_t_obs,obs_data,nobs,0)
+  CALL read_fdbk_nc(obsinfile,id_t_obs,obs_data,nobs,1) !STEVE: use ,2) if obs errors can be read in
   print *, "obsop_ecwmf_tprof.f90:: finished read_fdbk_nc."
-
-  !-----------------------------------------------------------------------------
-  ! Read model equivalent from ECMWF NEMOVAR feedback (fdbk) file
-  !-----------------------------------------------------------------------------
-  print *, "obsop_ecmwf_tprof.f90:: calling read_fdbk_nc for model equivalent..."
-  CALL read_fdbk_nc(obsinfile,id_t_obs,hxb_data,nhxb,1)
-  print *, "obsop_ecmwf_tprof.f90:: finished read_fdbk_nc."
-
-  !-----------------------------------------------------------------------------
-  ! Test data just read in
-  !-----------------------------------------------------------------------------
-  if (nobs .ne. nhxb) then
-    print *, "nobs = ", nobs
-    print *, "nhbx = ", nhxb
-    stop('obsop_ecmwf_tprof.f90:: nobs .ne. nxhb, EXITING...')
-  endif
 
   !-----------------------------------------------------------------------------
   ! Allocate memory for observation data
@@ -175,7 +160,7 @@ PROGRAM obsop_ecmwf_tprof
     rlev(i) = obs_data(i)%x_grd(3)
     odat(i) = obs_data(i)%value
     oerr(i) = obs_data(i)%oerr
-    ohx(i)  = hxb_data(i)%value
+    ohx(i)  = obs_data(i)%hxb
     oqc(i)  = 0  ! default = don't use the ob - update below during qc checks
     obhr(i) = obs_data(i)%hour
   enddo
@@ -199,7 +184,6 @@ PROGRAM obsop_ecmwf_tprof
   ! Cycle through all observations and do basic quality control checks
   !-----------------------------------------------------------------------------
   WRITE(6,*) "Cycling through observations..."
-  ohx=0.0d0
   oqc=0
   DO n=1,nobs
     !---------------------------------------------------------------------------
@@ -208,6 +192,15 @@ PROGRAM obsop_ecmwf_tprof
     if (oerr(n) <= 0) then
       !STEVE: this occurred for a few synthetic obs, perhaps due to Dave's code generating obs errors
       cnt_oerlt0 = cnt_oerlt0 + 1
+      CYCLE
+    endif
+
+    !---------------------------------------------------------------------------
+    ! Count bad departures, usually due to hxb being 'missing' where observations exist (NEMO) (NEMOVAR)
+    !---------------------------------------------------------------------------
+    if (abs(odat(n) - ohx(n)) > dep_thresh) then
+      !STEVE: this occurred for a few synthetic obs, perhaps due to Dave's code generating obs errors
+      cnt_largedep = cnt_largedep + 1
       CYCLE
     endif
 
@@ -279,6 +272,7 @@ PROGRAM obsop_ecmwf_tprof
   WRITE(6,*) "cnt_nl2 = ", cnt_nl2
   WRITE(6,*) "cnt_altlatrng = ", cnt_altlatrng
   WRITE(6,*) "cnt_thin = ", cnt_thin
+  WRITE(6,*) "cnt_largedep = ", cnt_largedep !(NEMO)
   if (DO_REMOVE_BLACKSEA) WRITE(6,*) "cnt_blacksea = ", cnt_blacksea
 
   !-----------------------------------------------------------------------------
@@ -286,7 +280,17 @@ PROGRAM obsop_ecmwf_tprof
   !-----------------------------------------------------------------------------
   CALL write_obs2(obsoutfile,nobs,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
 
-  DEALLOCATE( elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,v3d,v2d )
+  if (ALLOCATED(elem)) DEALLOCATE(elem)
+  if (ALLOCATED(rlon)) DEALLOCATE(rlon)
+  if (ALLOCATED(rlat)) DEALLOCATE(rlat)
+  if (ALLOCATED(rlev)) DEALLOCATE(rlev)
+  if (ALLOCATED(odat)) DEALLOCATE(odat)
+  if (ALLOCATED(oerr)) DEALLOCATE(oerr)
+  if (ALLOCATED(ohx )) DEALLOCATE(ohx)
+  if (ALLOCATED(oqc )) DEALLOCATE(oqc)
+  if (ALLOCATED(obhr)) DEALLOCATE(obhr)
+  if (ALLOCATED(v3d )) DEALLOCATE(v3d)
+  if (ALLOCATED(v2d )) DEALLOCATE(v2d)
 
 CONTAINS
 

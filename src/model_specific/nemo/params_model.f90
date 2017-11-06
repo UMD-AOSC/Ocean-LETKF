@@ -96,13 +96,13 @@ PUBLIC
   CHARACTER(7) :: grid_lon2d_name = 'nav_lon'
   CHARACTER(7) :: grid_lat2d_name = 'nav_lat'
 
-  CHARACTER(5) :: grid_wet_name    = 'tmask'     ! land/sea mask (assuming >0 is ocean)
+  CHARACTER(5) :: grid_lsmask_name    = 'tmask'     ! land/sea mask (assuming >0 is ocean)
   CHARACTER(6) :: grid_depth_name  = 'mbathy'    ! (in mesh_mask file) !'Bathymetry'  ! In bathymetry file
-  CHARACTER(5) :: grid_height_name = 'hdept'     ! (NEMO) n/a
+! CHARACTER(5) :: grid_height_name = 'hdept'     ! (NEMO) n/a
 
   CHARACTER(3) :: grid_dx_name = 'e1t'
   CHARACTER(3) :: grid_dy_name = 'e2t'
-  CHARACTER(6) :: grid_dz_name = 'e3t_ps'
+  CHARACTER(5) :: grid_dz_name = 'e3t_0'
 
   ! Diagnostic file filenames 
   !STEVE: these aren't used for NEMOVAR, instead files are specified explicitly by obsop_xxx.f90 routine

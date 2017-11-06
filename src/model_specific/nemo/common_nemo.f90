@@ -27,14 +27,14 @@ SUBROUTINE set_common_oceanmodel
   USE netcdf
   USE params_model, ONLY: SSHclm_file, nlon, nlat, nlev
   USE vars_model,   ONLY: SSHclm_m, lon, lat, lon2d, lat2d, lev
-  USE vars_model,   ONLY: dx, dy, area_t
-  USE vars_model,   ONLY: height, kmt, kmt3d, depth, wet, phi0, kmt0
+  USE vars_model,   ONLY: dx, dy, dz
+  USE vars_model,   ONLY: kmt, kmt3d, depth, phi0, kmt0
   USE vars_model,   ONLY: set_vars_model
   USE params_model, ONLY: initialize_params_model
   USE vars_model,   ONLY: initialize_vars_model
   USE params_model, ONLY: grid_lon_name, grid_lat_name, grid_lev_name
   USE params_model, ONLY: grid_lon2d_name, grid_lat2d_name
-  USE params_model, ONLY: grid_wet_name, grid_depth_name, grid_height_name
+  USE params_model, ONLY: grid_lsmask_name, grid_depth_name
 
   IMPLICIT NONE
 
@@ -112,7 +112,7 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
   !STEVE:NEMO - convert 3d ocean mask to kmt field (2d field with value equal to sum of ocean levels)
   WRITE(6,*) "Reading land/sea mask (kmt)..."
-  call check( NF90_INQ_VARID(ncid,grid_wet_name,varid) ) ! number of vertical T-cells
+  call check( NF90_INQ_VARID(ncid,grid_lsmask_name,varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid,varid,kmt3d) )
   WRITE(6,*) "kmt3d(1,1,1) = ", kmt3d(1,1,1)
   WRITE(6,*) "kmt3d(nlon,nlat,nlev) = ", kmt3d(nlon,nlat,nlev)
@@ -154,8 +154,8 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,*) "Reading dz..."
   call check( NF90_INQ_VARID(ncid,grid_dz_name,varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid,varid,dz) )
-  WRITE(6,*) "dz(1,1) = ", dz(1,1)
-  WRITE(6,*) "dz(nlon,nlat) = ", dz(nlon,nlat)
+  WRITE(6,*) "dz(1) = ", dz(1)
+  WRITE(6,*) "dz(nlev) = ", dz(nlev)
 
   !-----------------------------------------------------------------------------
   ! Close the grid file(s):
@@ -211,6 +211,8 @@ END SUBROUTINE read_etaclm
 !STEVE: add this:
 !-- Read a diagnostic file in mom6 netcdf format ---------------------------------------------------
 SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
+  ! (NEMO) n/a - this subroutine is used by the observation operator.
+  !
   !STEVE: This subroutine reads the hourly/daily diagnostic files produced by MOM6
   !       The t,s,u,v,(ssh) fields are read in from the files so that the o-f data can be computed
   !       by the obsop_xxx.f90 program prior to running letkf.f90, so the diagnostic files do not have 
@@ -364,7 +366,6 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   ! 3D-Variables
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
   !!! t
   if (DO_temp) then
     varname=diag_temp_name
@@ -502,11 +503,19 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
-        v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+        if (DO_SLA) then
+          v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+        else
+          v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size)
+        endif
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
-        v2d(:,:,ivid) = buf8(:,:,1) - SSHclm_m(:,:)
+        if (DO_SLA) then
+          v2d(:,:,ivid) = buf8(:,:,1) - SSHclm_m(:,:)
+        else
+          v2d(:,:,ivid) = buf8(:,:,1)
+        endif
     end select
     if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
 
@@ -526,7 +535,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !       It is assumed that the o-f data have already been computed by the obsop_xxx.f90 program prior
   !       to running letkf.f90, so the diagnostic files should not have to be touched during letkf runtime.
   USE netcdf
-  USE params_letkf, ONLY: DO_UPDATE_H
+! USE params_letkf, ONLY: DO_UPDATE_H
   USE vars_model,   ONLY: SSHclm_m
   USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
   USE params_model, ONLY: rsrt_lon_name, rsrt_lat_name, rsrt_lev_name
@@ -557,8 +566,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   INTEGER :: ivid
 
   tsfile = trim(infile)//'.'//trim(rsrt_tsbase)
-  uvfile = trim(infile)//'.'//trim(rsrt_uvbase)
-  bfile  = trim(infile)//'.'//trim(rsrt_hbase)
+! uvfile = trim(infile)//'.'//trim(rsrt_uvbase)   !(NEMO) n/a
+! bfile  = trim(infile)//'.'//trim(rsrt_hbase)    !(NEMO) n/a
 
   select case(prec)
     case(1)
@@ -637,7 +646,9 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   endif
 ! !STEVE: end
 
-  if (DO_UPDATE_H) then
+! if (DO_UPDATE_H) then  !STEVE: this is used for layered models (e.g. isopycnal coordinates)
+!                                (NEMO) n/a
+  if (.false.) then
     !---------------------------------------------------------------------------
     !!! h
     !---------------------------------------------------------------------------
@@ -702,16 +713,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   endif
 ! !STEVE: end
 
-  call check( NF90_CLOSE(ncid) )
-
-  !-----------------------------------------------------------------------------
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Open the U/V netcdf restart file
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !-----------------------------------------------------------------------------
-  call check( NF90_OPEN(uvfile,NF90_NOWRITE,ncid) )
-  WRITE(6,*) "read_restart :: just opened file ", uvfile
-
   !-----------------------------------------------------------------------------
   !!! v
   !-----------------------------------------------------------------------------
@@ -767,7 +768,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
     if (dodebug) WRITE(6,*) "read_restart :: just got data for variable ssh"
     if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable SSH"
 
-    ! Convert SSH eta stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
+    ! Convert SSH eta stored in v2d to climatological Sea Level Anomaly (SLA) 
+    ! by subtracting pre-computed model climatology
     if (DO_SLA) v2d(:,:,ivid) = v2d(:,:,iv2d_eta) - SSHclm_m(:,:)
 
     ! !STEVE: debug
@@ -838,7 +840,8 @@ END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
 SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   USE netcdf
-  USE params_letkf, ONLY: DO_UPDATE_H, DO_SLA
+! USE params_letkf, ONLY: DO_UPDATE_H
+  USE params_letkf, ONLY: DO_SLA
   USE vars_model,   ONLY: SSHclm_m
   USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
   USE params_model, ONLY: rsrt_lon_name, rsrt_lat_name, rsrt_lev_name
@@ -867,8 +870,8 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   !       each esnsemble member in netcdf format.
 
   tsfile = trim(outfile)//'.'//trim(rsrt_tsbase)
-  uvfile = trim(outfile)//'.'//trim(rsrt_uvbase)
-  bfile  = trim(outfile)//'.'//trim(rsrt_hbase)
+! uvfile = trim(outfile)//'.'//trim(rsrt_uvbase)   !(NEMO) n/a
+! bfile  = trim(outfile)//'.'//trim(rsrt_hbase)    !(NEMO) n/a
 
   if (prec == 1) then
     WRITE(6,*) "common_mom6.f90::write_restart:: input argument prec=1 (single precision) is not yet supported. Update write_restart subroutine. EXITING..."
@@ -888,7 +891,7 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !STEVE: open temp/salt file
+  !STEVE: open temp/salt file   !(NEMO) all data is in one file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   if (dodebug) WRITE(6,*) "Opening file for temperature and salinity..."
   call check( NF90_OPEN(tsfile,NF90_WRITE,ncid) )
@@ -928,7 +931,8 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   !-----------------------------------------------------------------------------
   !!! h (MOM6)
   !-----------------------------------------------------------------------------
-  if (DO_UPDATE_H) then
+  if (.false.) then   ! (NEMO) n/a
+! if (DO_UPDATE_H) then
     if (dodebug) WRITE(6,*) "Get id for layer thickness (h)..."
     call check( NF90_INQ_VARID(ncid,rsrt_h_name,varid) )
     if (dodebug) WRITE(6,*) "Write data for layer thickness (h)..."
@@ -962,14 +966,6 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   if (dodebug) WRITE(6,*) "Write data for u component of velocity..."
   call check( NF90_PUT_VAR(ncid,varid,buf8) )
 
-  call check( NF90_CLOSE(ncid) )
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!! uv file
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (dodebug) WRITE(6,*) "Opening file for velocity and surface height..."
-  call check( NF90_OPEN(uvfile,NF90_WRITE,ncid) )
-
   !-----------------------------------------------------------------------------
   !!! v
   !-----------------------------------------------------------------------------
@@ -991,8 +987,6 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   ! Write the updated eta_t to analysis restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   if (DO_ALTIMETRY) then
-! if (dodebug) WRITE(6,*) "Opening file for surface height..."
-!   call check( NF90_OPEN(bfile,NF90_WRITE,ncid) )
     if (dodebug) WRITE(6,*) "Get id for ssh..."
     call check( NF90_INQ_VARID(ncid,rsrt_ssh_name,varid) )
 
@@ -1000,8 +994,8 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
     ! Apply physical limits to the output analysis:
     if (do_physlimit) then
-      WHERE (buf8(:,:,1) < min_h) buf8(:,:,1) = min_eta
-      WHERE (buf8(:,:,1) > max_h) buf8(:,:,1) = max_eta
+      WHERE (buf8(:,:,1) < min_eta) buf8(:,:,1) = min_eta
+      WHERE (buf8(:,:,1) > max_eta) buf8(:,:,1) = max_eta
     endif
 
     ! Convert SSH stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology

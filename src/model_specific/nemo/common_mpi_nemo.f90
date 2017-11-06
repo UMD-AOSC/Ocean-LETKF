@@ -470,6 +470,7 @@ SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
 
 END SUBROUTINE gather_grd_mpi_fast
 
+
 !-----------------------------------------------------------------------
 ! Read ensemble data and distribute to processes
 !-----------------------------------------------------------------------
@@ -512,6 +513,7 @@ SUBROUTINE read_ens_mpi(file,nbv,v3d,v2d)
   DEALLOCATE(v3dg,v2dg)
 
 END SUBROUTINE read_ens_mpi
+
 
 !-----------------------------------------------------------------------
 ! Write ensemble data after collecting data from processes
@@ -560,6 +562,7 @@ SUBROUTINE write_ens_mpi(file,nbv,v3d,v2d)
 
 END SUBROUTINE write_ens_mpi
 
+
 !!!!!!!!!
 !STEVE: for debugging grid:
 !!!!!!!!!
@@ -607,6 +610,7 @@ SUBROUTINE write_ens_mpi_grd(file,nbv,v3d,v2d)
   DEALLOCATE(v3dg,v2dg)
 
 END SUBROUTINE write_ens_mpi_grd
+
 
 !-----------------------------------------------------------------------
 ! gridded data -> buffer
