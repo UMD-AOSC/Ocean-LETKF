@@ -106,6 +106,7 @@ INTEGER :: cnt, nlv
 LOGICAL :: dodebug=.false.
 REAL(r_size) :: missing_value=-99.0
 REAL(r_sngl) :: mvc=999
+REAL(r_sngl) :: max_depth=99999
 
 
 !-------------------------------------------------------------------------------
@@ -362,15 +363,16 @@ ALLOCATE(obs_data(nobs))
 n = 0
 do i=1,cnt
   if (dodebug) print *, "i = ", i
-  CALL cmpTz(stde(:,i),se0,seF,vals(:,i),depth(:),nlv,missing_value)  !STEVE: I would prefer to call this in the calling function, but it's
-                                                                        !       easier here where the data is still organized in profiles
+  CALL cmpTz(stde(:,i),se0,seF,vals(:,i),depth(:),nlv,missing_value)  
+             !STEVE: I would prefer to call this in the calling function, but it's
+             !       easier here where the data is still organized in profiles
   if (dodebug) print *, "read_argo.f90:: stde(:,i) = ", stde(:,i)
 ! if (dodebug) STOP(1)
 
   do k=1,nlv
     val = vals(k,i)
     err = stde(k,i)
-    if (val < mvc .and. depth(k) < mvc .and. val > missing_value) then
+    if (val < mvc .and. depth(k) < max_depth .and. abs(val - missing_value) > 1.0) then
       n = n+1
       if (dodebug) print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
       obs_data(n)%typ = typ

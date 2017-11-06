@@ -943,7 +943,7 @@ SUBROUTINE scatter_grd_mpi_small(nrank,v2dg,v2d,nx,ny,nv)
   REAL(r_sngl), ALLOCATABLE :: bufs(:,:,:) !(nij1max,nlevall,nprocs)
   REAL(r_sngl), ALLOCATABLE :: bufr(:,:) !(nij1max,nlevall)
   INTEGER :: j,k,n,ierr,ns,nr
-  INTEGER :: dodebug = .true.
+  LOGICAL :: dodebug = .true.
 
   if (dodebug) WRITE(6,*) "nij1max,nv,nprocs = ", nij1max,nv,nprocs
   if (dodebug) WRITE(6,*) "scatter_grd_mpi_small:: pre-ALLOCATE..."

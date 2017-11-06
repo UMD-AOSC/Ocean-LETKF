@@ -115,6 +115,7 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(dz(nlev))
 #endif
 
+  SSHclm_m = 0.0d0
   kmt = -1
 
   vars_model_initialized = .true.
