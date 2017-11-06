@@ -38,7 +38,7 @@ SUBROUTINE set_common_oceanmodel
   IMPLICIT NONE
 
   INTEGER :: i,j,k
-  INTEGER :: ncid,ncid2,ncid3,istat,varid,dimid
+  INTEGER :: ncid,ncid2,ncid3,varid,dimid
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
   REAL(r_size) :: dlat, dlon, d2, d3
@@ -282,7 +282,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   REAL(r_sngl), ALLOCATABLE, DIMENSION(:,:,:) :: buf4 !(nlon,nlat,nlev)
   REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:) :: buf8 !(nlon,nlat,nlev)
   INTEGER :: i,j,k
-  INTEGER :: ncid,istat,varid
+  INTEGER :: ncid,varid
   INTEGER :: iunit,iolen,n,irec
   LOGICAL, PARAMETER :: dodebug = .false.
   CHARACTER(slen) :: varname
@@ -552,11 +552,19 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
-        v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+        if (DO_SLA) then
+          v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+        else
+          v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size)
+        endif
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
-        v2d(:,:,ivid) = buf8(:,:,1) - SSHclm_m(:,:)
+        if (DO_SLA) then
+          v2d(:,:,ivid) = buf8(:,:,1) - SSHclm_m(:,:)
+        else
+          v2d(:,:,ivid) = buf8(:,:,1)
+        endif 
     end select
     if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
 
@@ -592,7 +600,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:) :: buf8
   CHARACTER(slen) :: tsfile,uvfile, sffile, bfile, drfile ! (TS) (UV) (SFC) (barotropic - eta) (DRIFTERS)
   INTEGER :: i,j,k
-  INTEGER :: ncid,istat,varid
+  INTEGER :: ncid,varid
   REAL(r_size), PARAMETER :: vmax = 1.0e18
   !STEVE:
   REAL(r_size) :: meanSSH !STEVE: for temporary SSH estimate based on heat content
@@ -760,10 +768,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !-----------------------------------------------------------------------------
   call check( NF90_OPEN(uvfile,NF90_NOWRITE,ncid) )
-  IF(istat /= NF90_NOERR) THEN
-    WRITE(6,'(A)') 'netCDF OPEN ERROR in read_restart for ',uvfile
-    STOP(7)
-  END IF
   WRITE(6,*) "read_restart :: just opened file ", uvfile
 
   !-----------------------------------------------------------------------------
@@ -908,7 +912,7 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   REAL(r_sngl), ALLOCATABLE, DIMENSION(:,:,:) :: buf4
   REAL(r_size), ALLOCATABLE, DIMENSION(:,:,:) :: buf8
   CHARACTER(slen) :: tsfile,uvfile, sffile,drfile, bfile ! (TS) (UV) (SFC) (DRIFTERS) (ALTIMETRY)
-  INTEGER :: ncid,istat,varid
+  INTEGER :: ncid,varid
   INTEGER :: m,k,j,i !STEVE: for debugging
   LOGICAL, PARAMETER :: do_physlimit=.true.
   REAL(r_size), DIMENSION(:), ALLOCATABLE :: mlon, mlat
@@ -1054,8 +1058,8 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
     ! Apply physical limits to the output analysis:
     if (do_physlimit) then
-      WHERE (buf8(:,:,1) < min_h) buf8(:,:,1) = min_eta
-      WHERE (buf8(:,:,1) > max_h) buf8(:,:,1) = max_eta
+      WHERE (buf8(:,:,1) < min_eta) buf8(:,:,1) = min_eta
+      WHERE (buf8(:,:,1) > max_eta) buf8(:,:,1) = max_eta
     endif
 
     ! Convert SSH stored in v2d to climatological Sea Level Anomaly (SLA) by subtracting pre-computed model climatology
