@@ -66,6 +66,12 @@ if [ ${model} == "hycom" ]; then
    cp $OBSDIR/obsop_bufr_sprof_hycom.f90 ./
 fi
 
+if [ ${model} == "nemo" ]; then
+   cp $OBSDIR/read_ecmwf_fdbk.f90 ./
+   cp $OBSDIR/obsop_ecmwf_tprof.f90 ./
+   cp $OBSDIR/obsop_ecmwf_sprof.f90 ./
+fi
+
 
 # Software package for equation of state computation from TEOS-2010
 GSWDIR=$root/src/obs/gsw_fortran_v3_03
