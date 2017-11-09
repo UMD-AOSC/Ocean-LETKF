@@ -15,6 +15,7 @@ MODULE common_obs_oceanmodel
   USE kdtree
 
   IMPLICIT NONE
+
   PUBLIC Trans_XtoY, phys2ijk, read_obs, get_nobs, read_obs2, write_obs2, itpl_2d, itpl_3d, monit_dep
   PUBLIC center_obs_coords
 
@@ -302,6 +303,9 @@ END SUBROUTINE phys2ijk
 ! Interpolation
 !-----------------------------------------------------------------------
 SUBROUTINE itpl_2d(var,ri,rj,var5)
+
+  USE params_model, ONLY: nlon, nlat
+
   REAL(r_size),INTENT(IN) :: var(nlon,nlat)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
@@ -344,6 +348,9 @@ END SUBROUTINE itpl_2d
 
 
 SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
+
+  USE params_model, ONLY: nlon, nlat, nlev
+
   REAL(r_size),INTENT(IN) :: var(nlon,nlat,nlev)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj

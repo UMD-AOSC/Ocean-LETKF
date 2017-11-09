@@ -111,6 +111,14 @@ PUBLIC
   CHARACTER(3) :: diag_ssh_name = 'ssh'
   CHARACTER(10):: diag_height_name = 'col_height'
 
+  !STEVE: flags to specify whether to read in each variable
+  !       only the observed variables are needed from the diag file
+  LOGICAL :: diag_DO_temp = .true.
+  LOGICAL :: diag_DO_salt = .true.
+  LOGICAL :: diag_DO_u    = .false.
+  LOGICAL :: diag_DO_v    = .false.
+  LOGICAL :: diag_DO_ssh  = .true.
+
   ! Restart filenames
   CHARACTER(10) :: rsrt_tsbase = 'MOM.res.nc'   !(and u, and h)
   CHARACTER(12) :: rsrt_uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)

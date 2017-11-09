@@ -220,6 +220,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   USE params_model, ONLY: diag_temp_name, diag_salt_name
   USE params_model, ONLY: diag_u_name, diag_v_name, diag_h_name
   USE params_model, ONLY: diag_ssh_name, diag_height_name
+  USE params_model, ONLY: diag_DO_temp, diag_DO_salt, diag_DO_u, diag_DO_v, diag_DO_ssh
   
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -234,14 +235,6 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   LOGICAL, PARAMETER :: dodebug = .false.
   CHARACTER(slen) :: varname
   INTEGER :: ivid
-
-  !STEVE: flags to read in each variable
-  !       (ISSUE) make these a namelist input
-  LOGICAL :: DO_temp = .true.
-  LOGICAL :: DO_salt = .true.
-  LOGICAL :: DO_u    = .false.
-  LOGICAL :: DO_v    = .false.
-  LOGICAL :: DO_ssh  = .true.
 
   ! If prec is a provided argument, use indicated precision,
   if(PRESENT(prec_in))then
@@ -351,7 +344,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open the T/S netcdf restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (DO_temp .or. DO_salt) then
+  if (diag_DO_temp .or. diag_DO_salt) then
     WRITE(6,*) "read_diag:: opening file: ",infile
     call check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
     WRITE(6,*) "read_diag :: just opened file ", infile
@@ -362,7 +355,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !!! t
-  if (DO_temp) then
+  if (diag_DO_temp) then
     varname=diag_temp_name
     ivid=iv3d_t
 
@@ -394,7 +387,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   endif
  
   !!! s
-  if (DO_salt) then 
+  if (diag_DO_salt) then 
     varname=diag_salt_name
     ivid=iv3d_s
 
@@ -424,7 +417,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   endif
 
   !!! u
-  if (DO_u) then
+  if (diag_DO_u) then
     varname=diag_u_name
     ivid=iv3d_u
 
@@ -454,7 +447,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   endif
 
   !!! v
-  if (DO_v) then
+  if (diag_DO_v) then
     varname=diag_v_name
     ivid=iv3d_v
 
@@ -488,7 +481,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !!! ssh
-  if (DO_ssh) then
+  if (diag_DO_ssh) then
     varname=diag_ssh_name
     ivid=iv2d_ssh
 

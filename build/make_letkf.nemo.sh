@@ -1,6 +1,7 @@
 #!/bin/bash
 set -ex
 
+# Change to a build directory outside of the main repository:
 CDIR=`pwd`
 
 # Machine configuration
@@ -15,11 +16,8 @@ source $CONFIGDIR/$MACHINE.modules.sh
 model=nemo #mom4, mom6, hycom, roms
 
 # Experiment name
-#name=${MACHINE}_${model}
-#name=${MACHINE}_${model}.kdtree_test
 name=${MACHINE}_${model}.nemovarHx0
-#name=test_$model
-#name=TESTc3
+#name=${MACHINE}_${model}.nemovar_test1
 
 # Executable for letkf
 PGM=letkf.$name.x
