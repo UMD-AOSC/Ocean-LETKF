@@ -427,7 +427,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4) )
-        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+        v3d(:,:,:,ivid) = buf4 !REAL(buf4,r_size)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8) )
@@ -458,7 +458,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4) )
-        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+        v3d(:,:,:,ivid) = buf4 !REAL(buf4,r_size)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8) )
@@ -488,7 +488,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4) )
-        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+        v3d(:,:,:,ivid) = buf4 !REAL(buf4,r_size)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8) )
@@ -518,7 +518,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4) )
-        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+        v3d(:,:,:,ivid) = buf4 !REAL(buf4,r_size)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8) )
@@ -553,9 +553,10 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
         if (DO_SLA) then
-          v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+!         v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+          v2d(:,:,ivid) = buf4(:,:,1) - SSHclm_m(:,:)
         else
-          v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size)
+          v2d(:,:,ivid) = buf4(:,:,1) !REAL(buf4(:,:,1),r_size)
         endif
       case(2)
         buf8=0.0d0
