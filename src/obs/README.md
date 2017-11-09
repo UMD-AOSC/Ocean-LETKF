@@ -10,9 +10,11 @@
   observation operators for rapid inclusion into the operational ocean data
   assimilation system.
 
-  Future:
+# Future:
   I'd like to make this more object oriented (as much as fortran can handle), e.g.
   with inheritance for an observation class down to specific instrument types.
+
+  These observation operators will migrate to the JCSDA JEDI framework as it becomes defined.
 
 
 # Add to obsop_sst, obsop_adt:

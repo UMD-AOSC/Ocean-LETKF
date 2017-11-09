@@ -24,6 +24,10 @@ REAL(r_size),SAVE :: sigma_obst=5.0d0     ! Not using this at the moment
 REAL(r_size),SAVE :: gross_error=3.0d0    ! number of standard deviations
 ! REAL(r_size),PARAMETER :: gross_error=10.0d0 !3.0d0 ! number of standard deviations   (Use for OSSEs)
                                                       ! used to filter out observations
+!-------------------------------------------------------------------------------
+! LETKF main options
+!-------------------------------------------------------------------------------
+LOGICAL :: DO_WRITE_ENS_MEAN_SPRD = .false.  ! Indicates whether to write the ensemble mean and spread (fcst and analysis)
 
 !-------------------------------------------------------------------------------
 ! From letkf_local.f90
@@ -54,9 +58,9 @@ REAL(r_size) :: cov_infl_mul = 1.0d0 !(NO INFLATION) !-1.0d0 => adaptive multipl
 REAL(r_size) :: sp_infl_add = 0.d0 !additive inflation
 
 !-------------------------------------------------------------------------------
-! From common_mom4.f90
+! From common_model.f90
 !-------------------------------------------------------------------------------
-! For (MLD, assimilate the mixed layer depth)
+! For (MLD, assimilate SST down through mixed layer only)
 LOGICAL :: DO_MLD = .false.
 LOGICAL :: DO_MLD_MAXSPRD = .true.
 ! For (DRIFTERS)

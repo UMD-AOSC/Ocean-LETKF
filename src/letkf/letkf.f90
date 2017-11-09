@@ -26,6 +26,7 @@ PROGRAM letkf
 !   04/26/2011 Steve Penny converted to OCEAN for use with mom4
 !   03/18/2014 Steve Penny adapted to use on Gaea at NCEP/GFDL
 !   06/06/2016 Steve Penny merged MOM4p1/MOM6/HYCOM/ROMS configurations
+!   11/07/2017 Steve Penny minor modifications for use by ECMWF with NEMOVAR OMFs
 !
 !-------------------------------------------------------------------------------
 ! $Authors: Steve Penny, Takemasa Miyoshi $
@@ -56,9 +57,9 @@ PROGRAM letkf
   LOGICAL :: dortout=.true.    ! Force 'realtime' output (helps with parallel debugging)
   LOGICAL :: dodebug0=.false.  ! Debug flag for various routines
 
-!------------------------------------------------------------------------------
-! Initial settings
-!------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
+  ! Initial settings
+  !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer00)
   CALL initialize_mpi
 
@@ -69,14 +70,16 @@ PROGRAM letkf
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I4.4,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 
-  !----------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   ! Read in namelist parameters
-  !----------------------------------------------------------------------------
-  CALL read_input_namelist !STEVE: this has been moved to input_nml_{oceanmodel}.f90 since it needed to be slightly different for each model
+  !-----------------------------------------------------------------------------
+  CALL read_input_namelist 
+  !STEVE: this has been moved to input_nml_{oceanmodel}.f90 since it needed to 
+  !       be slightly different for each model
 
-  !----------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   ! Print header
-  !----------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   WRITE(6,'(A)') '================================================='
   WRITE(6,'(A)') '  THE LOCAL ENSEMBLE TRANSFORM KALMAN FILTER     '
   WRITE(6,'(A)') '                                                 '
@@ -177,24 +180,27 @@ PROGRAM letkf
   rtimer00=rtimer
 
   !-----------------------------------------------------------------------------
-  ! Write ensemble mean and spread
+  ! Write ensemble mean and spread for evaluation
   !-----------------------------------------------------------------------------
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL write_ensmspr_mpi('gues',nbv,gues3d,gues2d)
+  !STEVE: make this an optional procedure via input namelist:
+  if (DO_WRITE_ENS_MEAN_SPRD) then
+    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+    CALL write_ensmspr_mpi('gues',nbv,gues3d,gues2d)
 
-  !STEVE: debug
-  if (dodebug0) CALL write_ens_mpi_grd('test',1,gues3d,gues2d)
-  
-  !-----------------------------------------------------------------------------
-  ! Check timer for writing forecast ensemble
-  !-----------------------------------------------------------------------------
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_GUES):',rtimer,rtimer-rtimer00
-  if (dortout) then !STEVE: force output to file
-    CLOSE(6)
-    OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+    !STEVE: debug
+    if (dodebug0) CALL write_ens_mpi_grd('test',1,gues3d,gues2d)
+
+    !-----------------------------------------------------------------------------
+    ! Check timer for writing forecast ensemble
+    !-----------------------------------------------------------------------------
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_GUES_MEAN_SPRD):',rtimer,rtimer-rtimer00
+    if (dortout) then !STEVE: force output to file
+      CLOSE(6)
+      OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+    endif
+    rtimer00=rtimer
   endif
-  rtimer00=rtimer
 
   !------------------------------------------------------------------------------
   ! Data Assimilation (MAIN)
@@ -214,28 +220,45 @@ PROGRAM letkf
   rtimer00=rtimer
 
   !--
-  ! Could call 3DVar here for hybrid...
+  ! Could call 3DVar here for hybrid-gain...
   !--
 
   !----------------------------------------------------------------------------
-  ! Write analysis ensemble
+  ! Write analysis ensemble members
   !----------------------------------------------------------------------------
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL write_ens_mpi('anal',nbv,anal3d,anal2d)
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL write_ensmspr_mpi('anal',nbv,anal3d,anal2d)
-
   !-----------------------------------------------------------------------------
-  ! Check timer for writing analysis ensemble, mean, and spread
+  ! Check timer for writing analysis ensemble members
   !-----------------------------------------------------------------------------
   CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL):',rtimer,rtimer-rtimer00
+  WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ENS_MPI):',rtimer,rtimer-rtimer00
   if (dortout) then !STEVE: force output to file
     CLOSE(6)
     OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
   endif
   rtimer00=rtimer
+
+  !----------------------------------------------------------------------------
+  ! Write analysis ensemble mean and spread for evaluation
+  !----------------------------------------------------------------------------
+  !STEVE: make this an optional procedure via input namelist:
+  if (DO_WRITE_ENS_MEAN_SPRD) then
+    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+    CALL write_ensmspr_mpi('anal',nbv,anal3d,anal2d)
+
+    !-----------------------------------------------------------------------------
+    ! Check timer for writing analysis ensemble mean and spread
+    !-----------------------------------------------------------------------------
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANALYSIS_MEAN_SPRD):',rtimer,rtimer-rtimer00
+    if (dortout) then !STEVE: force output to file
+      CLOSE(6)
+      OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
+    endif
+    rtimer00=rtimer
+  endif
 
   !----------------------------------------------------------------------------
   ! Finalize the MPI

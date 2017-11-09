@@ -36,10 +36,9 @@ subroutine debug_post_obslocal(calling_routine,ij,debug_hdxf_0,nobstotal,nobsl,h
   REAL(r_size), INTENT(IN) :: parm
   REAL(r_size), DIMENSION(:,:), INTENT(IN) :: trans
 
-  WRITE(6,*) "From: ", calling_routine
-
   ! Make sure there is not a zero value in hdxf, this was a sign of problems in the input fields
   if ( debug_hdxf_0 .and. MINVAL(hdxf) == 0 ) then
+    WRITE(6,*) "debug_post_obslocal:: From: ", calling_routine
     WRITE(6,*) "(3D) ij = ", ij
     WRITE(6,*) "inputs to letkf_core:"
     WRITE(6,*) "nobstotal = ", nobstotal
@@ -55,6 +54,7 @@ subroutine debug_post_obslocal(calling_routine,ij,debug_hdxf_0,nobstotal,nobsl,h
 
   ! Make sure there is no observation error that was input as less than 0
   if ( MINVAL(rdiag(1:nobsl)) .le. 0.0 ) then
+    WRITE(6,*) "debug_post_obslocal:: From: ", calling_routine
     WRITE(6,*) "ERROR: rdiag <=0 (i.e. there is an obserr <= 0)"
     WRITE(6,*) "MINVAL(rdiag) = ",MINVAL(rdiag)
     STOP("STOP::debug_post_obslocal::2")
@@ -71,10 +71,9 @@ subroutine debug_post_obslocal2d(calling_routine,nobsl,rdiag)
   INTEGER,      INTENT(IN) :: nobsl
   REAL(r_size), DIMENSION(nobsl), INTENT(IN) :: rdiag
 
-  WRITE(6,*) "From: ", calling_routine
-
   ! Make sure there is no observation error that was input as less than 0
   if ( MINVAL(rdiag(1:nobsl)) .le. 0.0 ) then
+    WRITE(6,*) "debug_post_obslocal2d:: From: ", calling_routine
     WRITE(6,*) "ERROR: rdiag <=0 (i.e. there is an obserr <= 0)"
     WRITE(6,*) "MINVAL(rdiag) = ",MINVAL(rdiag)
     STOP("STOP::debug_post_obslocal2d")
@@ -94,13 +93,12 @@ subroutine debug_post_letkfcore(calling_routine,debug_zeroinc,nobsl,n,trans)
   INTEGER,      INTENT(IN) :: nobsl, n
   REAL(r_size), DIMENSION(:,:), INTENT(IN) :: trans
 
-  WRITE(6,*) "From: ", calling_routine
-
   if ( debug_zeroinc .and. nobsl > 0 ) then
-    WRITE(6,*) "letkf_tools.f90::das_letkf:: post-letkf_core"
+    WRITE(6,*) "debug_post_letkfcore:: From: ", calling_routine
+    WRITE(6,*) "das_letkf:: post-letkf_core"
     WRITE(6,*) "n = ", n
     WRITE(6,*) "trans(:,:,n) = ", trans
-    WRITE(6,*) "letkf_tools.f90::das_letkf:: EXITING on purpose..."
+    WRITE(6,*) "das_letkf:: EXITING on purpose..."
     STOP("STOP::debug_post_letkfcore")
   endif
 
@@ -115,15 +113,14 @@ subroutine debug_ens_diversity(calling_routine,gues3d,dodebug)
   REAL(r_size), DIMENSION(:,:,:,:), INTENT(IN) :: gues3d  
   LOGICAL, INTENT(IN) :: dodebug
 
-  WRITE(6,*) "From: ", calling_routine
-
   if (dodebug) then
-    WRITE(6,*) "from letkf_tools.f90:: After computing perturbations..."
+    WRITE(6,*) "debug_ens_diversity From: ", calling_routine
+    WRITE(6,*) "After computing perturbations..."
     WRITE(6,*) "min val for level gues3d(:,1,:,1) = ", MINVAL(gues3d(:,1,:,1))
     WRITE(6,*) "max val for level gues3d(:,1,:,1) = ", MAXVAL(gues3d(:,1,:,1))
   endif
   if (MAXVAL(gues3d(:,1,:,1)) == MINVAL(gues3d(:,1,:,1))) then
-    WRITE(6,*) "from letkf_tools.f90::das_letkf:: It appears that all the ensemble members are identical. EXITING..."
+    WRITE(6,*) "das_letkf:: It appears that all the ensemble members are identical. EXITING..."
     STOP("STOP::debug_ens_diversity")
   endif
 
@@ -162,7 +159,7 @@ subroutine debug_post_anal3d(calling_routine,anal3d,gues3d,lon1,lat1,k,ij,ilev,m
 
   !STEVE: debug - check for bad values
   if ( anal3d < bad_value_low ) then
-    WRITE(6,*) "From: ", calling_routine
+    WRITE(6,*) "debug_post_anal3d:: From: ", calling_routine
     WRITE(6,*) "Problem in letkf_das after letkf_core. k = ", k
     WRITE(6,*) "ij, ilev, m, n = ", ij,ilev,m,n
     WRITE(6,*) "anal3d(ij,ilev,m,n) = ", anal3d

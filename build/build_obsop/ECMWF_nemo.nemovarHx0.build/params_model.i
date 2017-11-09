@@ -78,7 +78,7 @@ PUBLIC
 ! endif
 
   ! If using SLA assimilation calibrated to altimetry climatology:
-  CHARACTER(14) :: SSHclm_file = ''
+  CHARACTER(13) :: SSHclm_file = 'not specified'
 
   !0001_nrt_20161228_000000_restart.nc
   CHARACTER(12) :: gridfile  = 'mesh_mask.nc'   !'MOM.res.nc'

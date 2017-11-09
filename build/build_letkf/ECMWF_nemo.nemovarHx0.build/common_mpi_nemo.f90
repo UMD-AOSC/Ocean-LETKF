@@ -497,10 +497,7 @@ SUBROUTINE read_ens_mpi(file,nbv,v3d,v2d)
     if (im <= nbv) then
       WRITE(filename(1:7),'(A4,I3.3)') file,im
       WRITE(6,'(A,I3.3,2A)') 'In common_mpi_mom4.f90::read_ens_mpi, MYRANK ',myrank,' is reading a file ',filename
-      CALL read_restart(filename,v3dg,v2dg,2) !STEVE: 20150317, trying this out...
-!     CALL read_grd4(filename,v3dg,v2dg) !STEVE: 20130709, trying this out...
-!     CALL read_grd(filename,v3dg,v2dg)  !STEVE: causes type problem in scatter_grd_mpi
-!     if (.false.) CALL write_grd4('test.'//filename,v3dg,v2dg) 
+      CALL read_restart(filename,v3dg,v2dg,2)
     endif
 
     mstart = 1 + (l-1)*nprocs
@@ -522,7 +519,6 @@ SUBROUTINE write_ens_mpi(file,nbv,v3d,v2d)
 
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
 
-! INCLUDE 'netcdf.inc' !STEVE: for NaN correction (OCEAN)
   CHARACTER(4),INTENT(IN) :: file
   INTEGER,INTENT(IN) :: nbv
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nbv,nv3d)
@@ -549,12 +545,7 @@ SUBROUTINE write_ens_mpi(file,nbv,v3d,v2d)
       WRITE(filename(1:7),'(A4,I3.3)') file,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing file: ',filename
 
-      !STEVE: debug
-!     WRITE(6,*) "common_mpi_mom4.f90::write_ens_mpi:: MAXVAL(ABS(v3dg(:,:,:,iv3d_t))) = ", MAXVAL(ABS(v3dg(:,:,:,iv3d_t)))
-!     WRITE(6,*) "common_mpi_mom4.f90::write_ens_mpi:: MAXVAL(ABS(v3dg(:,:,:,iv3d_s))) = ", MAXVAL(ABS(v3dg(:,:,:,iv3d_s)))
-
       CALL write_restart(filename,v3dg,v2dg,2)
-!     CALL write_grd4(filename,v3dg,v2dg)
     endif
   enddo
 
@@ -598,11 +589,8 @@ SUBROUTINE write_ens_mpi_grd(file,nbv,v3d,v2d)
       WRITE(filename(1:7),'(A4,I3.3)') file,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
 
-      !STEVE: debug
-!     print *, "common_mpi_mom4.f90::write_ens_mpi_grd:: MAXVAL(ABS(v3dg(:,:,:,iv3d_t))) = ", MAXVAL(ABS(v3dg(:,:,:,iv3d_t)))
-
-!     CALL write_grd4(filename,v3dg,v2dg)
       CALL write_grd(filename,v3dg,v2dg)
+
     endif
 
   enddo
@@ -689,7 +677,6 @@ SUBROUTINE write_ensmspr_mpi(file,nbv,v3d,v2d)
   if (myrank == 0) then
     WRITE(filename(1:7),'(A4,A3)') file,'_me'
     WRITE(6,'(A,I3.3,2A)') 'write_ensmspr_mpi::MYRANK ',myrank,' is writing a file ',filename
-!   CALL write_grd4(filename,v3dg,v2dg)
     CALL write_grd(filename,v3dg,v2dg)
   endif
 
@@ -720,7 +707,6 @@ SUBROUTINE write_ensmspr_mpi(file,nbv,v3d,v2d)
   if (myrank == 0) then
     WRITE(filename(1:7),'(A4,A3)') file,'_sp'
     WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
-!   CALL write_grd4(filename,v3dg,v2dg)
     CALL write_grd(filename,v3dg,v2dg)
   endif
 

@@ -4,6 +4,7 @@ MODULE input_nml_oceanmodel
 USE params_model
 USE params_letkf
 USE params_obs
+!USE input_nml_letkf  !STEV: consider generalizing the more common items
 
 PUBLIC :: read_input_namelist
 
@@ -18,26 +19,18 @@ PRIVATE
 
 
 
-# 20
-  NAMELIST /params_model_nml/ gridfile, &  ! MOM4 grid_spec.nc file 
-                              gridfile1,&  !
-                              gridfile2,&  !
-                              gridfile3,&  !
+# 21
+  NAMELIST /params_model_nml/ gridfile, &  ! Model grid definition file (e.g. NEMO mesh_mask.nc)
                               tsbase,& !
-                              uvbase,& !
-                              grid_lon_name,& !
-                              grid_lat_name,& !
+                              grid_lon2d_name,& !
+                              grid_lat2d_name,& !
                               grid_lev_name,& !
                               grid_temp_name,& !
                               grid_salt_name,& !
                               grid_u_name,& !
                               grid_v_name,& !
-                              grid_h_name,& !
-                              grid_lon2d_name,& !
-                              grid_lat2d_name,& !
-                              grid_wet_name,& !
+                              grid_lsmask_name,& ! land/sea mask
                               grid_depth_name,& !
-                              grid_height_name,& !
                               diag_lon_name,& !
                               diag_lat_name,& !
                               diag_lev_name,& !
@@ -45,9 +38,7 @@ PRIVATE
                               diag_salt_name,& !
                               diag_u_name,& !
                               diag_v_name,& !
-                              diag_h_name,& !
                               diag_ssh_name,& !
-                              diag_height_name,& !
                               rsrt_lon_name,& !
                               rsrt_lat_name,& !
                               rsrt_lev_name,& !
@@ -55,12 +46,17 @@ PRIVATE
                               rsrt_salt_name,& !
                               rsrt_u_name,& !
                               rsrt_v_name,& !
-                              rsrt_h_name,& !
                               rsrt_ssh_name,& !
-                              SSHclm_file  ! model ssh climatology for altimetry assimilation
+                              SSHclm_file,&   ! model ssh climatology for altimetry assimilation
+                              do_physlimit,&  ! specify .true. (default) to enable bounds checks on analysis output
+                              max_t, min_t, &
+                              max_s, min_s, &
+                              max_u, min_u, &
+                              max_v, min_v, &
+                              max_eta, min_eta
 
-  NAMELIST /params_obs_nml/   obs1nrec, &  ! number of records in obs.dat type file
-                              obs2nrec     ! number of records in obs2.dat type file
+  NAMELIST /params_obs_nml/   obs1nrec, &            ! number of records in obs.dat type file
+                              obs2nrec               ! number of records in obs2.dat type file
 
   NAMELIST /params_letkf_nml/ nbv, &                 ! Number of ensemble members
                               nslots, &              ! Number of time slots for 4D assimilation
@@ -70,6 +66,7 @@ PRIVATE
                               sigma_obsv, &          ! Sigma-radius for vertical localization (m)
                               sigma_obst, &          ! Sigma-radius for temporal localization (not activated)
                               gross_error, &         ! number of standard deviations for quality control (all outside removed)
+                              DO_WRITE_ENS_MEAN_SPRD, &  ! logical flag to write the ensemble mean and spread for the forecast and analysis fields
                               DO_DRIFTERS, &         ! logical flag to do lagrangian drifters assimilation
                               DO_ALTIMETRY, &        ! logical flag to do altimetry data assimilation
                               DO_SLA, &              ! logical flag to use SLA for altimetry
@@ -77,11 +74,11 @@ PRIVATE
                               DO_NO_VERT_LOC, &      ! logical flag to skip all vertical localization and project weights (default)
                               DO_MLD, &              ! logical flag to use 2-layer vertical localization: (1) SFC and mixed layer, (2) below mixed layer
                               DO_MLD_MAXSPRD, &      ! logical flag to use maximum spread instead of mixed layer depth do to steps for DO_MLD 
-                              DO_REMOVE_65N, &       ! option to remove points above 65ÂN in letkf instead of in observation operators
+                              DO_REMOVE_65N, &       ! option to remove points above 65N in letkf instead of in observation operators
                               DO_QC_MEANDEP, &       ! option to quality control observations based on mean departure
                               DO_QC_MAXDEP, &        ! option to quality control observation based on maximum departure across ensemble members
                               DO_UPDATE_H, &         ! option to update model layer thicknesses based on assimilation of observations
-                              localization_method, & ! localization method to be used in letkf_local.f90
+                              localization_method, & ! localization method to be used in letkf_local.f90 (default=1, latitude-dependent)
                               cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
                               sp_infl_add            ! additive inflation factor (default none)
 
@@ -103,7 +100,7 @@ SUBROUTINE read_input_namelist
 
 
 
-# 104
+# 101
     READ(fid,nml=params_model_nml)
     READ(fid,nml=params_obs_nml)
     READ(fid,nml=params_letkf_nml)
