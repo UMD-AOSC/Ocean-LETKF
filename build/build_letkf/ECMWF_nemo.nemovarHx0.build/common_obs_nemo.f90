@@ -19,19 +19,21 @@ MODULE common_obs_oceanmodel
   USE kdtree
 
   IMPLICIT NONE
+
   PUBLIC Trans_XtoY, phys2ijk, read_obs, get_nobs, read_obs2, write_obs2, itpl_2d, itpl_3d, monit_dep
   PUBLIC center_obs_coords
 
   PRIVATE
+
   TYPE(KD_ROOT), SAVE :: kdtree_root
   INTEGER, SAVE       :: initialized = 0
-  REAL(r_size), SAVE  :: prev_lon, prev_lat      !STEVE: for checking if this longitude was last searched
+  REAL(r_size), SAVE  :: prev_lon, prev_lat  !STEVE: for checking if this longitude was last searched
   INTEGER             :: k_sought=1
   INTEGER             :: k_found
 
-  INTEGER, SAVE, ALLOCATABLE      :: idx(:)      !STEVE: index of the observations that are found by kd_search_radius
-  REAL(r_size), SAVE, ALLOCATABLE :: dist(:)     !STEVE: distance from the center grid point
-  INTEGER, SAVE :: nn                            !STEVE: total number of local observations found by kd_search_radius
+  INTEGER, SAVE, ALLOCATABLE      :: idx(:)  !STEVE: index of the observations that are found by kd_search_radius
+  REAL(r_size), SAVE, ALLOCATABLE :: dist(:) !STEVE: distance from the center grid point
+  INTEGER, SAVE :: nn                        !STEVE: total number of local observations found by kd_search_radius
 
   ! For debugging kdtree:
   REAL(r_size), ALLOCATABLE, DIMENSION(:) :: lon2ij, lat2ij
@@ -42,6 +44,7 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Transformation from model space to observation space (i.e. H-operator)
 !-----------------------------------------------------------------------
+! (NEMO) n/a - using NEMOVAR fdbk files instead for OMFs
 SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_eta, iv2d_sst, iv2d_sss
@@ -85,6 +88,7 @@ END SUBROUTINE Trans_XtoY
 !-----------------------------------------------------------------------
 ! Coordinate conversion
 !-----------------------------------------------------------------------
+! (NEMO) n/a - using NEMOVAR fdbk files instead for OMFs
 SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   USE params_model, ONLY: nlon, nlat, nlev
   USE vars_model,   ONLY: lon2d, lat2d, lev2d, lon, lat, lev
@@ -306,6 +310,9 @@ END SUBROUTINE phys2ijk
 ! Interpolation
 !-----------------------------------------------------------------------
 SUBROUTINE itpl_2d(var,ri,rj,var5)
+
+  USE params_model, ONLY: nlon, nlat
+
   REAL(r_size),INTENT(IN) :: var(nlon,nlat)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
@@ -348,6 +355,9 @@ END SUBROUTINE itpl_2d
 
 
 SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
+
+  USE params_model, ONLY: nlon, nlat, nlev
+
   REAL(r_size),INTENT(IN) :: var(nlon,nlat,nlev)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
@@ -522,12 +532,12 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
   endif
 
   WRITE(6,'(A)') '== OBSERVATIONAL DEPARTURE ============================================='
-  WRITE(6,'(7A12)') 'U','V','T','S','SSH','eta','SST','SSS'                                       !(OCEAN)
-  WRITE(6,'(7ES12.3)') bias_u,bias_v,bias_t,bias_s,bias_ssh,bias_eta,bias_sst,bias_sss               !(OCEAN)
-  WRITE(6,'(7ES12.3)') rmse_u,rmse_v,rmse_t,rmse_s,rmse_ssh,bias_eta,rmse_sst,bias_sss               !(OCEAN)
+  WRITE(6,'(7A12)') 'U','V','T','S','SSH','eta','SST'
+  WRITE(6,'(7ES12.3)') bias_u,bias_v,bias_t,bias_s,bias_ssh,bias_eta,bias_sst
+  WRITE(6,'(7ES12.3)') rmse_u,rmse_v,rmse_t,rmse_s,rmse_ssh,bias_eta,rmse_sst
   WRITE(6,'(A)') '== NUMBER OF OBSERVATIONS TO BE ASSIMILATED ============================'
-  WRITE(6,'(7A12)') 'U','V','T','S','SSH','eta','SST','SSS'                                       !(OCEAN)
-  WRITE(6,'(7I12)') iu,iv,it,is,issh,ieta,isst,isss                                              !(OCEAN)
+  WRITE(6,'(7A12)') 'U','V','T','S','SSH','eta','SST'
+  WRITE(6,'(7I12)') iu,iv,it,is,issh,ieta,isst
   WRITE(6,'(A)') '========================================================================'
 
 END SUBROUTINE monit_dep
@@ -572,6 +582,12 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
     DO
       READ(iunit,IOSTAT=ios) wk
+
+      if (ios < 0) then
+        WRITE(6,*) "get_nobs:: end of file reached with nn = ", nn
+        EXIT
+      endif
+
       if (dodebug .and. nrec.eq.6) then
         PRINT '(I6,2F7.2,F10.2,2F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6)
       elseif (dodebug .and. nrec .eq. 8) then
@@ -579,7 +595,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
       elseif (dodebug .and. nrec .eq. 9) then
         PRINT '(I6,2F7.2,F10.2,5F12.2)',NINT(wk(1)),wk(2),wk(3),wk(4),wk(5),wk(6),wk(7),wk(8),wk(9)
       endif
-      if (ios /= 0) EXIT
+
       SELECT CASE(NINT(wk(1)))
       CASE(id_u_obs)
         iu = iu + 1
@@ -604,12 +620,15 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
       CASE(id_z_obs)     !(OCEAN)
         iz = iz + 1      !(OCEAN)
       END SELECT
+
       if (wk(2) .ne. lon_m1 .and. wk(3) .ne. lat_m1) then
         nprof=nprof+1
         lon_m1 = wk(2)
         lat_m1 = wk(3)
       endif
+
       nn = nn + 1
+
     enddo
     WRITE(6,'(I10,A)') nprof ,' PROFILES INPUT'
     WRITE(6,'(I10,A)') nn,' TOTAL OBSERVATIONS INPUT (in get_nobs)'
@@ -652,7 +671,7 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
   REAL(r_size),INTENT(OUT) :: obhr(nn)
 ! REAL(r_sngl) :: wk(6)
   REAL(r_sngl) :: wk(9)
-  !REAL(r_size) :: wk(6) !(OCEAN) STEVE: I changed this because the netcdf observation files are stored as double precision
+! REAL(r_size) :: wk(6) !(OCEAN) STEVE: type must be changed if the netcdf observation files are stored as double precision
   INTEGER :: n,iunit
   ! STEVE: for general grid
   LOGICAL, PARAMETER :: dodebug = .false.
@@ -721,7 +740,7 @@ SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
   REAL(r_sngl) :: wk(9)
   INTEGER :: n,iunit
   INTEGER :: IOstatus
-  LOGICAL :: dodebug = .true.
+  LOGICAL :: dodebug = .false.
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
@@ -733,6 +752,8 @@ SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
       WRITE(6,*) "read_obs2:: reached end of file prematurely."
       WRITE(6,*) "read_obs2::          n  = ", n
       WRITE(6,*) "read_obs2:: expected nn = ", nn
+      WRITE(6,*) "Perhaps the observations are not identical across members?"
+      WRITE(6,*) "(They should be - please check your input.)"
       WRITE(6,*) "read_obs2:: EXITING on purpose..."
       STOP(9522)
     endif
@@ -840,6 +861,7 @@ SUBROUTINE center_obs_coords(rlon,oerr,nn)
 !===============================================================================
 ! Center all observations within the longitudes defined by the model grid
 !===============================================================================
+! (NEMO) n/a - this is specific to MOM and must be updated if the functionality is needed for NEMO
   USE vars_model,   ONLY: lon0, lonf, wrapgap
   REAL(r_size),INTENT(INOUT) :: rlon(nn)
   REAL(r_size),INTENT(INOUT) :: oerr(nn)
@@ -936,14 +958,12 @@ SUBROUTINE center_obs_coords(rlon,oerr,nn)
     WRITE(6,*) "read_obs:: Error: MAX(observation lon, i.e. rlon) > lonf"
     WRITE(6,*) "MAXVAL(rlon) = ", MAXVAL(rlon)
     WRITE(6,*) "lonf = ", lonf
-!   WRITE(6,*) "lon(nlon) = ", lon(nlon)
     STOP(22)
   endif
   if (MINVAL(rlon) < lon0) then
     WRITE(6,*) "read_obs:: Error: MIN(observation lon, i.e. rlon) < lon0"
     WRITE(6,*) "MINVAL(rlon) = ", MINVAL(rlon)
     WRITE(6,*) "lon0 = ", lon0
-!   WRITE(6,*) "lon(1) = ", lon(1)
     STOP(23)
   endif
 

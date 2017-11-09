@@ -256,7 +256,9 @@ quality_control : if (.true.) then
     enddo
     obsdep(n) = obsdep(n) / REAL(nbv,r_size)
     do i=1,nbv
-      if (DO_QC_MAXDEP .and. (id_sst_obs .ne. obselm(n)) .and. ABS(obsdat(n) - obshdxf(n,i)) > gross_error*obserr(n)) then
+      if (DO_QC_MAXDEP .and. &
+          (id_sst_obs .ne. obselm(n)) .and. &
+          ABS(obsdat(n) - obshdxf(n,i)) > gross_error*obserr(n) ) then
         if (obsqc(n)==1) gross_cnt = gross_cnt + 1  !STEVE: add to data removed for exceeding gross_error range
         obsqc(n) = 0
       endif

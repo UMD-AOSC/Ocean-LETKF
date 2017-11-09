@@ -216,7 +216,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   do ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
                !NOTE: I switched the loops for ij and ilev (below) based on an indication
                !      by T. Sluka that this improved performance due to caching issues (3/22/16)
-    if (dodebug .or. doverbose) WRITE(6,*) "ij = ", ij
+    if (dodebug .and. doverbose) WRITE(6,*) "ij = ", ij
 
     !(OCEAN) The gridpoint is on land, so just assign undef values and CYCLE
     if (kmt1(ij) < 1) then
@@ -288,7 +288,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         else
           !STEVE: need to change localization for obs below mlev - added to input arguments (3/25/2016)
           CALL obs_local(ij,ilev,mlev,var_local(n,:),hdxf,rdiag,rloc,dep,nobsl,nobstotal)
-          if (dodebug .and. nobsl > 0) WRITE(6,*) "letkf_tools.f90::post-obs_local(3d):: Assimilating ", nobsl, " observations."
+          if (dodebug .and. doverbose .and. nobsl > 0) WRITE(6,*) "letkf_tools.f90::post-obs_local(3d):: Assimilating ", nobsl, " observations."
 
           parm = work3d(ij,ilev,n)
 

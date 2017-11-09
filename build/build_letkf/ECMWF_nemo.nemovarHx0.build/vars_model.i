@@ -39,9 +39,7 @@ PUBLIC
 
 
 
-
-
-# 41
+# 39
   REAL(r_size),DIMENSION(nlon),SAVE      :: lon !(nlon)
   REAL(r_size),DIMENSION(nlat),SAVE      :: lat !(nlat)
   REAL(r_size),DIMENSION(nlev),SAVE      :: lev !(nlev)                     !(OCEAN)
@@ -54,9 +52,7 @@ PUBLIC
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: area_t !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
-! REAL(r_size),DIMENSION(nlon,nlat,nlev),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: depth !(nlon,nlat)               !(OCEAN)
-! REAL(r_size),DIMENSION(nlon,nlat),SAVE :: wet !(nlon,nlat)               !(OCEAN)
 
   REAL(r_size),DIMENSION(nlat),SAVE      :: fcori !(nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: fcori2d !(nlon,nlat)
@@ -70,7 +66,7 @@ PUBLIC
 
 
   !STEVE: For generalized grid
-# 69
+# 65
   REAL(r_size),SAVE :: lon0, lonf, lat0, latf
   REAL(r_size),SAVE :: wrapgap
 
@@ -122,7 +118,7 @@ SUBROUTINE initialize_vars_model
 
 
 
-# 120
+# 116
   SSHclm_m = 0.0d0
   kmt = -1
 
@@ -147,26 +143,37 @@ SUBROUTINE set_vars_model
     WRITE(6,*) "set_vars_model..."
   endif
 
-  ! Corioris parameter
-  fcori(:)   = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
-  fcori2d(:,:) = 2.0d0 * r_omega * sin(lat2d(:,:)*pi/180.0d0)
+  ! Set lon and lat, just for completeness (NEMO)
+  ! These are mostly still here for backward compatibility
+  lon = lon2d(:,NINT(nlat/2.0d0))
+  lat = lat2d(NINT(nlon/2.0d0),:)
 
   ! Estimate the start and end lon/lat near the equator (NEMO) n/a
-  lon0 = lon2d(1,NINT(nlat/2.0d0))
-  lonf = lon2d(nlon,NINT(nlat/2.0d0))
-  lat0 = lat2d(NINT(nlon/2.0d0),1)
-  latf = lat2d(NINT(nlon/2.0d0),nlat)
+! lon0 = lon2d(1,NINT(nlat/2.0d0))
+! lonf = lon2d(nlon,NINT(nlat/2.0d0))
+! lat0 = lat2d(NINT(nlon/2.0d0),1)
+! latf = lat2d(NINT(nlon/2.0d0),nlat)
+  lon0 = lon(1)
+  lonf = lon(nlon)
+  lat0 = lat(1)
+  latf = lat(nlon)
 
   if (lon0 .eq. lonf) then
     WRITE(6,*) "ERROR in vars_model.f90::initialize_vars_model(), lon0==lonf==",lon0
     STOP(25)
   endif
 
+  ! Corioris parameter
+  fcori(:)   = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
+  fcori2d(:,:) = 2.0d0 * r_omega * sin(lat2d(:,:)*pi/180.0d0)
+
   ! STEVE: for (more) generalized (longitude) grid:
   ! ISSUE: may need to check additional cases
   if (lon0 .ne. 0 .and. lonf .ne. 360) then
     lon0_360 = MODULO(lon0+360.0,360.0)
     lonf_360 = MODULO(lonf+360.0,360.0)
+    WRITE(6,*) "set_vars_model:: lon0_360 = ", lon0_360
+    WRITE(6,*) "set_vars_model:: lonf_360 = ", lonf_360
     wrapgap = abs(lon0_360 - lonf_360)
   else
     wrapgap=0.0
