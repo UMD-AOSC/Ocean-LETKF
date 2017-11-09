@@ -7,7 +7,7 @@
 #PBS -l EC_threads_per_task=1
 
 #PBS -l EC_nodes=2
-##PBS -l EC_predicted_walltime=0
+#PBS -l EC_predicted_walltime=600
 
 #PBS -l EC_max_threads_per_node=72
 #PBS -l EC_tasks_per_node=72

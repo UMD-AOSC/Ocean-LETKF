@@ -1,4 +1,5 @@
 #!/bin/bash
+set -ex
 date=/bin/date
 
 # Set up the observation/innovation .dat files by running the letkf obsop_tprof.x / obsop_sprof.x routines.

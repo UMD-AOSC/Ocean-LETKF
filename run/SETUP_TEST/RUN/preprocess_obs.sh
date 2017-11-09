@@ -1,4 +1,5 @@
 #!/bin/bash
+set -ex
 date=/bin/date
 
 # Set up the observation/innovation .dat files by running the letkf obsop_tprof.x / obsop_sprof.x routines.
@@ -28,7 +29,16 @@ FILE_PREFIX=0001_nrt_5_2_
 FILE_SUFFIX=_profb_01_fdbk.nc
 
 OBS_FILELIST='observation_infile_list.txt'
-ALIGN_OBS_EXE=align_obs.py
+DO_QC=1
+if [ $DO_QC == "1" ]; then
+  # Use a feedback qc file to filter out NEMOVAR qc'd obs
+  # then reorder obs in all members so they align properly by index
+  ALIGN_OBS_EXE=reduce_obs.py
+else
+  # Use a regular feedback file prior to NEMOVAR qc
+  # Reorder observations in all members so they align properly by index
+  ALIGN_OBS_EXE=align_obs.py
+fi
 
 DSTDIR=/home/rd/dasp/scratch/WORK
 mkdir -p $DSTDIR
