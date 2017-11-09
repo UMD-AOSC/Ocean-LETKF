@@ -11,9 +11,11 @@ MODULE common_oceanmodel
 !
 !=======================================================================
   USE common
+
   USE params_letkf, ONLY: DO_ALTIMETRY, DO_SLA, DO_DRIFTERS
-  USE params_model !, ONLY: nlon, nlat, nlev, nv3d, nv2d, iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv3d_h
+
   IMPLICIT NONE
+
   PUBLIC
 
 CONTAINS
@@ -24,7 +26,9 @@ CONTAINS
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_oceanmodel
   USE netcdf
-  USE params_model, ONLY: SSHclm_file, nlon, nlat, nlev
+  USE params_model, ONLY: SSHclm_file
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nlon2d, nlat2d
   USE vars_model,   ONLY: SSHclm_m, lon, lat, lon2d, lat2d, lev
   USE vars_model,   ONLY: dx, dy, area_t
   USE vars_model,   ONLY: height, kmt, depth, wet, phi0, kmt0
@@ -34,8 +38,8 @@ SUBROUTINE set_common_oceanmodel
   USE params_model, ONLY: grid_lon_name, grid_lat_name, grid_lev_name
   USE params_model, ONLY: grid_lon2d_name, grid_lat2d_name
   USE params_model, ONLY: grid_wet_name, grid_depth_name, grid_height_name
-
-  IMPLICIT NONE
+  USE params_model, ONLY: grid_h_name
+  USE params_model, ONLY: gridfile, gridfile1, gridfile2, gridfile3
 
   INTEGER :: i,j,k
   INTEGER :: ncid,ncid2,ncid3,varid,dimid
@@ -121,19 +125,6 @@ SUBROUTINE set_common_oceanmodel
   lat2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
   WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
-
-! call check( NF90_INQ_VARID(ncid3,'dx',varid) )    ! width of T_cell (meters)
-! call check( NF90_GET_VAR(ncid3,varid,dx) ) 
-! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MIN(dx) = ", MINVAL(dx)
-! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MAX(dx) = ", MAXVAL(dx)
-! call check( NF90_INQ_VARID(ncid3,'dy',varid) )    ! height of T_cell (meters)
-! call check( NF90_GET_VAR(ncid3,varid,dy) ) 
-! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MIN(dy) = ", MINVAL(dy)
-! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MAX(dy) = ", MAXVAL(dy)
-! call check( NF90_INQ_VARID(ncid3,'area',varid) )        ! area of T_cell
-! call check( NF90_GET_VAR(ncid3,varid,area_t) ) 
-! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MIN(area_t) = ", MINVAL(area_t)
-! WRITE(6,*) "common_oceanmodel:: ", trim(gridfile3), " MAX(area_t) = ", MAXVAL(area_t)
 
   !STEVE: I don't really need this anymore with the kdtree-based search
   if (.true.) then !STEVE: this is TEMPORARY, until I figure out how to use the ocean_hgrid.nc data
@@ -230,10 +221,11 @@ END SUBROUTINE set_common_oceanmodel
 ! File I/O
 !-----------------------------------------------------------------------
 SUBROUTINE read_etaclm
+
   USE netcdf
   USE params_model, ONLY: SSHclm_file, nlon, nlat
   USE vars_model,   ONLY: SSHclm_m
-  IMPLICIT NONE
+  
   REAL(r_sngl) :: buf4(nlon,nlat)
   INTEGER :: i,j
   INTEGER :: ncid, varid
@@ -269,11 +261,15 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !       The full 3d model prognostic variables can be read in via read_restart
   USE netcdf
   USE vars_model,   ONLY: SSHclm_m
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nv3d, nv2d
+  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_ssh
   USE params_model, ONLY: diag_lon_name, diag_lat_name, diag_lev_name
   USE params_model, ONLY: diag_temp_name, diag_salt_name
   USE params_model, ONLY: diag_u_name, diag_v_name, diag_h_name
   USE params_model, ONLY: diag_ssh_name, diag_height_name
-  IMPLICIT NONE
+  USE params_model, ONLY: diag_DO_temp, diag_DO_salt, diag_DO_u, diag_DO_v, diag_DO_ssh
+  
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
@@ -287,14 +283,6 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   LOGICAL, PARAMETER :: dodebug = .false.
   CHARACTER(slen) :: varname
   INTEGER :: ivid
-
-  !STEVE: flags to read in each variable
-  !       (ISSUE) make these a namelist input
-  LOGICAL :: DO_temp = .true.
-  LOGICAL :: DO_salt = .true.
-  LOGICAL :: DO_u    = .false.
-  LOGICAL :: DO_v    = .false.
-  LOGICAL :: DO_ssh  = .true.
 
   ! If prec is a provided argument, use indicated precision,
   if(PRESENT(prec_in))then
@@ -404,7 +392,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open the T/S netcdf restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (DO_temp .or. DO_salt) then
+  if (diag_DO_temp .or. diag_DO_salt) then
     WRITE(6,*) "read_diag:: opening file: ",infile
     call check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
     WRITE(6,*) "read_diag :: just opened file ", infile
@@ -416,7 +404,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 
 
   !!! t
-  if (DO_temp) then
+  if (diag_DO_temp) then
     varname=diag_temp_name
     ivid=iv3d_t
 
@@ -427,7 +415,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4) )
-        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+        v3d(:,:,:,ivid) = buf4 !REAL(buf4,r_size)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8) )
@@ -448,7 +436,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   endif
  
   !!! s
-  if (DO_salt) then 
+  if (diag_DO_salt) then 
     varname=diag_salt_name
     ivid=iv3d_s
 
@@ -458,7 +446,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4) )
-        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+        v3d(:,:,:,ivid) = buf4 !REAL(buf4,r_size)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8) )
@@ -478,7 +466,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   endif
 
   !!! u
-  if (DO_u) then
+  if (diag_DO_u) then
     varname=diag_u_name
     ivid=iv3d_u
 
@@ -488,7 +476,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4) )
-        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+        v3d(:,:,:,ivid) = buf4 !REAL(buf4,r_size)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8) )
@@ -508,7 +496,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   endif
 
   !!! v
-  if (DO_v) then
+  if (diag_DO_v) then
     varname=diag_v_name
     ivid=iv3d_v
 
@@ -518,7 +506,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       case(1)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4) )
-        v3d(:,:,:,ivid) = REAL(buf4,r_size)
+        v3d(:,:,:,ivid) = buf4 !REAL(buf4,r_size)
       case(2)
         buf8=0.0d0
         call check( NF90_GET_VAR(ncid,varid,buf8) )
@@ -542,7 +530,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !!! ssh
-  if (DO_ssh) then
+  if (diag_DO_ssh) then
     varname=diag_ssh_name
     ivid=iv2d_ssh
 
@@ -553,9 +541,10 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
         buf4=0.0
         call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
         if (DO_SLA) then
-          v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+!         v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size) - SSHclm_m(:,:)
+          v2d(:,:,ivid) = buf4(:,:,1) - SSHclm_m(:,:)
         else
-          v2d(:,:,ivid) = REAL(buf4(:,:,1),r_size)
+          v2d(:,:,ivid) = buf4(:,:,1) !REAL(buf4(:,:,1),r_size)
         endif
       case(2)
         buf8=0.0d0
@@ -584,6 +573,10 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !       It is assumed that the o-f data have already been computed by the obsop_xxx.f90 program prior
   !       to running letkf.f90, so the diagnostic files should not have to be touched during letkf runtime.
   USE netcdf
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nv3d, nv2d
+  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_ssh
+  USE params_model, ONLY: iv3d_h, iv2d_eta
   USE params_letkf, ONLY: DO_UPDATE_H
   USE vars_model,   ONLY: SSHclm_m
   USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
@@ -591,7 +584,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
   USE params_model, ONLY: rsrt_u_name, rsrt_v_name
   USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
-  IMPLICIT NONE
+  
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
@@ -852,42 +845,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   WHERE (ABS(v3d) .ge. vmax) v3d = 0.0
   WHERE (ABS(v2d) .ge. vmax) v2d = 0.0
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! !STEVE: debug test
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (.false.) then
-    testfile = "test_read4.grd"
-!   CALL write_grd4(trim(testfile),v3d,v2d)
-
-    iunit=55
-    INQUIRE(IOLENGTH=iolen) iolen
-    OPEN(iunit,FILE=testfile,FORM='unformatted',ACCESS='direct',RECL=nij0*iolen)
-
-    WRITE(6,*) "Writing to", testfile
-    irec=1
-    do n=1,nv3d
-      do k=1,nlev
-        WRITE(6,*) "n, k, irec = ", n, k, irec
-        WRITE(6,*) "max v3d(n) = ", MAXVAL(v3d(:,:,k,n))
-        WRITE(iunit,REC=irec) v3d(:,:,k,n)
-        irec = irec + 1
-      enddo
-    enddo
-
-    do n=1,nv2d
-      WRITE(iunit,REC=irec) v2d(:,:,n)
-      irec = irec + 1
-    enddo
-    CLOSE(iunit)
-
-    WRITE(6,*) "Initially read from file: ", infile
-    WRITE(6,*) "STOP 10"
-    STOP(10)
-  endif
-! !STEVE: debug end
-
-! DEALLOCATE(v3d,v2d) !INTENT OUT, so no DEALLOCATE
-!
 END SUBROUTINE read_restart
 
 
@@ -896,6 +853,10 @@ END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
 SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   USE netcdf
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nv3d, nv2d
+  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_ssh
+  USE params_model, ONLY: iv3d_h, iv2d_eta
   USE params_letkf, ONLY: DO_UPDATE_H, DO_SLA
   USE vars_model,   ONLY: SSHclm_m
   USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
@@ -903,8 +864,12 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
   USE params_model, ONLY: rsrt_u_name, rsrt_v_name
   USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
-  IMPLICIT NONE
-!  INCLUDE 'netcdf.inc'
+  USE params_model, ONLY: do_physlimit
+  USE params_model, ONLY: min_t, max_t, min_s, max_s
+  USE params_model, ONLY: min_u, max_u, min_v, max_v
+  USE params_model, ONLY: min_eta, max_eta
+  USE params_model, ONLY: min_h, max_h
+  
   CHARACTER(*),INTENT(IN) :: outfile
   REAL(r_sngl),INTENT(IN) :: v3d_in(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2d_in(nlon,nlat,nv2d)
@@ -914,7 +879,6 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   CHARACTER(slen) :: tsfile,uvfile, sffile,drfile, bfile ! (TS) (UV) (SFC) (DRIFTERS) (ALTIMETRY)
   INTEGER :: ncid,varid
   INTEGER :: m,k,j,i !STEVE: for debugging
-  LOGICAL, PARAMETER :: do_physlimit=.true.
   REAL(r_size), DIMENSION(:), ALLOCATABLE :: mlon, mlat
   REAL(r_size), DIMENSION(:,:,:), ALLOCATABLE :: data4D
   CHARACTER(slen) :: sfc_outfile, sfc_infile
@@ -1080,7 +1044,11 @@ END SUBROUTINE write_restart
 ! Read a grid file with single precision
 !-----------------------------------------------------------------------
 SUBROUTINE read_grd(filename,v3d,v2d)
-  IMPLICIT NONE
+
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nv3d, nv2d
+  USE params_model, ONLY: nij0
+  
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(OUT) :: v2d(nlon,nlat,nv2d)
@@ -1117,7 +1085,11 @@ END SUBROUTINE read_grd
 ! Write a grid file in single precision
 !-----------------------------------------------------------------------
 SUBROUTINE write_grd(filename,v3d,v2d)
-  IMPLICIT NONE
+  
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nv3d, nv2d
+  USE params_model, ONLY: nij0
+
   CHARACTER(*),INTENT(IN) :: filename
   REAL(r_sngl),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),INTENT(IN) :: v2d(nlon,nlat,nv2d)
@@ -1152,10 +1124,14 @@ END SUBROUTINE write_grd
 
 
 !-----------------------------------------------------------------------
-! Monitor
+! Monitor  (ISSUE) Depricated. Subroutine slated for removal.
 !-----------------------------------------------------------------------
 SUBROUTINE monit_grd(v3d,v2d)
-  IMPLICIT NONE
+ 
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nv3d, nv2d
+  USE params_model, ONLY: element
+
   REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
   INTEGER :: k,n
@@ -1179,7 +1155,10 @@ END SUBROUTINE monit_grd
 ! Ensemble manipulations
 !-----------------------------------------------------------------------
 SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
-  IMPLICIT NONE
+  
+  USE params_model, ONLY: nlev
+  USE params_model, ONLY: nv3d, nv2d
+
   INTEGER,INTENT(IN) :: member
   INTEGER,INTENT(IN) :: nij
   REAL(r_size),INTENT(IN) :: v3d(nij,nlev,member,nv3d)
@@ -1218,7 +1197,7 @@ END SUBROUTINE ensmean_grd
 !-----------------------------------------------------------------------
 subroutine check(status)
   USE netcdf
-  IMPLICIT NONE
+  
   integer, intent (in) :: status
   if(status /= nf90_noerr) then 
     print *, trim(nf90_strerror(status))

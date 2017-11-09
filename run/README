@@ -34,3 +34,9 @@ Update the submit_job file with the correct directory and file names
 Update the xml script with the local drectories  
 Run ./submit_job  
 update the crontab with the calling line from submit_job, and the desired time interval: "crontab -e"  
+
+# The directory SETUP_TEST:
+The directory SETUP_TEST was used to test a configuration at ECMWF
+This essentially sets up a working directory to run 1 analysis with LETKF,
+without cycling, assuming the forecasts and observation data are already available.
+View README files contained inside for guidance.

@@ -726,7 +726,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
     endif
 
   else
-    WRITE(6,*) "read_restart :: Skipping SFC eta from: ", bfile
+    WRITE(6,*) "read_restart :: Skipping reading eta/ssh. Enabled only when using DO_ALTIMETRY=.true."
   endif altimetry
 
   call check( NF90_CLOSE(ncid) )
