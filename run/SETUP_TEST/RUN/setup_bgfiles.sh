@@ -1,4 +1,5 @@
 #!/bin/bash
+set -ex
 date=/bin/date
 
 # Set up the forecast files as background, and add template analysis files

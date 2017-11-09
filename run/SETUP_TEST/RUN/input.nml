@@ -1,10 +1,6 @@
-!nlon=720,
-!nlat=410,
-!nlev=40,
-
 &params_model_nml
  gridfile  = 'mesh_mask.nc', 
- SSHclm_file = '',
+ do_physlimit = .false.
 /
 
 &params_obs_nml
@@ -19,6 +15,7 @@
  sigma_obs = 720.0d3,
  sigma_obs0 = 200.0d3,
  gross_error = 3.0d0
+ DO_WRITE_ENS_MEAN_SPRD=.false.,
  DO_DRIFTERS = F,
  DO_ALTIMETRY = F,
  DO_SLA = F,
