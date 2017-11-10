@@ -35,7 +35,7 @@ MODULE common_obs_oceanmodel
   REAL(r_size), SAVE, ALLOCATABLE :: dist(:) !STEVE: distance from the center grid point
   INTEGER, SAVE :: nn                        !STEVE: total number of local observations found by kd_search_radius
 
-  ! For debugging kdtree:
+  ! For setting up kdtree:
   REAL(r_size), ALLOCATABLE, DIMENSION(:) :: lon2ij, lat2ij
 
 CONTAINS
@@ -111,9 +111,15 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   !-----------------------------------------------------------------------------
   !STEVE: NOTE: this is replicated for each process
   if (initialized == 0) then
+    ! Allocating this was needed for some machines, possibly due to the cache size
+    ! of the machine and how the compiler handles nested function calls in memory.
+    ALLOCATE(lon2ij(nlon*nlat),lat2ij(nlon*nlat))
+    lon2ij = RESHAPE(lon2d(:,:),(/nlon*nlat/))
+    lat2ij = RESHAPE(lat2d(:,:),(/nlon*nlat/))
+
     WRITE(6,*) "Initializing the obs_local()"
     initialized = 1
-    call kd_init( kdtree_root, RESHAPE(lon2d(:,:),(/nlon*nlat/)), RESHAPE(lat2d(:,:),(/nlon*nlat/)) )
+    call kd_init( kdtree_root, lon2ij, lat2ij)
     WRITE(6,*) "Done constructing KD search tree."
     WRITE(6,*) "nlon*nlat = ", nlon*nlat
     ALLOCATE(dist(k_sought))
@@ -121,12 +127,6 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
     prev_lon = -1e10
     prev_lat = -1e10
 
-    ! To debug kdtree:
-    if (dodebug) then
-      ALLOCATE(lon2ij(nlon*nlat),lat2ij(nlon*nlat))
-      lon2ij = RESHAPE(lon2d(:,:),(/nlon*nlat/))
-      lat2ij = RESHAPE(lat2d(:,:),(/nlon*nlat/))
-    endif
   endif
 
   !-----------------------------------------------------------------------------
@@ -165,8 +165,8 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
   ! For debugging:
   if (dodebug) then
-    xlon = lon2ij(idx(1))
-    xlat = lat2ij(idx(1))
+    if (ALLOCATED(lon2ij) xlon = lon2ij(idx(1))
+    if (ALLOCATED(lat2ij) xlat = lat2ij(idx(1))
   endif
 
   !STEVE: initialize to something that will throw errors if it's not changed within

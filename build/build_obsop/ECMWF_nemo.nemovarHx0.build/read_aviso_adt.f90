@@ -211,6 +211,7 @@ print *, "ylat(1:10) = ", ylat(1:10)
 ! Read the time as 'day'
 !-------------------------------------------------------------------------------
 ALLOCATE(day(cnt))
+ALLOCATE(hour(cnt))
 istat = NF90_INQ_VARID(ncid,'time',varid)   
 if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID time failed"
@@ -221,6 +222,7 @@ if (istat /= NF90_NOERR) then
   print *, "NF90_GET_VAR day failed"
   STOP
 endif
+hour = (day - FLOOR(day))*24.0d0
 
 !-------------------------------------------------------------------------------
 ! Read the cycle
@@ -312,7 +314,7 @@ do i=1,nobs
     obs_data(n)%typ = id_eta_obs
     obs_data(n)%x_grd(1) = xlon(i)
     obs_data(n)%x_grd(2) = ylat(i)
-    obs_data(n)%hour = (day(i) - FLOOR(day(i)))*24.0d0
+    obs_data(n)%hour = hour(i)
     obs_data(n)%value = val
     obs_data(n)%oerr = err
     obs_data(n)%cycle = acycle(i)

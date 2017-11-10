@@ -7,23 +7,21 @@ IMPLICIT NONE
 
 PUBLIC
 
-  ! Now definable via namelist at runtime:
+
+
+
+
+
+
 
   ! NEMO 1/4-degree, ECMWF ORAS5
-
-
-
-
-
-
-  ! GFDL MOM6:
-# 19
+# 17
   INTEGER,PARAMETER :: nlon=1442
   INTEGER,PARAMETER :: nlat=1021
   INTEGER,PARAMETER :: nlev=75
 
 
-# 24
+# 22
   INTEGER,PARAMETER :: ilev_sfc=1
 !
   INTEGER,PARAMETER :: nv3d=4 ! u,v,t,s              !(OCEAN)
@@ -94,14 +92,13 @@ PUBLIC
   CHARACTER(2) :: grid_salt_name = 'sn'
   CHARACTER(2) :: grid_u_name = 'un'
   CHARACTER(2) :: grid_v_name = 'vn'
-  CHARACTER(1) :: grid_h_name = ''               ! (NEMO) n/a
+  CHARACTER(13):: grid_h_name = 'not specified'  ! (NEMO) n/a
 
   CHARACTER(7) :: grid_lon2d_name = 'nav_lon'
   CHARACTER(7) :: grid_lat2d_name = 'nav_lat'
 
   CHARACTER(5) :: grid_lsmask_name    = 'tmask'     ! land/sea mask (assuming >0 is ocean)
   CHARACTER(6) :: grid_depth_name  = 'mbathy'    ! (in mesh_mask file) !'Bathymetry'  ! In bathymetry file
-! CHARACTER(5) :: grid_height_name = 'hdept'     ! (NEMO) n/a
 
   CHARACTER(3) :: grid_dx_name = 'e1t'
   CHARACTER(3) :: grid_dy_name = 'e2t'
@@ -123,6 +120,14 @@ PUBLIC
   CHARACTER(1) :: diag_h_name = 'h'
   CHARACTER(4) :: diag_ssh_name = 'sshn'
   CHARACTER(10):: diag_height_name = 'col_height'
+
+  !STEVE: flags to specify whether to read in each variable
+  !       only the observed variables are needed from the diag file
+  LOGICAL :: diag_DO_temp = .true.
+  LOGICAL :: diag_DO_salt = .true.
+  LOGICAL :: diag_DO_u    = .false.
+  LOGICAL :: diag_DO_v    = .false.
+  LOGICAL :: diag_DO_ssh  = .true.
 
   ! Restart filenames
   CHARACTER(slen) :: rsrt_tsbase = 'restart.nc' !'MOM.res.nc'   !(and u, and h)
@@ -147,7 +152,7 @@ PUBLIC
   INTEGER :: nlat2d ! = 2*nlat  !STEVE: set below in initialize_params_model
 
   ! Bounds checking (for output by common_nemo.f90::write_restart)
-  LOGICAL :: do_physlimit=.true.
+  LOGICAL :: do_physlimit = .true.
   REAL(r_size) :: max_t = 40.0d0 ! ºC
   REAL(r_size) :: min_t = -4.0d0 ! ºC
   REAL(r_size) :: max_s = 50.0d0 ! psu
@@ -156,8 +161,8 @@ PUBLIC
   REAL(r_size) :: min_u =-99.0d0 ! m/s
   REAL(r_size) :: max_v = 99.0d0 ! m/s
   REAL(r_size) :: min_v =-99.0d0 ! m/s
-  REAL(r_size) :: max_h = 90.0d3 ! =90000 m
-  REAL(r_size) :: min_h =  0.0d0 ! m
+! REAL(r_size) :: max_h = 90.0d3 ! =90000 m
+! REAL(r_size) :: min_h =  0.0d0 ! m
   REAL(r_size) :: max_eta = 99.0d0 ! m
   REAL(r_size) :: min_eta =-99.0d0 ! m
 
