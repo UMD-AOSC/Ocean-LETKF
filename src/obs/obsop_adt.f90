@@ -43,6 +43,7 @@ PROGRAM obsop_adt
   USE common_obs_oceanmodel
   USE params_letkf,              ONLY: DO_ALTIMETRY, DO_ADT
   USE read_aviso_adt,            ONLY: read_aviso_adt_nc, obs_data
+  USE input_nml_oceanmodel,       ONLY: read_input_namelist
 
   IMPLICIT NONE
 
@@ -498,18 +499,18 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
   PRINT *, "Argument ", i, " = ",TRIM(arg1)
 
   select case (arg1)
-    case('-nlon')
-      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-      read (arg2,*) nlon
-    case('-nlat')
-      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-      read (arg2,*) nlat
-    case('-nlev')
-      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-      read (arg2,*) nlev
+!   case('-nlon')
+!     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+!     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+!     read (arg2,*) nlon
+!   case('-nlat')
+!     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+!     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+!     read (arg2,*) nlat
+!   case('-nlev')
+!     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+!     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+!     read (arg2,*) nlev
     case('-obsin')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)

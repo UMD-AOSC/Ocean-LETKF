@@ -30,7 +30,7 @@ MODULE common_obs_oceanmodel
   REAL(r_size), SAVE, ALLOCATABLE :: dist(:)     !STEVE: distance from the center grid point
   INTEGER, SAVE :: nn                            !STEVE: total number of local observations found by kd_search_radius
 
-  ! For debugging kdtree:
+  ! For setting up kdtree:
   REAL(r_size), ALLOCATABLE, DIMENSION(:) :: lon2ij, lat2ij
 
 CONTAINS
@@ -86,17 +86,16 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   USE params_model, ONLY: nlon, nlat, nlev
   USE vars_model,   ONLY: lon2d, lat2d, lev2d, lon, lat, lev
   USE vars_model,   ONLY: lon0, lonf, lat0, latf, wrapgap
-  REAL(r_size),INTENT(IN) :: elem
-  REAL(r_size),INTENT(IN) :: rlon
-  REAL(r_size),INTENT(IN) :: rlat
-  REAL(r_size),INTENT(IN) :: rlev ! pressure levels
-  REAL(r_size),INTENT(OUT) :: ri
-  REAL(r_size),INTENT(OUT) :: rj
-  REAL(r_size),INTENT(OUT) :: rk
+  REAL(r_size),INTENT(IN) :: elem ! observation element id (integer code for specific obs type)
+  REAL(r_size),INTENT(IN) :: rlon ! observation longitude
+  REAL(r_size),INTENT(IN) :: rlat ! observation latitude
+  REAL(r_size),INTENT(IN) :: rlev ! observation depth 
+  REAL(r_size),INTENT(OUT) :: ri  ! non-integer grid coordinate for lon dimension
+  REAL(r_size),INTENT(OUT) :: rj  ! non-integer grid coordinate for lat dimension
+  REAL(r_size),INTENT(OUT) :: rk  ! non-integer grid coordinate for lev dimension
   REAL(r_size) :: aj,ak,ai, rrlon, glon,glat,xlon,xlat
-! REAL(r_size) :: lnps(nlon,nlat)
-  REAL(r_size) :: plev(nlev)
   INTEGER :: i,j,k,n, ni,nj, ii,jj
+
   LOGICAL, PARAMETER :: dodebug = .false.
 
   !-----------------------------------------------------------------------------
@@ -104,22 +103,21 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   !-----------------------------------------------------------------------------
   !STEVE: NOTE: this is replicated for each process
   if (initialized == 0) then
+    ! Allocating this was needed for some machines, possibly due to the cache size
+    ! of the machine and how the compiler handles nested function calls in memory.
+    ALLOCATE(lon2ij(nlon*nlat),lat2ij(nlon*nlat))
+    lon2ij = RESHAPE(lon2d(:,:),(/nlon*nlat/))
+    lat2ij = RESHAPE(lat2d(:,:),(/nlon*nlat/))
+
     WRITE(6,*) "Initializing the obs_local()"
     initialized = 1
-    call kd_init( kdtree_root, RESHAPE(lon2d(:,:),(/nlon*nlat/)), RESHAPE(lat2d(:,:),(/nlon*nlat/)) )
+    call kd_init( kdtree_root, lon2ij, lat2ij )
     WRITE(6,*) "Done constructing KD search tree."
     WRITE(6,*) "nlon*nlat = ", nlon*nlat
     ALLOCATE(dist(k_sought))
     ALLOCATE( idx(k_sought))
     prev_lon = -1e10
     prev_lat = -1e10
-
-    ! To debug kdtree:
-    if (dodebug) then
-      ALLOCATE(lon2ij(nlon*nlat),lat2ij(nlon*nlat))
-      lon2ij = RESHAPE(lon2d(:,:),(/nlon*nlat/))
-      lat2ij = RESHAPE(lat2d(:,:),(/nlon*nlat/))
-    endif
   endif
 
   !-----------------------------------------------------------------------------
