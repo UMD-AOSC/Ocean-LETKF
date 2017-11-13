@@ -156,8 +156,8 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
 
   ! For debugging:
   if (dodebug) then
-    xlon = lon2ij(idx(1))
-    xlat = lat2ij(idx(1))
+    if (ALLOCATED(lon2ij)) xlon = lon2ij(idx(1))
+    if (ALLOCATED(lat2ij)) xlat = lat2ij(idx(1))
   endif
 
   !STEVE: initialize to something that will throw errors if it's not changed within

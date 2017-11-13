@@ -171,6 +171,7 @@ PROGRAM letkf
   !-----------------------------------------------------------------------------
   ! Check timer for reading forecast ensemble
   !-----------------------------------------------------------------------------
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)  !STEVE: to make sure timers are aligned (mostly for debugging)
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_ENS_MPI):',rtimer,rtimer-rtimer00
   if (dortout) then !STEVE: force output to file
@@ -211,6 +212,7 @@ PROGRAM letkf
   !-----------------------------------------------------------------------------
   ! Check timer for computing letkf analysis
   !-----------------------------------------------------------------------------
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)  !STEVE: to make sure timers are aligned (mostly for debugging)
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
   if (dortout) then !STEVE: force output to file
@@ -232,6 +234,7 @@ PROGRAM letkf
   !-----------------------------------------------------------------------------
   ! Check timer for writing analysis ensemble members
   !-----------------------------------------------------------------------------
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)  !STEVE: to make sure timers are aligned (mostly for debugging)
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ENS_MPI):',rtimer,rtimer-rtimer00
   if (dortout) then !STEVE: force output to file
@@ -269,6 +272,7 @@ PROGRAM letkf
   !-----------------------------------------------------------------------------
   ! Check timer for total runtime
   !-----------------------------------------------------------------------------
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)  !STEVE: to make sure timers are aligned (mostly for debugging)
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(FINAL):',rtimer,rtimer-rtimer00
   if (dortout) then !STEVE: force output to file

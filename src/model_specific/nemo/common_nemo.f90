@@ -1,7 +1,7 @@
 MODULE common_oceanmodel
 !=======================================================================
 !
-! [PURPOSE:] Common Information for MOM6
+! [PURPOSE:] Common Information for NEMO
 !
 ! [HISTORY:]
 !   10/15/2004 Takemasa Miyoshi  created
@@ -556,6 +556,26 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   CHARACTER(slen) :: varname
   INTEGER :: ivid
 
+
+  !STEVE: (ISSUE) add logic for reading in subpanels and updating the model grid definition
+  !               e.g. perhaps read in above in the init routine a separte file to specify
+  !               the subpanel specifications.
+  !
+  ! Read these in and correct based on halo, etc.
+  !
+  ! // global attributes:
+  !             :DOMAIN_number_total = 78 ;
+  !             :DOMAIN_number = 0 ;                    ! Use to track filename
+  !             :DOMAIN_dimensions_ids = 1, 2 ;
+  !             :DOMAIN_size_global = 1442, 1021 ;      
+  !             :DOMAIN_size_local = 38, 511 ;          ! Use to define new grid domain
+  !             :DOMAIN_position_first = 1, 1 ;         ! Use to identify the proper lon2d/lat2d values
+  !             :DOMAIN_position_last = 38, 511 ;       ! ""
+  !             :DOMAIN_halo_size_start = 0, 0 ;
+  !             :DOMAIN_halo_size_end = 0, 0 ;
+  !             :DOMAIN_type = "BOX" ;
+
+
   ! Input restart filename:
   tsfile = trim(infile)//'.'//trim(rsrt_tsbase)
 
@@ -732,7 +752,7 @@ END SUBROUTINE read_restart
 
 
 !-----------------------------------------------------------------------
-! Write a set of MOM6 restart files to initialize the next model run
+! Write a set of NEMO restart files to initialize the next model run
 !-----------------------------------------------------------------------
 SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   USE netcdf
