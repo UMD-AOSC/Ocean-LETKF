@@ -79,6 +79,9 @@ PUBLIC
   CHARACTER(14) :: gridfile3 = 'ocean_hgrid.nc'
 
   ! variable names in gridfile:
+  CHARACTER(8) :: grid_nlon_name = 'grid_x_T'      ! (MOM6) used for dynamic allocation of grid
+  CHARACTER(8) :: grid_nlat_name = 'grid_x_T'      ! (MOM6) 
+  CHARACTER(2) :: grid_nlev_name = 'zt'            ! (MOM6) 
   CHARACTER(4) :: grid_lon_name = 'lonh'
   CHARACTER(4) :: grid_lat_name = 'lath'
   CHARACTER(5) :: grid_lev_name = 'Layer'

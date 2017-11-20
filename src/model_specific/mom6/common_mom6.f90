@@ -50,28 +50,10 @@ SUBROUTINE set_common_oceanmodel
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
   CALL initialize_params_model ! (checks to make sure it is initialized)
-  CALL initialize_vars_model   ! (checks to make sure it is initialized)
 
   !-----------------------------------------------------------------------------
-  ! Read the SSH model climatology if assimilating SLA's
+  ! Open grid_spec.nc grid specification file for MOM6
   !-----------------------------------------------------------------------------
-  if (DO_ALTIMETRY .and. DO_SLA) then
-    INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
-    if (ex) then
-      ! Read in the model climatology
-      CALL read_etaclm
-    else
-      WRITE(6,*) "The file does not exist: ", SSHclm_file
-      WRITE(6,*) "Exiting common_mom6.f90..."
-      STOP(1)
-    endif
-  endif
-
-  !-----------------------------------------------------------------------------
-  ! Lon, Lat, f, orography
-  !-----------------------------------------------------------------------------
-!STEVE: this part adapted from ROMS, update for MOM4 (and later MOM6) netcdf files:
-!STEVE: GOAL: to utilize all netcdf grid data to completely define the grid and all grid-dependent operations
   INQUIRE(FILE=trim(gridfile),EXIST=ex)
   IF(.not. ex) THEN
     WRITE(6,*) "The file does not exist: ", gridfile 
@@ -81,6 +63,35 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,'(A)') '  >> accessing file: ', gridfile
   call check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
 
+  !-----------------------------------------------------------------------------
+  ! Read grid dimensions
+  !-----------------------------------------------------------------------------
+#ifdef DYNAMIC
+  WRITE(6,*) "Reading x dimension (lon)..."
+  call check( NF90_INQ_DIMID(ncid,grid_nlon_name,dimid) )   ! Longitude for T-cell
+  call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlon) )
+  WRITE(6,*) "nlon = ", nlon
+
+  WRITE(6,*) "Reading y dimension (lat)..."
+  call check( NF90_INQ_DIMID(ncid,grid_nlat_name,dimid) )   ! Latitude for T-cell
+  call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlat) )
+  WRITE(6,*) "nlat = ", nlat
+
+  WRITE(6,*) "Reading z dimension (lev)..."
+  call check( NF90_INQ_DIMID(ncid,grid_nlev_name,dimid) )   ! Level for T-cell
+  call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlev) )
+  WRITE(6,*) "nlev = ", nlev
+#endif
+
+  !-----------------------------------------------------------------------------
+  ! Initialize the model variables (and allocate arrays if using #ifdef DYNAMIC)
+  !-----------------------------------------------------------------------------
+  WRITE(6,*) "Initializing variables and allocating arrays..."
+  CALL initialize_vars_model   ! (checks to make sure it is initialized)
+
+  !-----------------------------------------------------------------------------
+  ! Get grid variables
+  !-----------------------------------------------------------------------------
   call check( NF90_INQ_VARID(ncid,grid_lon_name,varid) )   ! Longitude for T-cell
   call check( NF90_GET_VAR(ncid,varid,lon) )
   WRITE(6,*) "lon(1) = ", lon(1)
@@ -213,6 +224,21 @@ SUBROUTINE set_common_oceanmodel
   ! Set model variables that depend on initialization and further processing.
   ! (e.g. lon0, lat0, lonf, latf, wrapgap, ...)
   CALL set_vars_model
+
+  !-----------------------------------------------------------------------------
+  ! Read the SSH model climatology if assimilating SLA's
+  !-----------------------------------------------------------------------------
+  if (DO_ALTIMETRY .and. DO_SLA) then
+    INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
+    if (ex) then
+      ! Read in the model climatology
+      CALL read_etaclm
+    else
+      WRITE(6,*) "The file does not exist: ", SSHclm_file
+      WRITE(6,*) "Exiting common_mom6.f90..."
+      STOP(1)
+    endif
+  endif
 
 END SUBROUTINE set_common_oceanmodel
 
