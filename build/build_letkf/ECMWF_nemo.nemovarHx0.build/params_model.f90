@@ -9,8 +9,10 @@ PUBLIC
 #ifdef DYNAMIC
   ! Now definable via namelist at runtime:
   ! NEMO 1/4-degree, ECMWF ORAS5
-  INTEGER :: nlon=1442
-  INTEGER :: nlat=1021
+! INTEGER :: nlon=1442
+! INTEGER :: nlat=1021
+  INTEGER :: nlon=52
+  INTEGER :: nlat=81
   INTEGER :: nlev=75
 #else
   ! NEMO 1/4-degree, ECMWF ORAS5
@@ -118,6 +120,14 @@ PUBLIC
   CHARACTER(4) :: diag_ssh_name = 'sshn'
   CHARACTER(10):: diag_height_name = 'col_height'
 
+  !STEVE: flags to specify whether to read in each variable
+  !       only the observed variables are needed from the diag file
+  LOGICAL :: diag_DO_temp = .true.
+  LOGICAL :: diag_DO_salt = .true.
+  LOGICAL :: diag_DO_u    = .false.
+  LOGICAL :: diag_DO_v    = .false.
+  LOGICAL :: diag_DO_ssh  = .true.
+
   ! Restart filenames
   CHARACTER(slen) :: rsrt_tsbase = 'restart.nc' !'MOM.res.nc'   !(and u, and h)
   CHARACTER(slen) :: rsrt_uvbase = 'restart.nc' !(v and ave_ssh/sfc)
@@ -132,6 +142,9 @@ PUBLIC
   CHARACTER(2) :: rsrt_v_name = 'vn'
   CHARACTER(4) :: rsrt_ssh_name = 'sshn'
   CHARACTER(1) :: rsrt_h_name = 'h'              ! (NEMO) n/a
+
+  ! Flag to identify whether this is reading a subgrid
+! LOGICAL :: DO_SUBGRID = .false.
 
   !STEVE: unused:
   CHARACTER(slen) :: drbase   ! (DRIFTERS)   !(NEMO) n/a

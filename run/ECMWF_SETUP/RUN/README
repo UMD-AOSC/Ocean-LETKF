@@ -1,0 +1,12 @@
+# Set up the global parameters that will populate all RUN/*.sh scripts:
+vim params.sh
+# Set up the background files in the working directory:
+sh setup_bgfiles.sh
+# Preprocess the NEMOVAR observation feedback files:
+sh preprocess_obs.sh
+# Compute the observation operator to change NEMOVAR netcdf to LETKF binary input format
+sh setup_obsop.sh
+# Run the main letkf analysis
+qsub run.sh
+# Compute ensemble mean and standard deviation post-analysis:
+sh postprocess_ens.sh

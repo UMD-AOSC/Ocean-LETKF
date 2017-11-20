@@ -1,0 +1,30 @@
+# Static data directory
+Put the global mesh_mask.nc file here.
+
+A simplified mesh_mask.nc file can be stored instead, for example using nco:
+ncks -a -v nav_lon,nav_lat,nav_lev,tmask,mbathy,e1t,e2t,e3t_0 mesh_mask.nc mesh_mask_short.nc
+
+These are the only fields needed:
+
+netcdf mesh_mask {
+dimensions:
+        y = 1021 ;
+        x = 1442 ;
+        z = 75 ;
+        t = UNLIMITED ; // (1 currently)
+variables:
+        float nav_lon(y, x) ;
+        float nav_lat(y, x) ;
+        float nav_lev(z) ;
+        byte tmask(t, z, y, x) ;
+        double e1t(t, y, x) ;
+        double e2t(t, y, x) ;
+        short mbathy(t, y, x) ;
+        double e3t_0(t, z) ;
+
+// global attributes:
+                :history = "Mon Oct 30 14:14:35 2017: ncks -a -v nav_lon,nav_lat,nav_lev,tmask,mbathy,e1t,e2t,e3t_0 mesh_mask.nc mesh_mask_short.nc" ;
+                :NCO = "4.3.7" ;
+}
+
+

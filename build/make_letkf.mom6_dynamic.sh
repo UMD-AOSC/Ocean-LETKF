@@ -16,10 +16,7 @@ model=mom6 #mom4, mom6, hycom, roms
 
 # Experiment name
 #name=${MACHINE}_${model}
-#name=${MACHINE}_${model}.kdtree_test
 name=${MACHINE}_${model}.dynamic
-#name=test_$model
-#name=TESTc3
 
 # Executable for letkf
 PGM=letkf.$name.x
@@ -43,7 +40,7 @@ sh $CDIR/lnkcommon.sh $model $CDIR/..
 cat netlib.f > netlib2.f
 if test $BLAS -eq 1
 then
-  LBLAS="-L${CRAY_LIBSCI_PREFIX_DIR}/lib -lsci_intel -lsci_intel_mp"
+  LBLAS="-L${BLAS_DIR}/lib $BLAS_LIBS"
 else
   cat netlibblas.f >> netlib2.f
   LBLAS=""

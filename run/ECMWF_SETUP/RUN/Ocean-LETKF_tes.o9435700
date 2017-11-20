@@ -1,0 +1,144 @@
+[profile.ecmwf-INIT] session is -bash on ccamom09 at Tue 20171114_163410 = 1510677250
+
+[profile.ecmwf-INFO] HOME=/home/rd/dasp=/home/rd/dasp
+
+[profile.ecmwf-INFO] PERM=/perm/rd/dasp=/perm/rd/dasp
+
+[profile.ecmwf-INFO] SCRATCH=TEMP=/scratch/rd/dasp=/lus/snx11062/scratch/rd/dasp
+
+[profile.ecmwf-INFO] USUAL_SCRATCH=USUAL_TEMP=/scratch/rd/dasp
+
+[profile.ecmwf-INFO] EPHEMERAL_SCRATCH=EPHEMERAL_TEMP=/lus/snx11064/scratch/rd/dasp (DATA WILL BE REMOVED Dec 15 09:00Z!)
+
+[profile.ecmwf-INFO] SCRATCHDIR=TMPDIR=/lus/snx11064/TMP/JTMP/50/dasp.9435700.ccapar.20171113T141836
+
+## INFO -------------------------------------------------------------------------------------
+## INFO  This is the ECMWF jobfilter (v3.00)
+## INFO  +++ Please report issues to calldesk, cdk@ecmwf.int +++
+## INFO  configuration info:
+## INFO  /usr/local/apps/pbs_tools/bin/ecqsub: size: 97008, mtime: Mon Oct 30 22:27:55 2017
+## INFO  /usr/local/apps/pbs_tools/config/ecqsub.conf (/usr/local/apps/pbs_tools/config/ecqsub.conf): size: 6309, mtime: Mon Sep 18 09:30:40 2017
+## INFO  /usr/local/apps/pbs_tools/config/multicomplex.conf (/usr/local/apps/pbs_tools/config/multicomplex.conf): size: 3916, mtime: Mon Oct  3 06:57:13 2016
+## INFO  /usr/local/apps/pbs_tools/config/ecqsub_rules.conf (/usr/local/apps/pbs_tools/config/ecqsub_rules.conf): size: 17941, mtime: Tue Oct 24 16:32:01 2017
+## INFO  /usr/local/apps/pbs_tools/config/system_sessions.conf (/usr/local/apps/pbs_tools/config/system_sessions.conf): size: 1487, mtime: Fri Nov 10 15:01:54 2017
+## INFO  system logfile is: /usr/local/apps/pbs_tools/logs/ecqsub.log.20171113
+## INFO -------------------------------------------------------------------------------------
+## INFO  
+## INFO Time at submit: Mon Nov 13 14:18:36 2017 (1510582716.95) on cca-login3:/perm/rd/dasp/DATA/RUN
+## INFO invoked as: '/opt/pbs/13.0.403.161593/bin/qsub' 'run.sh'
+## INFO IN: #PBS -N Ocean-LETKF_test
+## INFO IN: #PBS -q np
+## INFO IN: #PBS -l EC_total_tasks=288
+## INFO IN: #PBS -l EC_hyperthreads=2
+## INFO IN: #PBS -l EC_threads_per_task=1
+## INFO IN: #PBS -l EC_nodes=2
+## INFO IN: #PBS -l EC_predicted_walltime=600
+## INFO IN: #PBS -l EC_max_threads_per_node=72
+## INFO IN: #PBS -l EC_tasks_per_node=72
+## INFO IN: #PBS -l EC_job_tmpdir=DEFAULT
+## INFO IN: #PBS -l EC_threads_per_numa_node=36
+## INFO IN: #PBS -l EC_tmpdir_mem=0
+## INFO IN: #PBS -l EC_billing_account=ecrdasdm
+## INFO Billing account = ecrdasdm
+## INFO Billing account ecrdasdm OK
+## INFO NOTE: EC_job_tmpdir is currently not supported for parallel jobs. Setting TMPDIR=SCRATCHDIR in Lustre directory
+## INFO HOLD.APPEND needed_rsrc:snx11062 booked_rsrc:snx11062 endtime:1510601016 session_time:1510560000
+## INFO [qsub:set_job_dirpaths():l1418]: detected file /usr/local/etc/USE_SNX64_FOR_SCRATCHDIR, requesting alternate $SCRATCHDIR base
+## INFO history jobtag identifier = dasp-Ocean-LETKF_test-/home/rd/dasp/perm/DATA/RUN/Ocean-LETKF_test
+## INFO Recommended Max threads per NUMA node = [36]
+## INFO rule 'TEMPLATE' disabled
+## INFO jobfilter-rule did not fire: 'moose_only'
+## INFO jobfilter-rule did not fire: 'oom_0'
+## INFO rule 'accept_benchmarkers_only' disabled
+## INFO jobfilter-rule did not fire: 'allow_hpcsupp'
+## INFO rule 'for_benchmarking_free_and_vp' disabled
+## INFO jobfilter-rule did not fire: 'kronos_free_and_kronos'
+## INFO rule 'dump_job' disabled
+## INFO jobfilter-rule did not fire: 'np_to_vp'
+## INFO jobfilter-rule fired: 'EC_aries_elecgroup_for_np'
+## INFO jobfilter-rule did not fire: 'free_gthh'
+## INFO jobfilter-rule did not fire: 'row2_pset_for_huge_np'
+## INFO jobfilter-rule did not fire: 'mega_np_to_user_hold'
+## INFO jobfilter-rule did not fire: 'op_place__EC_aries_elec'
+## INFO jobfilter-rule did not fire: 'o_suite_hres_to_hp'
+## INFO jobfilter-rule did not fire: 'o_suite_sekf_to_sp'
+## INFO jobfilter-rule did not fire: 'o_suite_prodgen_to_free'
+## INFO jobfilter-rule did not fire: 'o_suite_jb_calc_ifsmin_boost_prio_over_newreqs'
+## INFO jobfilter-rule did not fire: 'o_e_suite_hres_to_hp'
+## INFO jobfilter-rule did not fire: 'o_e_suite_sekf_to_sp'
+## INFO jobfilter-rule did not fire: 'o_e_suite_prodgen_to_free'
+## INFO rule 'e_suite_jb_calc_ifsmin_boost_prio_over_newreqs' disabled
+## INFO jobfilter-rule did not fire: 'n_esuite_to_vp'
+## INFO jobfilter-rule did not fire: '007._esuite_240_to_hyper'
+## INFO rule 'esuite_hres_to_hp' disabled
+## INFO rule 'esuite_sekf_to_sp' disabled
+## INFO rule 'esuite_prodgen_to_free' disabled
+## INFO jobfilter-rule did not fire: 'cleps_lokal_member_to_xp_with_aries'
+## INFO [qsub:main():l2049] rule-induced additional directives: "['-l', 'place=group=EC_aries_elecgroup']"
+## INFO Recommended Max threads per NUMA node = [36]
+## INFO Calculated select = 1:vntype=cray_login:EC_accept_from_queue=np:ncpus=0:mem=300MB+2:vntype=cray_compute:EC_accept_from_queue=np:mem=120GB
+## INFO Enforcing Select
+## INFO Nodes needed: 2
+## INFO Setting directive #PBS -l EC_nodes=2
+## INFO Setting directive #PBS -l EC_max_threads_per_node=72
+## INFO Setting directive #PBS -l EC_resources=snx11064:generic:snx11062+hold_on_submit=snx11062
+## INFO Setting directive #PBS -l EC_job_tmpdir=DEFAULT
+## INFO Setting directive #PBS -l EC_threads_per_numa_node=36
+## INFO Setting directive #PBS -l EC_threads_per_task=1
+## INFO Setting directive #PBS -l EC_predicted_walltime=600
+## INFO Setting directive #PBS -l EC_tasks_per_node=72
+## INFO Setting directive #PBS -l EC_tmpdir_mem=0
+## INFO Setting directive #PBS -l EC_total_tasks=144
+## INFO Setting directive #PBS -l EC_hyperthreads=2
+## INFO Setting directive #PBS -l EC_billing_account=ecrdasdm
+## INFO Setting directive #PBS -l select=1:vntype=cray_login:EC_accept_from_queue=np:ncpus=0:mem=300MB+2:vntype=cray_compute:EC_accept_from_queue=np:mem=120GB
+## INFO Calling qsub with args: ['/opt/pbs/default/bin/qsubf.ALTAIR_ORIG', '-f', '-v', 'EC_ORIG_TMPDIR=/lus/snx11064/TMP/JTMP/50/dasp.REPLACE_WITH_JOBID.20171113T141836,EC_ORIG_SCRATCHDIR=/lus/snx11064/TMP/JTMP/50/dasp.REPLACE_WITH_JOBID.20171113T141836,EC_job_tmpdir=DEFAULT,EC_tmpdir_mem=0', '-l', 'place=group=EC_aries_elecgroup', '-q', 'np@ccapar:15001']
+## INFO OUT: #PBS -l EC_predicted_walltime=0
+## INFO OUT: #PBS -l EC_nodes=2
+## INFO OUT: #PBS -l EC_max_threads_per_node=72
+## INFO OUT: #PBS -l EC_resources=snx11064:generic:snx11062+hold_on_submit=snx11062
+## INFO OUT: #PBS -l EC_job_tmpdir=DEFAULT
+## INFO OUT: #PBS -l EC_threads_per_numa_node=36
+## INFO OUT: #PBS -W umask=027
+## INFO OUT: #PBS -l EC_threads_per_task=1
+## INFO OUT: #PBS -l EC_predicted_walltime=600
+## INFO OUT: #PBS -N Ocean-LETKF_tes
+## INFO OUT: #PBS -l EC_tasks_per_node=72
+## INFO OUT: #PBS -l EC_tmpdir_mem=0
+## INFO OUT: #PBS -l EC_total_tasks=144
+## INFO OUT: #PBS -l EC_hyperthreads=2
+## INFO OUT: #PBS -l EC_billing_account=ecrdasdm
+## INFO OUT: #PBS -l select=1:vntype=cray_login:EC_accept_from_queue=np:ncpus=0:mem=300MB+2:vntype=cray_compute:EC_accept_from_queue=np:mem=120GB
+## INFO OUT: #PBS -q np
+## INFO  
+
+
+[sh.epilog.ecmwf-INFO] resources consumed by this shell:
+
+0m0.052s 0m0.056s
+0m0.464s 0m0.320s
+## INFO ----------------------------------------------------------------------------------
+## INFO  This is the ECMWF job Epilogue. Please report problems to calldesk, cdk@ecmwf.int
+## INFO ----------------------------------------------------------------------------------
+## INFO  
+## INFO Run at Tue Nov 14 16:34:14 2017 on CCA
+## INFO Job Name                  : Ocean-LETKF_tes
+## INFO Job ID                    : 9435700.ccapar
+## INFO Queued                    : Mon Nov 13 14:18:37 2017
+## INFO Dispatched                : Tue Nov 14 16:33:59 2017
+## INFO Completed                 : Tue Nov 14 16:34:14 2017
+## INFO Waiting in the queue      : 94522 seconds
+## INFO Runtime                   : 15 seconds
+## INFO Exit Code                 : 1
+## INFO Account                   : ecrdasdm
+## INFO Queue                     : np
+## INFO Owner                     : dasp
+## INFO STDOUT                    : /home/rd/dasp/perm/DATA/RUN/Ocean-LETKF_tes.o9435700
+## INFO STDERR                    : /home/rd/dasp/perm/DATA/RUN/Ocean-LETKF_tes.e9435700
+## INFO Hyperthreads              : 2
+## INFO SBU                       : 4.838931 units
+## INFO Logical CPUs              : 144
+## INFO  
+## INFO This job had nonzero exit code 1, not comparing its runtime to the historic runtime average
+## INFO  
+## INFO Removing prologue-created EC_ORIG_SCRATCHDIR /lus/snx11064/TMP/JTMP/50/dasp.9435700.ccapar.20171113T141836 on ccamom09 at 20171114T163414

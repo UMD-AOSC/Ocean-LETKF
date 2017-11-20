@@ -1,7 +1,7 @@
 MODULE common_oceanmodel
 !=======================================================================
 !
-! [PURPOSE:] Common Information for MOM6
+! [PURPOSE:] Common Information for NEMO
 !
 ! [HISTORY:]
 !   10/15/2004 Takemasa Miyoshi  created
@@ -533,6 +533,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
   USE params_model, ONLY: rsrt_u_name, rsrt_v_name
   USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
+! USE params_model, ONLY: DO_SUBGRID
   
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -555,7 +556,32 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   CHARACTER(32) :: sfc_infile
   CHARACTER(slen) :: varname
   INTEGER :: ivid
+  INTEGER :: ncstat
+! INTEGER, DIMENSION(1) :: domain_number_total, domain_number
+! INTEGER, DIMENSION(2) :: domain_dimension_ids
+! INTEGER, DIMENSION(2) :: domain_size_global, domain_size_local
+! INTEGER, DIMENSION(2) :: domain_position_first, domain_position_last
+! INTEGER, DIMENSION(2) :: domain_halo_size_start, domain_halo_size_end
+! CHARACTER(slen) :: domain_type
 
+
+  !STEVE: (ISSUE) add logic for reading in subpanels and updating the model grid definition
+  !               e.g. perhaps read in above in the init routine a separte file to specify
+  !               the subpanel specifications.
+  !
+  ! Read these in and correct based on halo, etc.
+  !
+  ! // global attributes:
+  !             :DOMAIN_number_total = 78 ;
+  !             :DOMAIN_number = 0 ;                    ! Use to track filename
+  !             :DOMAIN_dimensions_ids = 1, 2 ;
+  !             :DOMAIN_size_global = 1442, 1021 ;      
+  !             :DOMAIN_size_local = 38, 511 ;          ! Use to define new grid domain
+  !             :DOMAIN_position_first = 1, 1 ;         ! Use to identify the proper lon2d/lat2d values
+  !             :DOMAIN_position_last = 38, 511 ;       ! ""
+  !             :DOMAIN_halo_size_start = 0, 0 ;
+  !             :DOMAIN_halo_size_end = 0, 0 ;
+  !             :DOMAIN_type = "BOX" ;
   ! Input restart filename:
   tsfile = trim(infile)//'.'//trim(rsrt_tsbase)
 
@@ -571,6 +597,31 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   call check( NF90_OPEN(tsfile,NF90_NOWRITE,ncid) )
   WRITE(6,*) "read_restart:: just opened file ", tsfile
+
+! if (DO_SUBGRID) then
+!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number_total", domain_number_total)
+!   if (ncstat /= NF90_NOERR) then
+!     WRITE(6,*) "common_nemo.f90::read_restart:: DO_SUBGRID is set to .true."
+!     WRITE(6,*) "however, required subgrid information is not in restart file: "
+!     WRITE(6,*) trim(tsfile)
+!     WRITE(6,*) "EXITING..."
+!     STOP('DO_SUBGRID read_restart')
+!   endif
+!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number_total", domain_number_total)
+!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number", domain_number)
+!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_dimension_ids", domain_number_total)
+!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_size_global", domain_size_global)
+!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_size_local", domain_size_local)
+!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_position_first", domain_position_first)
+!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_position_last", domain_position_last)
+
+!   if (dodebug) then
+!     WRITE(6,*) "common_nemo.f90::read_restart:: DO_SUBGRID is set to .true."
+!     WRITE(6,*) "Reading domain ", domain_number(1), " of ", domain_number_total(1)
+!     WRITE(6,*) "Global domain = ", domain_size_global
+!     WRITE(6,*) "Local domain = ", domain_size_local
+!   endif
+! endif
 
   !-----------------------------------------------------------------------------
   !!! t
@@ -732,7 +783,7 @@ END SUBROUTINE read_restart
 
 
 !-----------------------------------------------------------------------
-! Write a set of MOM6 restart files to initialize the next model run
+! Write a set of NEMO restart files to initialize the next model run
 !-----------------------------------------------------------------------
 SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   USE netcdf

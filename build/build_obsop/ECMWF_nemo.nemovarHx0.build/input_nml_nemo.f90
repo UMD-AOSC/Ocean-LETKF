@@ -46,6 +46,7 @@ PRIVATE
                               rsrt_v_name,& !
                               rsrt_ssh_name,& !
                               SSHclm_file,&   ! model ssh climatology for altimetry assimilation
+                              DO_SUBGRID,&    ! logical flag to identify whether using a subgrid of the full global grid (e.g. prior to MPPNCCOMBINE)
                               do_physlimit,&  ! specify .true. (default) to enable bounds checks on analysis output
                               max_t, min_t, &
                               max_s, min_s, &
