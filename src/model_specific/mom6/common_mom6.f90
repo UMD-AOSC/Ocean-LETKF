@@ -40,6 +40,7 @@ SUBROUTINE set_common_oceanmodel
   USE params_model, ONLY: grid_wet_name, grid_depth_name, grid_height_name
   USE params_model, ONLY: grid_h_name
   USE params_model, ONLY: gridfile, gridfile1, gridfile2, gridfile3
+  USE params_model, ONLY: grid_nlon_name, grid_nlat_name, grid_nlev_name
 
   INTEGER :: i,j,k
   INTEGER :: ncid,ncid2,ncid3,varid,dimid
