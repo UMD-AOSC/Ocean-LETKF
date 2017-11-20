@@ -2,16 +2,22 @@
 set -ex
 date=/bin/date
 
+source params.sh
+
 # Set up the forecast files as background, and add template analysis files
 
-MEM=0
-MEMBERS=5
+MEM=$GLOBAL_MEM_START
+MEMBERS=$GLOBAL_MEMBERS
 
 ISLOT=1  # Use if there are multiple observation time bins
 
-SRCDIR=/home/rd/dasp/perm/DATA/FCST
-FILE_SUFFIX=.restart.nc
-DSTDIR=/home/rd/dasp/scratch/WORK
+#SCRATCH=/scratch/rd/dasp
+SCRATCH=$GLOBAL_SCRATCH
+EXPNAME=$GLOBAL_EXPNAME
+
+SRCDIR=$SCRATCH/$EXPNAME/DATA/FCST
+FILE_SUFFIX=$RESTART_FILE_SUFFIX
+DSTDIR=$SCRATCH/$EXPNAME/$WORK
 mkdir -p $DSTDIR
 
 while [ $MEM -lt $MEMBERS ]; do
@@ -25,8 +31,10 @@ while [ $MEM -lt $MEMBERS ]; do
   bfile=gs${ISLOT2}${MEM3}${FILE_SUFFIX}
   afile=anal${MEM3}${FILE_SUFFIX}
   echo "Creating file: $bfile"
-  cp -f $SRCDIR/$MEM2/nvars.nc $DSTDIR/$bfile
+  cp -f $SRCDIR/$MEM2/nvars.nc $DSTDIR/$bfile &
   echo "Creating file: $afile"
-  cp -f $SRCDIR/$MEM2/nvars.nc $DSTDIR/$afile
+  cp -f $SRCDIR/$MEM2/nvars.nc $DSTDIR/$afile &
 
 done
+
+time wait

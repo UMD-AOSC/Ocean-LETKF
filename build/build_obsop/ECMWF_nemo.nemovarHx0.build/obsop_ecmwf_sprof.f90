@@ -115,6 +115,8 @@ PROGRAM obsop_ecmwf_sprof
   LOGICAL :: DO_REMOVE_BLACKSEA=.false.
   INTEGER :: cnt_blacksea=0
   REAL(r_size) :: dep_thresh = 100
+  CHARACTER(slen) :: obs_name='PSAL_OBS' !(NEMO) default
+  CHARACTER(slen) :: hxb_name='PSAL_Hx0' !(NEMO) default  
 
   ! BEGIN
   
@@ -133,7 +135,7 @@ PROGRAM obsop_ecmwf_sprof
   ! Read observations from ECMWF NEMOVAR feedback (fdbk) file
   !-----------------------------------------------------------------------------
   print *, "obsop_ecmwf_sprof.f90:: calling read_fdbk_nc for observations..."
-  CALL read_fdbk_nc(obsinfile,id_s_obs,obs_data,nobs,1) !STEVE: use ,2) if obs errors can be read in
+  CALL read_fdbk_nc(obsinfile,id_t_obs,obs_data,nobs,obs_name,hxb_name,1) !STEVE: use ,2) if obs errors can be read in
   print *, "obsop_ecwmf_sprof.f90:: finished read_fdbk_nc."
 
   !-----------------------------------------------------------------------------
@@ -324,6 +326,14 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
 !     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
 !     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
 !     read (arg2,*) nlev
+    case('-obs_name')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      obs_name = arg2
+    case('-hxb_name')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      hxb_name = arg2
     case('-obsin')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
@@ -352,16 +362,6 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) dodebug1
-!   case('-i2p')
-!     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-!     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-!     read (arg2,*) DO_INSITU_to_POTTEMP
-!     if (DO_INSITU_to_POTTEMP) DO_POTTEMP_to_INSITU = .false.
-!   case('-p2i')
-!     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-!     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-!     read (arg2,*) DO_POTTEMP_to_INSITU
-!     if (DO_POTTEMP_to_INSITU) DO_INSITU_to_POTTEMP = .false.
     case('-remap')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)

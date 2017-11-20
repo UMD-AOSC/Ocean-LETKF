@@ -144,6 +144,9 @@ PUBLIC
   CHARACTER(4) :: rsrt_ssh_name = 'sshn'
   CHARACTER(1) :: rsrt_h_name = 'h'              ! (NEMO) n/a
 
+  ! Flag to identify whether this is reading a subgrid
+! LOGICAL :: DO_SUBGRID = .false.
+
   !STEVE: unused:
   CHARACTER(slen) :: drbase   ! (DRIFTERS)   !(NEMO) n/a
 

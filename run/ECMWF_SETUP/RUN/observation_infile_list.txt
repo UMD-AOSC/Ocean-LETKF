@@ -1,0 +1,5 @@
+/home/rd/dasp/perm/DATA/OBS/00/0001_nrt_5_2_20161226_20170101_profb_01_fdbk.nc
+/home/rd/dasp/perm/DATA/OBS/01/0001_nrt_5_2_20161226_20170101_profb_01_fdbk.nc
+/home/rd/dasp/perm/DATA/OBS/02/0001_nrt_5_2_20161226_20170101_profb_01_fdbk.nc
+/home/rd/dasp/perm/DATA/OBS/03/0001_nrt_5_2_20161226_20170101_profb_01_fdbk.nc
+/home/rd/dasp/perm/DATA/OBS/04/0001_nrt_5_2_20161226_20170101_profb_01_fdbk.nc

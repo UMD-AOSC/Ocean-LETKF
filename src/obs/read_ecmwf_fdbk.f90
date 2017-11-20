@@ -52,9 +52,6 @@ TYPE argo_data
   LOGICAL :: kept   ! tells letkf whether this obs is kept for assimilation
 END TYPE argo_data
 
-CHARACTER(slen) :: tvar_name, tobs_name, tmod_name
-CHARACTER(slen) :: svar_name, sobs_name, smod_name
-
 LOGICAL :: DO_READ_OBE      ! Read the observation error estimate from the file
 LOGICAL :: DO_COMPUTE_OBE   ! Compute the observation error estimate using the NCEP approach w/ vertical gradient
 
@@ -86,7 +83,8 @@ INTEGER :: undef = 99999
 
 CONTAINS
 
-SUBROUTINE read_fdbk_nc(infile,typ,obs_data,nobs,opt_in)
+!SUBROUTINE read_fdbk_nc(infile,typ,obs_data,nobs,opt_in)
+SUBROUTINE read_fdbk_nc(infile,typ,obs_data,nobs,obs_name,mod_name,opt_in)
 !===============================================================================
 ! Read the argo profile data
 ! contained in the NEMOVAR netcdf feedback (fdbk) file used by ECMWF
@@ -102,6 +100,7 @@ INTEGER, INTENT(IN) :: typ
 TYPE(argo_data), INTENT(OUT), ALLOCATABLE, DIMENSION(:) :: obs_data
 INTEGER, INTENT(OUT) :: nobs
 INTEGER, INTENT(IN), OPTIONAL :: opt_in
+CHARACTER(*), INTENT(IN) :: obs_name, mod_name !STEVE: observation name and model equivalent name in netcdf file
 
 ! Other variables:
 INTEGER :: opt
@@ -124,6 +123,9 @@ REAL(r_size) :: missing_value=99999 !-99.0
 REAL(r_sngl) :: mvc=999
 REAL(r_sngl) :: max_depth = 9999
 
+CHARACTER(slen) :: tobs_name, tmod_name
+CHARACTER(slen) :: sobs_name, smod_name
+
 ! Set option to identify whether we are reading the observation or the model equivalent
 ! from this NEMOVAR feedback file.
 if (present(opt_in)) then
@@ -132,22 +134,33 @@ else
   opt = 1
 endif
 
-tobs_name = 'POTM_OBS'
-sobs_name = 'PSAL_OBS'
+if (typ .eq. id_t_obs) then
+! Example possible options:
+! tobs_name = 'POTM_OBS'
+! tmod_name = 'POTM_Hx0'
+! tmod_name = 'POTM_Hx0qc'
+! tmod_name = 'POTM_Hx'
+  tobs_name = trim(obs_name)
+  tmod_name = trim(obs_name) 
+elseif (typ .eq. id_s_obs) then
+! Example possible options:
+! sobs_name = 'PSAL_OBS'
+! smod_name = 'PSAL_Hx0'
+! smod_name = 'PSAL_Hx0qc'
+! smod_name = 'PSAL_Hx'
+  sobs_name = trim(obs_name)
+  smod_name = trim(obs_name) 
+endif
 
 if (opt==0) then
   DO_READ_OBE = .false.
   DO_COMPUTE_OBE = .false.
 elseif (opt==1) then
   ! To read the fdbk file
-  tmod_name = 'POTM_Hx0'
-  smod_name = 'PSAL_Hx0'
   DO_READ_OBE = .false.
   DO_COMPUTE_OBE = .true.
 elseif (opt==2) then
   ! To read the fdbkqc file
-  tmod_name = 'POTM_Hx0qc'
-  smod_name = 'PSAL_Hx0qc'
   DO_READ_OBE = .true.
   DO_COMPUTE_OBE = .false.
 endif
@@ -392,7 +405,7 @@ if (DO_READ_OBE) then
   if (typ .eq. id_t_obs) then
     istat = NF90_INQ_VARID(ncid,'POTM_OBEa1qc',varid)   
     if (istat /= NF90_NOERR) then
-      print *, "NF90_INQ_VARID failed for ", trim(tmod_name)
+      print *, "NF90_INQ_VARID failed for ", 'POTM_OBEa1qc'
       STOP
     endif
     istat = NF90_GET_VAR(ncid,varid,stde)
@@ -400,7 +413,7 @@ if (DO_READ_OBE) then
   elseif (typ .eq. id_s_obs) then
     istat = NF90_INQ_VARID(ncid,'PSAL_OBEa1qc',varid)   
     if (istat /= NF90_NOERR) then
-      print *, "NF90_INQ_VARID failed for ", trim(svar_name)
+      print *, "NF90_INQ_VARID failed for ", 'PSAL_OBEa1qc'
       STOP
     endif
     istat = NF90_GET_VAR(ncid,varid,stde)

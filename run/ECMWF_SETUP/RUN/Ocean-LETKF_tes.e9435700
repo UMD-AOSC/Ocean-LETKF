@@ -1,0 +1,2 @@
+#[16:34:11] 9435700.ccapar.SC[28]> source params.sh
+/var/spool/PBS/mom_priv/jobs/9435700.ccapar.SC: line 28: params.sh: No such file or directory
