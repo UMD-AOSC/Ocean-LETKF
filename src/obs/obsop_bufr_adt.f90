@@ -207,8 +207,8 @@ PROGRAM obsop_adt
           if (dodebug1) print *, "idx = ", idx
           odat(idx) = superobs(i,j)
           oerr(idx) = min_oerr + SQRT(M2(i,j))
-          rlon(idx) = (lon(i+1)-lon(i))/2.0d0
-          rlat(idx) = (lat(j+1)-lat(j))/2.0d0
+          rlon(idx) = (lon(i+1)+lon(i))/2.0d0
+          rlat(idx) = (lat(j+1)+lat(j))/2.0d0
           rlev(idx) = 0
           elem(idx) = id_sst_obs
           if (dodebug1) print *, "odat(idx) = ", odat(idx)
