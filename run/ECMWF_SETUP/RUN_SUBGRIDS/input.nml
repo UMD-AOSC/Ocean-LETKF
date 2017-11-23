@@ -11,7 +11,7 @@
 /
 
 &params_letkf_nml
- nbv = 20,
+ nbv = 5,
  nslots = 1,
  nbslot = 1,
  sigma_obs = 720.0d3,

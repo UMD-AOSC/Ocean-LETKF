@@ -9,7 +9,6 @@ source params.sh
 
 # Set up the observation/innovation .dat files by running the letkf obsop_tprof.x / obsop_sprof.x routines.
 
-MEM=$GLOBAL_MEM_START
 MEMBERS=$GLOBAL_MEMBERS
 
 IYYYY=$GLOBAL_IYYYY
@@ -22,7 +21,7 @@ inc_units=$GLOBAL_inc_units
 ISLOT=1  # Use if there are multiple observation time bins
 ISLOT2=`printf "%02d" $ISLOT`
 
-EXEDIR=/home/rd/dasp/perm/DATA/RUN
+EXEDIR=$GLOBAL_RUNDIR
 
 SCRATCH=$GLOBAL_SCRATCH
 EXPNAME=$GLOBAL_EXPNAME
@@ -34,9 +33,8 @@ name=ECMWF_nemo.nemovarHx0
 EXE_tprof=obsop.$name.tprof.x
 EXE_sprof=obsop.$name.sprof.x
 
-FILE_PREFIX=$OBS_FILE_PREFIX #0001_nrt_5_2_
-#FILE_SUFFIX=_profbqc_01_fdbk.nc
-FILE_SUFFIX=$OBS_FILE_SUFFIX #_profb_01_fdbk.nc
+FILE_PREFIX=$GLOBAL_OBS_FILE_PREFIX #0001_nrt_5_2_
+FILE_SUFFIX=$GLOBAL_OBS_FILE_SUFFIX #_profb_01_fdbk.nc
 
 OBS_FILELIST='observation_infile_list.txt'
 DO_QC=$GLOBAL_DO_QC
@@ -67,13 +65,15 @@ NY=`$date -d "$YYYY-$MM-$DD $inc $inc_units" +%Y`
 NM=`$date -d "$YYYY-$MM-$DD $inc $inc_units" +%m`
 ND=`$date -d "$YYYY-$MM-$DD $inc $inc_units" +%d`
 
-DATE_RANGE= #${YYYY}${MM}${DD}_${NY}${NM}${ND} #STEVE: current batch of feedback files doesn't have a date range.
+#STEVE: current batch of feedback files doesn't have a date range as part of the file name:
+DATE_RANGE= #${YYYY}${MM}${DD}_${NY}${NM}${ND} 
 
 echo "For reference, the current date is:"
 echo "$YYYY-$MM-$DD"
 echo "The next date is:"
 echo "$NY-$NM-$ND"
 
+MEM=$GLOBAL_MEM_START
 while [ $MEM -lt $MEMBERS ]; do
 
   MEM2=`printf "%02d" $MEM`
@@ -93,6 +93,13 @@ done
 echo "Sorting observations (python script) ..."
 python $ALIGN_OBS_EXE
 
+# If this error occurs:
+# IndexError: index 10560 is out of bounds for size 10560
+#
+#  The 'varlist' may need to be changed in the python script if the names change:
+## Variables to keep, dimensioned a: (nobs), and b: (nobs,depth)
+#varlist_b = ['DEPTH','POTM_OBS','PSAL_OBS','POTM_Hx','PSAL_Hx']
+
 #-------------------------------------------------------------------------------
 # Replace the control member observations to all members:
 #-------------------------------------------------------------------------------
@@ -104,6 +111,7 @@ MEM=`echo $(($MEM>0?$MEM:1))`  # i.e. start at 1 unless the desired starting mem
 YYYY=$IYYYY
 MM=$IMM
 DD=$IDD
+MEM=$GLOBAL_MEM_START
 while [ $MEM -lt $MEMBERS ]; do
   
   MEM2=`printf "%02d" $MEM`

@@ -77,14 +77,14 @@ PUBLIC
 
   !0001_nrt_20161228_000000_restart.nc
   CHARACTER(12) :: gridfile  = 'mesh_mask.nc'   !'MOM.res.nc'
-  CHARACTER(12) :: gridfile1 = 'mesh_mask.nc'   !'MOM.res_1.nc'     (NEMO) n/a
+  CHARACTER(12) :: gridfile1 = 'anal001.restart.nc'   !'MOM.res_1.nc' (NEMO) use for subgrid definition
   CHARACTER(14) :: gridfile2 = 'bathy_meter.nc' !'ocean_topog.nc'   (NEMO) n/a
   CHARACTER(14) :: gridfile3 = 'bathy_meter.nc' !'ocean_hgrid.nc'   (NEMO) n/a
 
   ! variable names in gridfile:
-  CHARACTER(7) :: grid_lon_name = 'nav_lon'      ! (NEMO) n/a
-  CHARACTER(7) :: grid_lat_name = 'nav_lat'      ! (NEMO) n/a
-  CHARACTER(7) :: grid_lev_name = 'nav_lev'
+  CHARACTER(1) :: grid_nlon_name = 'x'      ! (NEMO) used for dynamic allocation of grid
+  CHARACTER(1) :: grid_nlat_name = 'y'      ! (NEMO) 
+  CHARACTER(1) :: grid_nlev_name = 'z'      ! (NEMO) 
   CHARACTER(2) :: grid_temp_name = 'tn'
   CHARACTER(2) :: grid_salt_name = 'sn'
   CHARACTER(2) :: grid_u_name = 'un'
@@ -93,6 +93,7 @@ PUBLIC
 
   CHARACTER(7) :: grid_lon2d_name = 'nav_lon'
   CHARACTER(7) :: grid_lat2d_name = 'nav_lat'
+  CHARACTER(7) :: grid_lev_name = 'nav_lev'
 
   CHARACTER(5) :: grid_lsmask_name    = 'tmask'     ! land/sea mask (assuming >0 is ocean)
   CHARACTER(6) :: grid_depth_name  = 'mbathy'    ! (in mesh_mask file) !'Bathymetry'  ! In bathymetry file

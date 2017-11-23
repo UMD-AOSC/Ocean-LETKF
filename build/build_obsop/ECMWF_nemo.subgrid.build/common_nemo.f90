@@ -36,7 +36,8 @@ SUBROUTINE set_common_oceanmodel
   USE vars_model,   ONLY: set_vars_model
   USE params_model, ONLY: initialize_params_model
   USE vars_model,   ONLY: initialize_vars_model
-  USE params_model, ONLY: gridfile
+  USE params_model, ONLY: gridfile, gridfile2
+  USE params_model, ONLY: grid_nlon_name, grid_nlat_name, grid_nlev_name
   USE params_model, ONLY: grid_lon2d_name, grid_lat2d_name
   USE params_model, ONLY: grid_lev_name
   USE params_model, ONLY: grid_lsmask_name, grid_depth_name
@@ -51,22 +52,6 @@ SUBROUTINE set_common_oceanmodel
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
   CALL initialize_params_model ! (checks to make sure it is initialized)
-  CALL initialize_vars_model   ! (checks to make sure it is initialized)
-
-  !-----------------------------------------------------------------------------
-  ! Read the SSH model climatology if assimilating SLA's
-  !-----------------------------------------------------------------------------
-  if (DO_ALTIMETRY .and. DO_SLA) then
-    INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
-    if (ex) then
-      ! Read in the model climatology
-      CALL read_etaclm
-    else
-      WRITE(6,*) "The file does not exist: ", SSHclm_file
-      WRITE(6,*) "Exiting common_mom6.f90..."
-      STOP(1)
-    endif
-  endif
 
   !-----------------------------------------------------------------------------
   ! Open grid specification file for Lon, Lat, f, bathymetry, etc.
@@ -82,15 +67,73 @@ SUBROUTINE set_common_oceanmodel
   call check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
 
   !-----------------------------------------------------------------------------
+  ! Get grid dimensions
+  !-----------------------------------------------------------------------------
+#ifdef DYNAMIC
+  WRITE(6,*) "Reading x dimension (lon)..."
+  call check( NF90_INQ_DIMID(ncid,grid_nlon_name,dimid) )   ! Longitude for T-cell
+  call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlon) )
+  WRITE(6,*) "nlon = ", nlon
+
+  WRITE(6,*) "Reading y dimension (lat)..."
+  call check( NF90_INQ_DIMID(ncid,grid_nlat_name,dimid) )   ! Longitude for T-cell
+  call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlat) )
+  WRITE(6,*) "nlat = ", nlat
+
+  WRITE(6,*) "Reading z dimension (lev)..."
+  call check( NF90_INQ_DIMID(ncid,grid_nlev_name,dimid) )   ! Longitude for T-cell
+  call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlev) )
+  WRITE(6,*) "nlev = ", nlev
+#endif
+
+  !-----------------------------------------------------------------------------
+  ! Initialize the model variables (and allocate arrays if using #ifdef DYNAMIC)
+  !-----------------------------------------------------------------------------
+  WRITE(6,*) "Initializing variables and allocating arrays..."
+  CALL initialize_vars_model   ! (checks to make sure it is initialized)
+
+  !STEVE: debugging:
+#ifdef DYNAMIC
+  if (allocated(lon2d)) then
+    WRITE(6,*) "pre-assignment:"
+    WRITE(6,*) "SIZE(lon2d,1) = ", SIZE(lon2d,1)
+    WRITE(6,*) "SIZE(lon2d,2) = ", SIZE(lon2d,2)
+    WRITE(6,*) "lon2d(1,1) = ", lon2d(1,1)
+    WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
+  else
+    WRITE(6,*) "lon2d is not allocated"
+  endif
+
+  if (allocated(lat2d)) then
+    WRITE(6,*) "pre-assignment:"
+    WRITE(6,*) "SIZE(lat2d,1) = ", SIZE(lat2d,1)
+    WRITE(6,*) "SIZE(lat2d,2) = ", SIZE(lat2d,2)
+    WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
+    WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
+  else
+    WRITE(6,*) "lat2d is not allocated"
+  endif
+
+  if (allocated(lev)) then
+    WRITE(6,*) "pre-assignment:"
+    WRITE(6,*) "SIZE(lev,1) = ", SIZE(lev,1)
+    WRITE(6,*) "lev(1) = ", lev(1)
+    WRITE(6,*) "lev(nlev) = ", lev(nlev)
+  else
+    WRITE(6,*) "lev is not allocated"
+  endif
+#endif
+
+  !-----------------------------------------------------------------------------
   ! lon2d, lat2
   !-----------------------------------------------------------------------------
-  WRITE(6,*) "Reading x coordinate (lon)..."
+  WRITE(6,*) "Reading x coordinate (lon2d)..."
   call check( NF90_INQ_VARID(ncid,grid_lon2d_name,varid) )   ! Longitude for T-cell
   call check( NF90_GET_VAR(ncid,varid,lon2d) )
   WRITE(6,*) "lon2d(1,1) = ", lon2d(1,1)
   WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
 
-  WRITE(6,*) "Reading y coordinate (lat)..."
+  WRITE(6,*) "Reading y coordinate (lat2d)..."
   call check( NF90_INQ_VARID(ncid,grid_lat2d_name,varid) )   ! Latitude for T-cell
   call check( NF90_GET_VAR(ncid,varid,lat2d) )
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
@@ -164,6 +207,21 @@ SUBROUTINE set_common_oceanmodel
   CALL set_vars_model
 
   WRITE(6,*) "set_common_nemo:: Finished..."
+
+  !-----------------------------------------------------------------------------
+  ! Read the SSH model climatology if assimilating SLA's
+  !-----------------------------------------------------------------------------
+  if (DO_ALTIMETRY .and. DO_SLA) then
+    INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
+    if (ex) then
+      ! Read in the model climatology
+      CALL read_etaclm
+    else
+      WRITE(6,*) "The file does not exist: ", SSHclm_file
+      WRITE(6,*) "Exiting common_mom6.f90..."
+      STOP(1)
+    endif
+  endif
 
 END SUBROUTINE set_common_oceanmodel
 
@@ -533,7 +591,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
   USE params_model, ONLY: rsrt_u_name, rsrt_v_name
   USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
-! USE params_model, ONLY: DO_SUBGRID
   
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -557,32 +614,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   CHARACTER(slen) :: varname
   INTEGER :: ivid
   INTEGER :: ncstat
-! INTEGER, DIMENSION(1) :: domain_number_total, domain_number
-! INTEGER, DIMENSION(2) :: domain_dimension_ids
-! INTEGER, DIMENSION(2) :: domain_size_global, domain_size_local
-! INTEGER, DIMENSION(2) :: domain_position_first, domain_position_last
-! INTEGER, DIMENSION(2) :: domain_halo_size_start, domain_halo_size_end
-! CHARACTER(slen) :: domain_type
 
-
-  !STEVE: (ISSUE) add logic for reading in subpanels and updating the model grid definition
-  !               e.g. perhaps read in above in the init routine a separte file to specify
-  !               the subpanel specifications.
-  !
-  ! Read these in and correct based on halo, etc.
-  !
-  ! // global attributes:
-  !             :DOMAIN_number_total = 78 ;
-  !             :DOMAIN_number = 0 ;                    ! Use to track filename
-  !             :DOMAIN_dimensions_ids = 1, 2 ;
-  !             :DOMAIN_size_global = 1442, 1021 ;      
-  !             :DOMAIN_size_local = 38, 511 ;          ! Use to define new grid domain
-  !             :DOMAIN_position_first = 1, 1 ;         ! Use to identify the proper lon2d/lat2d values
-  !             :DOMAIN_position_last = 38, 511 ;       ! ""
-  !             :DOMAIN_halo_size_start = 0, 0 ;
-  !             :DOMAIN_halo_size_end = 0, 0 ;
-  !             :DOMAIN_type = "BOX" ;
-  ! Input restart filename:
   tsfile = trim(infile)//'.'//trim(rsrt_tsbase)
 
   select case(prec)
@@ -597,31 +629,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   call check( NF90_OPEN(tsfile,NF90_NOWRITE,ncid) )
   WRITE(6,*) "read_restart:: just opened file ", tsfile
-
-! if (DO_SUBGRID) then
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number_total", domain_number_total)
-!   if (ncstat /= NF90_NOERR) then
-!     WRITE(6,*) "common_nemo.f90::read_restart:: DO_SUBGRID is set to .true."
-!     WRITE(6,*) "however, required subgrid information is not in restart file: "
-!     WRITE(6,*) trim(tsfile)
-!     WRITE(6,*) "EXITING..."
-!     STOP('DO_SUBGRID read_restart')
-!   endif
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number_total", domain_number_total)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number", domain_number)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_dimension_ids", domain_number_total)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_size_global", domain_size_global)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_size_local", domain_size_local)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_position_first", domain_position_first)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_position_last", domain_position_last)
-
-!   if (dodebug) then
-!     WRITE(6,*) "common_nemo.f90::read_restart:: DO_SUBGRID is set to .true."
-!     WRITE(6,*) "Reading domain ", domain_number(1), " of ", domain_number_total(1)
-!     WRITE(6,*) "Global domain = ", domain_size_global
-!     WRITE(6,*) "Local domain = ", domain_size_local
-!   endif
-! endif
 
   !-----------------------------------------------------------------------------
   !!! t
@@ -833,13 +840,14 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
       if (dodebug) WRITE(6,*) "write_restart::ALLOCATE buf4..."
       ALLOCATE(buf4(nlon,nlat,nlev))
       if (dodebug) WRITE(6,*) "Done ALLOCATE buf4."
+      WRITE(6,*) "common_nemo.f90::write_restart:: Single precision restart output not yet supported."
+      WRITE(6,*) "common_nemo.f90::write_restart:: EXITING..."
     case(2)
       if (dodebug) WRITE(6,*) "write_restart::ALLOCATE buf8..."
       ALLOCATE(buf8(nlon,nlat,nlev))
       if (dodebug) WRITE(6,*) "Done ALLOCATE buf8."
   end select
 
-  
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !STEVE: open temp/salt file   !(NEMO) all data is in one file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -863,8 +871,11 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
       WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
       WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
     endif
-    WHERE (buf8 < min_t) buf8 = min_t
-    WHERE (buf8 > max_t) buf8 = max_t
+    !(NEMO) ECMWF compiler did not like this:
+!   WHERE (buf8 < min_t) buf8 = min_t
+!   WHERE (buf8 > max_t) buf8 = max_t
+    !(NEMO) using alternative:
+    call apply_physlimit_3d(buf8,buf8,iv3d_t)
     if (dodebug) then
       WRITE(6,*) "post-physlimit:"
       WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
@@ -885,8 +896,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
   ! Apply physical limits to the output analysis:
   if (do_physlimit) then
-    WHERE (buf8 < min_s) buf8 = min_s
-    WHERE (buf8 > max_s) buf8 = max_s
+!   WHERE (buf8 < min_s) buf8 = min_s
+!   WHERE (buf8 > max_s) buf8 = max_s
+    call apply_physlimit_3d(buf8,buf8,iv3d_s)
   endif
 
   if (dodebug) WRITE(6,*) "Write data for salinity..."
@@ -902,8 +914,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
   ! Apply physical limits to the output analysis:
   if (do_physlimit) then
-    WHERE (buf8 < min_u) buf8 = min_u
-    WHERE (buf8 > max_u) buf8 = max_u
+!   WHERE (buf8 < min_u) buf8 = min_u
+!   WHERE (buf8 > max_u) buf8 = max_u
+    call apply_physlimit_3d(buf8,buf8,iv3d_u)
   endif
 
   if (dodebug) WRITE(6,*) "Write data for u component of velocity..."
@@ -919,8 +932,9 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
   ! Apply physical limits to the output analysis:
   if (do_physlimit) then
-    WHERE (buf8 < min_v) buf8 = min_v
-    WHERE (buf8 > max_v) buf8 = max_v
+!   WHERE (buf8 < min_v) buf8 = min_v
+!   WHERE (buf8 > max_v) buf8 = max_v
+    call apply_physlimit_3d(buf8,buf8,iv3d_v)
   endif
 
   if (dodebug) WRITE(6,*) "Write data for v component of velocity..."
@@ -935,16 +949,17 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
     buf8(:,:,1) = REAL(v2d_in(:,:,iv2d_ssh),r_size)
 
-    ! Apply physical limits to the output analysis:
-    if (do_physlimit) then
-      WHERE (buf8(:,:,1) < min_eta) buf8(:,:,1) = min_eta
-      WHERE (buf8(:,:,1) > max_eta) buf8(:,:,1) = max_eta
-    endif
-
     ! Transform Sea Level Anomaly (SLA) back to modeled anomaly
     ! by adding back in the pre-computed model climatology
     if (DO_SLA) then
       buf8(:,:,1) = buf8(:,:,1) + SSHclm_m(:,:)
+    endif
+
+    ! Apply physical limits to the output analysis:
+    if (do_physlimit) then
+!     WHERE (buf8(:,:,1) < min_eta) buf8(:,:,1) = min_eta
+!     WHERE (buf8(:,:,1) > max_eta) buf8(:,:,1) = max_eta
+      call apply_physlimit_2d(buf8(:,:,1),buf8(:,:,1),iv2d_ssh)
     endif
 
     if (dodebug) WRITE(6,*) "Write data for ssh..."
@@ -954,6 +969,86 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   call check( NF90_CLOSE(ncid) )
 
 END SUBROUTINE write_restart
+
+
+!-----------------------------------------------------------------------
+! Apply upper and lower limits the 3D analysis fields based on 
+! physical requirements specified via params_model.f90 or input.nml
+!-----------------------------------------------------------------------
+SUBROUTINE apply_physlimit_3d(v3d_in,v3d_out,iv)
+  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nv3d
+  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s
+  USE params_model, ONLY: min_t, max_t, min_s, max_s
+  USE params_model, ONLY: min_u, max_u, min_v, max_v
+
+  REAL(r_size),INTENT(IN) :: v3d_in(nlon,nlat,nlev)
+  REAL(r_size),INTENT(OUT) :: v3d_out(nlon,nlat,nlev)
+  INTEGER :: iv ! variable type index
+  INTEGER :: i,j,k
+  REAL(r_size) :: min_val, max_val
+
+  ! Apply physical limits to the output analysis:
+  variable_type : select case (iv)
+    case (iv3d_t)
+      min_val = min_t
+      max_val = max_t
+    case (iv3d_s)
+      min_val = min_s
+      max_val = max_s
+    case (iv3d_u)
+      min_val = min_u
+      max_val = max_u
+    case (iv3d_v)
+      min_val = min_v
+      max_val = max_v
+  end select variable_type 
+
+  v3d_out = v3d_in
+  do k=1,nlev
+    do j=1,nlat
+      do i=1,nlon
+        if (v3d_in(i,j,k) < min_val) v3d_out(i,j,k) = min_val
+        if (v3d_in(i,j,k) > max_val) v3d_out(i,j,k) = max_val
+      enddo
+    enddo
+  enddo
+
+END SUBROUTINE apply_physlimit_3d
+
+
+!-----------------------------------------------------------------------
+! Apply upper and lower limits the 2D analysis fields based on 
+! physical requirements specified via params_model.f90 or input.nml
+!-----------------------------------------------------------------------
+SUBROUTINE apply_physlimit_2d(v2d_in,v2d_out,iv)
+  USE params_model, ONLY: nlon, nlat
+  USE params_model, ONLY: nv2d
+  USE params_model, ONLY: iv2d_ssh
+  USE params_model, ONLY: min_eta, max_eta
+
+  REAL(r_size),INTENT(IN) :: v2d_in(nlon,nlat)
+  REAL(r_size),INTENT(OUT) :: v2d_out(nlon,nlat)
+  INTEGER :: iv ! variable type index
+  INTEGER :: i,j,k
+  REAL(r_size) :: min_val, max_val
+
+  ! Apply physical limits to the output analysis:
+  variable_type : select case (iv)
+    case (iv2d_ssh)
+      min_val = min_eta
+      max_val = max_eta
+  end select variable_type 
+
+  v2d_out = v2d_in
+  do j=1,nlat
+    do i=1,nlon
+      if (v2d_in(i,j) < min_val) v2d_out(i,j) = min_val
+      if (v2d_in(i,j) > max_val) v2d_out(i,j) = max_val
+    enddo
+  enddo
+
+END SUBROUTINE apply_physlimit_2d
 
 
 !-----------------------------------------------------------------------
@@ -1051,8 +1146,6 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
   REAL(r_size),INTENT(OUT) :: v3dm(nij,nlev,nv3d)
   REAL(r_size),INTENT(OUT) :: v2dm(nij,nv2d)
   INTEGER :: i,k,m,n
-
-! ALLOCATE(v3dm(nij,nlev,nv3d),v2dm(nij,nv2d))
 
   do n=1,nv3d
     do k=1,nlev

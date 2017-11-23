@@ -19,20 +19,15 @@ function ncmin {
 source params.sh
 
 # Link the observations to the subgrid working directories
-
-MEM=$GLOBAL_MEM_START
-MEMBERS=$GLOBAL_MEMBERS
 SUBGRIDS=$GLOBAL_num_subgrids
-
 ISLOT=1  # Use if there are multiple observation time bins
 
 SCRATCH=$GLOBAL_SCRATCH
 EXPNAME=$GLOBAL_EXPNAME
 
-SRCDIR=$GLOBAL_SRC/DATA/STATIC
+SRCDIR=$GLOBAL_PERM/DATA/STATIC
 DSTDIR0=$SCRATCH/$EXPNAME/WORK
 mkdir -p $DSTDIR0
-
 
 # Create a subdirectory in the working directory for each subgrid analysis
 SG=$GLOBAL_subgrid_start

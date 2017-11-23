@@ -85,9 +85,9 @@ PUBLIC
   CHARACTER(14) :: gridfile3 = 'bathy_meter.nc' !'ocean_hgrid.nc'   (NEMO) n/a
 
   ! variable names in gridfile:
-  CHARACTER(7) :: grid_nlon_name = 'x'      ! (NEMO) n/a
-  CHARACTER(7) :: grid_nlat_name = 'y'      ! (NEMO) n/a
-  CHARACTER(7) :: grid_nlev_name = 'z'      ! (NEMO) n/a
+  CHARACTER(1) :: grid_nlon_name = 'x'      ! (NEMO) used for dynamic allocation of grid
+  CHARACTER(1) :: grid_nlat_name = 'y'      ! (NEMO) 
+  CHARACTER(1) :: grid_nlev_name = 'z'      ! (NEMO) 
   CHARACTER(2) :: grid_temp_name = 'tn'
   CHARACTER(2) :: grid_salt_name = 'sn'
   CHARACTER(2) :: grid_u_name = 'un'

@@ -1,6 +1,6 @@
-PROGRAM obsop_ecmwf_sprof
+PROGRAM obsop_ecmwf_tprof
 !===============================================================================
-! PROGRAM: obsop_ecmwf_sprof
+! PROGRAM: obsop_ecmwf_tprof
 ! 
 ! USES:
 !  use common
@@ -101,7 +101,7 @@ PROGRAM obsop_ecmwf_sprof
   INTEGER :: cnt_obs_ssh=0, cnt_obs_sst=0, cnt_obs_sss=0, cnt_obs_eta=0
   INTEGER :: cnt_obs_x=0, cnt_obs_y=0, cnt_obs_z=0
   INTEGER :: cnt_thin=0
-  INTEGER :: cnt_largedep !(NEMO)
+  INTEGER :: cnt_largedep=0 ! (NEMO)
   INTEGER, DIMENSION(nv3d+nv2d), SAVE :: cnt_obs = 0
 
   !STEVE: for debugging observation culling:
@@ -115,8 +115,8 @@ PROGRAM obsop_ecmwf_sprof
   LOGICAL :: DO_REMOVE_BLACKSEA=.false.
   INTEGER :: cnt_blacksea=0
   REAL(r_size) :: dep_thresh = 100
-  CHARACTER(slen) :: obs_name='PSAL_OBS' !(NEMO) default
-  CHARACTER(slen) :: hxb_name='PSAL_Hx0' !(NEMO) default  
+  CHARACTER(slen) :: obs_name='POTM_OBS' !(NEMO) default. Change via command line argument
+  CHARACTER(slen) :: hxb_name='POTM_Hx'  !(NEMO) default. Change via command line argument
 
   ! BEGIN
   
@@ -134,9 +134,9 @@ PROGRAM obsop_ecmwf_sprof
   !-----------------------------------------------------------------------------
   ! Read observations from ECMWF NEMOVAR feedback (fdbk) file
   !-----------------------------------------------------------------------------
-  print *, "obsop_ecmwf_sprof.f90:: calling read_fdbk_nc for observations..."
-  CALL read_fdbk_nc(obsinfile,id_t_obs,obs_data,nobs,obs_name,hxb_name,1) !STEVE: use ,2) if obs errors can be read in
-  print *, "obsop_ecwmf_sprof.f90:: finished read_fdbk_nc."
+  print *, "obsop_ecmwf_tprof.f90:: calling read_fdbk_nc for observations..."
+  CALL read_fdbk_nc(obsinfile,id_t_obs,obs_data,nobs,trim(obs_name),trim(hxb_name),1) !STEVE: use ,2) if obs errors can be read in
+  print *, "obsop_ecwmf_tprof.f90:: finished read_fdbk_nc."
 
   !-----------------------------------------------------------------------------
   ! Allocate memory for observation data
@@ -154,7 +154,7 @@ PROGRAM obsop_ecmwf_sprof
   !-----------------------------------------------------------------------------
   ! Assign observation and model equivalent data to data arrays in letkf format
   !-----------------------------------------------------------------------------
-  print *, "obsop_sprof.f90:: starting nobs = ", nobs
+  print *, "obsop_tprof.f90:: starting nobs = ", nobs
   do i=1,nobs
     elem(i) = obs_data(i)%typ
     rlon(i) = obs_data(i)%x_grd(1)
@@ -262,7 +262,7 @@ PROGRAM obsop_ecmwf_sprof
   !-----------------------------------------------------------------------------
   ! Print out the counts of observations removed for various reasons
   !-----------------------------------------------------------------------------
-  WRITE(6,*) "In obsop_sprof.f90:: observations removed for:"
+  WRITE(6,*) "In obsop_tprof.f90:: observations removed for:"
   WRITE(6,*) "cnt_oerlt0 = ", cnt_oerlt0
   WRITE(6,*) "cnt_xout = ", cnt_xout
   WRITE(6,*) "cnt_yout = ", cnt_yout
@@ -310,7 +310,7 @@ INTEGER, DIMENSION(3) :: values
 ! inputs are in the format "-x xxx"
 do i=1,COMMAND_ARGUMENT_COUNT(),2
   CALL GET_COMMAND_ARGUMENT(i,arg1)
-  PRINT *, "In obsop_sprof.f90::"
+  PRINT *, "In obsop_tprof.f90::"
   PRINT *, "Argument ", i, " = ",TRIM(arg1)
 
   select case (arg1)
@@ -375,4 +375,4 @@ enddo
 
 END SUBROUTINE process_command_line
 
-END PROGRAM obsop_ecmwf_sprof
+END PROGRAM obsop_ecmwf_tprof

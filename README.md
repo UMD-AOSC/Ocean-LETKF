@@ -2,8 +2,8 @@
 Main repository for the Ocean-LETKF development
 
 # Getting started with git:
-https://gist.github.com/blackfalcon/8428401
-https://robots.thoughtbot.com/5-useful-tips-for-a-better-commit-message
+https://gist.github.com/blackfalcon/8428401  
+https://robots.thoughtbot.com/5-useful-tips-for-a-better-commit-message  
 
 # Configuration:  
 All machine-specific details have been moved to 'config/'

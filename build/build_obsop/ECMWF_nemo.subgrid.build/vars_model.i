@@ -86,8 +86,6 @@ SUBROUTINE initialize_vars_model
   USE common, ONLY: r_size
   USE params_model, ONLY: nlon, nlat, nlev, params_model_initialized
 
-  IMPLICIT NONE
-
   if (.not. params_model_initialized) then
     WRITE(6,*) "vars_model.f90::initialize_vars_model::"
     WRITE(6,*) "ERROR: must call initialize_params_model before calling initialize_vars_model. EXITING..."
@@ -118,7 +116,15 @@ SUBROUTINE initialize_vars_model
 
 
 
-# 116
+
+
+
+
+
+
+
+
+# 122
   SSHclm_m = 0.0d0
   kmt = -1
 
