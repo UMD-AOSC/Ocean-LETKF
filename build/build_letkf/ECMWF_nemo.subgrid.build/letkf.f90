@@ -263,12 +263,6 @@ PROGRAM letkf
     rtimer00=rtimer
   endif
 
-  !----------------------------------------------------------------------------
-  ! Finalize the MPI
-  !----------------------------------------------------------------------------
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL finalize_mpi
-
   !-----------------------------------------------------------------------------
   ! Check timer for total runtime
   !-----------------------------------------------------------------------------
@@ -280,5 +274,11 @@ PROGRAM letkf
     OPEN(6,FILE=stdoutf,POSITION='APPEND',STATUS = 'OLD')
   endif
   rtimer00=rtimer
+
+  !----------------------------------------------------------------------------
+  ! Finalize the MPI
+  !----------------------------------------------------------------------------
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL finalize_mpi
 
 END PROGRAM letkf

@@ -41,8 +41,8 @@ IDD=$GLOBAL_IDD
 inc=$GLOBAL_inc
 inc_units=$GLOBAL_inc_units
 
-FILE_PREFIX=$OBS_FILE_PREFIX #0001_nrt_5_2_
-FILE_SUFFIX=$OBS_FILE_SUFFIX #_profb_01_fdbk.nc
+FILE_PREFIX=$GLOBAL_OBS_FILE_PREFIX #0001_nrt_5_2_
+FILE_SUFFIX=$GLOBAL_OBS_FILE_SUFFIX #_profb_01_fdbk.nc
 
 ISLOT=1  # Use if there are multiple observation time bins
 ISLOT2=`printf "%02d" $ISLOT`

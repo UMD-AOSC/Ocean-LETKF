@@ -1,45 +1,41 @@
-# 1 "vars_model.f90"
 MODULE vars_model
 
 USE common,       ONLY: r_size
 
-
-# 6
+#ifndef DYNAMIC
 USE params_model, ONLY: nlon, nlat, nlev
+#endif
 
-
-# 9
 IMPLICIT NONE
 
 PUBLIC
 
 !-----------------------------------------------------------------------------
+#ifdef DYNAMIC
+  REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE   :: lon !(nlon)                     !(NEMO) n/a
+  REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE   :: lat !(nlat)                     !(NEMO) n/a
+  REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE   :: lev !(nlev)                     !(OCEAN)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lon2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
 
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dx !(nlon,nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dy !(nlon,nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: area_t !(nlon,nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: phi0 !(nlon,nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: depth !(nlon,nlat)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 39
+  REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE     :: fcori   !(nlat)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE   :: fcori2d !(nlon,nlat)
+  INTEGER,ALLOCATABLE,DIMENSION(:,:),SAVE        :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
+  INTEGER,ALLOCATABLE,DIMENSION(:,:,:),SAVE      :: kmt3d          !(OCEAN) (NEMO)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE   :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
+  ! For AMOC computation
+  REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE :: zb !(nlev)
+  REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE :: dz !(nlev)
+!-----------------------------------------------------------------------------
+#else
   REAL(r_size),DIMENSION(nlon),SAVE      :: lon !(nlon)
   REAL(r_size),DIMENSION(nlat),SAVE      :: lat !(nlat)
   REAL(r_size),DIMENSION(nlev),SAVE      :: lev !(nlev)                     !(OCEAN)
@@ -63,10 +59,9 @@ PUBLIC
   REAL(r_size),DIMENSION(nlev),SAVE :: zb !(nlev)
   REAL(r_size),DIMENSION(nlev),SAVE :: dz !(nlev)
 !-----------------------------------------------------------------------------
-
+#endif
 
   !STEVE: For generalized grid
-# 65
   REAL(r_size),SAVE :: lon0, lonf, lat0, latf
   REAL(r_size),SAVE :: wrapgap
 
@@ -86,8 +81,6 @@ SUBROUTINE initialize_vars_model
   USE common, ONLY: r_size
   USE params_model, ONLY: nlon, nlat, nlev, params_model_initialized
 
-  IMPLICIT NONE
-
   if (.not. params_model_initialized) then
     WRITE(6,*) "vars_model.f90::initialize_vars_model::"
     WRITE(6,*) "ERROR: must call initialize_params_model before calling initialize_vars_model. EXITING..."
@@ -99,26 +92,33 @@ SUBROUTINE initialize_vars_model
     WRITE(6,*) "initialize_vars_model..."
   endif
 
+#ifdef DYNAMIC
+  WRITE(6,*) "initialize_vars_model:: allocating arrays with total grid size:"
+  WRITE(6,*) "nlon = ", nlon
+  WRITE(6,*) "nlat = ", nlat
+  WRITE(6,*) "nlev = ", nlev
+  ALLOCATE(lon(nlon))
+  ALLOCATE(lat(nlat))
+  WRITE(6,*) "Allocating lev..."
+  ALLOCATE(lev(nlev))
+  WRITE(6,*) "Allocating lon2d..."
+  ALLOCATE(lon2d(nlon,nlat))
+  WRITE(6,*) "Allocating lat2d..."
+  ALLOCATE(lat2d(nlon,nlat))
+  ALLOCATE(dx(nlon,nlat))
+  ALLOCATE(dy(nlon,nlat))
+  ALLOCATE(phi0(nlon,nlat))
+  ALLOCATE(kmt0(nlon,nlat))
+  ALLOCATE(SSHclm_m(nlon,nlat))
 
+  ALLOCATE(kmt(nlon,nlat))     ! 2d array
+  ALLOCATE(kmt3d(nlon,nlat,nlev))   ! 3d array (NEMO)
 
+  ALLOCATE(fcori(nlat))
+  ALLOCATE(zb(nlev))
+  ALLOCATE(dz(nlev))
+#endif
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 116
   SSHclm_m = 0.0d0
   kmt = -1
 

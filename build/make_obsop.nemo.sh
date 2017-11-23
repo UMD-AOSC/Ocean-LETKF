@@ -42,7 +42,7 @@ source $CONFIGDIR/$MACHINE.modules.sh
 model=nemo
 
 # Experiment name:
-name=${MACHINE}_${model}.nemovarHx0
+name=${MACHINE}_${model}.subgrid #nemovarHx0
 #name=test_$model
 #name=TESTc3
 PGM=obsop.$name
@@ -66,7 +66,8 @@ $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90
 $F90 $OMP $F90_OPT $F90_FPP $F90_OBJECT_FLAG params_model.f90
 $F90 $OMP $F90_OPT $F90_FPP $F90_OBJECT_FLAG vars_model.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_letkf.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_$model.f90
+#$F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_$model.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_$model.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_obs.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG vars_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG kdtree.f90

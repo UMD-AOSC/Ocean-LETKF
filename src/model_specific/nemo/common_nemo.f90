@@ -93,6 +93,7 @@ SUBROUTINE set_common_oceanmodel
   CALL initialize_vars_model   ! (checks to make sure it is initialized)
 
   !STEVE: debugging:
+#ifdef DYNAMIC
   if (allocated(lon2d)) then
     WRITE(6,*) "pre-assignment:"
     WRITE(6,*) "SIZE(lon2d,1) = ", SIZE(lon2d,1)
@@ -121,6 +122,7 @@ SUBROUTINE set_common_oceanmodel
   else
     WRITE(6,*) "lev is not allocated"
   endif
+#endif
 
   !-----------------------------------------------------------------------------
   ! lon2d, lat2
@@ -606,12 +608,12 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !STEVE: for debugging:
   CHARACTER(32) :: testfile
   INTEGER :: iunit,iolen,n,irec
-  LOGICAL, PARAMETER :: dodebug = .false.
   CHARACTER(3) :: MEM3
   CHARACTER(32) :: sfc_infile
   CHARACTER(slen) :: varname
   INTEGER :: ivid
   INTEGER :: ncstat
+  LOGICAL, PARAMETER :: dodebug = .true.
 
   tsfile = trim(infile)//'.'//trim(rsrt_tsbase)
 
@@ -894,9 +896,25 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
   ! Apply physical limits to the output analysis:
   if (do_physlimit) then
+    if (dodebug) then
+      WRITE(6,*) "min_s = ", min_s
+      WRITE(6,*) "max_s = ", max_s
+    endif
+    if (dodebug) then
+      WRITE(6,*) "pre-physlimit:"
+      WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+      WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+    endif
+    !(NEMO) ECMWF compiler did not like this:
 !   WHERE (buf8 < min_s) buf8 = min_s
 !   WHERE (buf8 > max_s) buf8 = max_s
+    !(NEMO) using alternative:
     call apply_physlimit_3d(buf8,buf8,iv3d_s)
+    if (dodebug) then
+      WRITE(6,*) "post-physlimit:"
+      WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+      WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+    endif
   endif
 
   if (dodebug) WRITE(6,*) "Write data for salinity..."

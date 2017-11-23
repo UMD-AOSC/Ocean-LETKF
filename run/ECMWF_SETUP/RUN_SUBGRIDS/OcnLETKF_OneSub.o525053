@@ -1,0 +1,366 @@
+[profile.ecmwf-INIT] session is -bash on ccamom05 at Thu 20171123_121620 = 1511439380
+
+[profile.ecmwf-INFO] HOME=/home/rd/dasp=/home/rd/dasp
+
+[profile.ecmwf-INFO] PERM=/perm/rd/dasp=/perm/rd/dasp
+
+[profile.ecmwf-INFO] SCRATCH=TEMP=/scratch/rd/dasp=/lus/snx11062/scratch/rd/dasp
+
+[profile.ecmwf-INFO] USUAL_SCRATCH=USUAL_TEMP=/scratch/rd/dasp
+
+[profile.ecmwf-INFO] EPHEMERAL_SCRATCH=EPHEMERAL_TEMP=/lus/snx11064/scratch/rd/dasp (DATA WILL BE REMOVED Dec 15 09:00Z!)
+
+[profile.ecmwf-INFO] SCRATCHDIR=TMPDIR=/lus/snx11064/TMP/JTMP/80/dasp.525053.ccapar.20171123T120928
+
+## INFO -------------------------------------------------------------------------------------
+## INFO  This is the ECMWF jobfilter (v3.00)
+## INFO  +++ Please report issues to calldesk, cdk@ecmwf.int +++
+## INFO  configuration info:
+## INFO  /usr/local/apps/pbs_tools/bin/ecqsub: size: 97008, mtime: Mon Oct 30 22:27:55 2017
+## INFO  /usr/local/apps/pbs_tools/config/ecqsub.conf (/usr/local/apps/pbs_tools/config/ecqsub.conf): size: 6309, mtime: Mon Sep 18 09:30:40 2017
+## INFO  /usr/local/apps/pbs_tools/config/multicomplex.conf (/usr/local/apps/pbs_tools/config/multicomplex.conf): size: 3916, mtime: Mon Oct  3 06:57:13 2016
+## INFO  /usr/local/apps/pbs_tools/config/ecqsub_rules.conf (/usr/local/apps/pbs_tools/config/ecqsub_rules.conf): size: 17941, mtime: Tue Oct 24 16:32:01 2017
+## INFO  /usr/local/apps/pbs_tools/config/system_sessions.conf (/usr/local/apps/pbs_tools/config/system_sessions.conf): size: 1487, mtime: Wed Nov 15 12:01:59 2017
+## INFO  system logfile is: /usr/local/apps/pbs_tools/logs/ecqsub.log.20171123
+## INFO -------------------------------------------------------------------------------------
+## INFO  
+## INFO Time at submit: Thu Nov 23 12:09:28 2017 (1511438968.02) on cca-login3:/perm/rd/dasp/DATA/RUN_SUBGRIDS
+## INFO invoked as: '/opt/pbs/13.0.403.161593/bin/qsub' 'run_one.sh'
+## INFO IN: #PBS -N OcnLETKF_OneSubgrid
+## INFO IN: #PBS -q np
+## INFO IN: #PBS -l EC_total_tasks=72
+## INFO IN: #PBS -l EC_hyperthreads=2
+## INFO IN: #PBS -l EC_threads_per_task=1
+## INFO IN: #PBS -l EC_nodes=1
+## INFO IN: #PBS -l EC_max_threads_per_node=72
+## INFO IN: #PBS -l EC_tasks_per_node=72
+## INFO IN: #PBS -l EC_job_tmpdir=DEFAULT
+## INFO IN: #PBS -l EC_threads_per_numa_node=36
+## INFO IN: #PBS -l EC_tmpdir_mem=0
+## INFO IN: #PBS -l EC_billing_account=ecrdasdm
+## INFO Billing account = ecrdasdm
+## INFO Billing account ecrdasdm OK
+## INFO NOTE: EC_job_tmpdir is currently not supported for parallel jobs. Setting TMPDIR=SCRATCHDIR in Lustre directory
+## INFO [qsub:set_job_dirpaths():l1418]: detected file /usr/local/etc/USE_SNX64_FOR_SCRATCHDIR, requesting alternate $SCRATCHDIR base
+## INFO history jobtag identifier = dasp-OcnLETKF_OneSubgrid-/home/rd/dasp/perm/DATA/RUN_SUBGRIDS/OcnLETKF_OneSubgrid
+## INFO Recommended Max threads per NUMA node = [36]
+## INFO rule 'TEMPLATE' disabled
+## INFO jobfilter-rule did not fire: 'moose_only'
+## INFO jobfilter-rule did not fire: 'oom_0'
+## INFO rule 'accept_benchmarkers_only' disabled
+## INFO jobfilter-rule did not fire: 'allow_hpcsupp'
+## INFO rule 'for_benchmarking_free_and_vp' disabled
+## INFO jobfilter-rule did not fire: 'kronos_free_and_kronos'
+## INFO rule 'dump_job' disabled
+## INFO jobfilter-rule did not fire: 'np_to_vp'
+## INFO jobfilter-rule fired: 'EC_aries_elecgroup_for_np'
+## INFO jobfilter-rule did not fire: 'free_gthh'
+## INFO jobfilter-rule did not fire: 'row2_pset_for_huge_np'
+## INFO jobfilter-rule did not fire: 'mega_np_to_user_hold'
+## INFO jobfilter-rule did not fire: 'op_place__EC_aries_elec'
+## INFO jobfilter-rule did not fire: 'o_suite_hres_to_hp'
+## INFO jobfilter-rule did not fire: 'o_suite_sekf_to_sp'
+## INFO jobfilter-rule did not fire: 'o_suite_prodgen_to_free'
+## INFO jobfilter-rule did not fire: 'o_suite_jb_calc_ifsmin_boost_prio_over_newreqs'
+## INFO jobfilter-rule did not fire: 'o_e_suite_hres_to_hp'
+## INFO jobfilter-rule did not fire: 'o_e_suite_sekf_to_sp'
+## INFO jobfilter-rule did not fire: 'o_e_suite_prodgen_to_free'
+## INFO rule 'e_suite_jb_calc_ifsmin_boost_prio_over_newreqs' disabled
+## INFO jobfilter-rule did not fire: 'n_esuite_to_vp'
+## INFO jobfilter-rule did not fire: '007._esuite_240_to_hyper'
+## INFO rule 'esuite_hres_to_hp' disabled
+## INFO rule 'esuite_sekf_to_sp' disabled
+## INFO rule 'esuite_prodgen_to_free' disabled
+## INFO jobfilter-rule did not fire: 'cleps_lokal_member_to_xp_with_aries'
+## INFO [qsub:main():l2049] rule-induced additional directives: "['-l', 'place=group=EC_aries_elecgroup']"
+## INFO Recommended Max threads per NUMA node = [36]
+## INFO Calculated select = 1:vntype=cray_login:EC_accept_from_queue=np:ncpus=0:mem=300MB+1:vntype=cray_compute:EC_accept_from_queue=np:mem=120GB
+## INFO Enforcing Select
+## INFO Nodes needed: 1
+## INFO Setting directive #PBS -l EC_nodes=1
+## INFO Setting directive #PBS -l EC_max_threads_per_node=72
+## INFO Setting directive #PBS -l EC_resources=snx11064:generic:snx11062
+## INFO Setting directive #PBS -l EC_job_tmpdir=DEFAULT
+## INFO Setting directive #PBS -l EC_threads_per_numa_node=36
+## INFO Setting directive #PBS -l EC_threads_per_task=1
+## INFO Setting directive #PBS -l EC_tasks_per_node=72
+## INFO Setting directive #PBS -l EC_tmpdir_mem=0
+## INFO Setting directive #PBS -l EC_total_tasks=72
+## INFO Setting directive #PBS -l EC_hyperthreads=2
+## INFO Setting directive #PBS -l EC_billing_account=ecrdasdm
+## INFO Setting directive #PBS -l select=1:vntype=cray_login:EC_accept_from_queue=np:ncpus=0:mem=300MB+1:vntype=cray_compute:EC_accept_from_queue=np:mem=120GB
+## INFO Calling qsub with args: ['/opt/pbs/default/bin/qsubf.ALTAIR_ORIG', '-f', '-v', 'EC_ORIG_TMPDIR=/lus/snx11064/TMP/JTMP/80/dasp.REPLACE_WITH_JOBID.20171123T120928,EC_ORIG_SCRATCHDIR=/lus/snx11064/TMP/JTMP/80/dasp.REPLACE_WITH_JOBID.20171123T120928,EC_job_tmpdir=DEFAULT,EC_tmpdir_mem=0', '-l', 'place=group=EC_aries_elecgroup', '-q', 'np@ccapar:15001']
+## INFO OUT: #PBS -l EC_predicted_walltime=0
+## INFO OUT: #PBS -l EC_nodes=1
+## INFO OUT: #PBS -l EC_max_threads_per_node=72
+## INFO OUT: #PBS -l EC_resources=snx11064:generic:snx11062
+## INFO OUT: #PBS -l EC_job_tmpdir=DEFAULT
+## INFO OUT: #PBS -l EC_threads_per_numa_node=36
+## INFO OUT: #PBS -W umask=027
+## INFO OUT: #PBS -l EC_threads_per_task=1
+## INFO OUT: #PBS -N OcnLETKF_OneSub
+## INFO OUT: #PBS -l EC_tasks_per_node=72
+## INFO OUT: #PBS -l EC_tmpdir_mem=0
+## INFO OUT: #PBS -l EC_total_tasks=72
+## INFO OUT: #PBS -l EC_hyperthreads=2
+## INFO OUT: #PBS -l EC_billing_account=ecrdasdm
+## INFO OUT: #PBS -l select=1:vntype=cray_login:EC_accept_from_queue=np:ncpus=0:mem=300MB+1:vntype=cray_compute:EC_accept_from_queue=np:mem=120GB
+## INFO OUT: #PBS -q np
+## INFO  
+Running Ocean-LETKF...
+Hello from MYRANK 059/071
+Hello from MYRANK 057/071
+STDOUT goes to NOUT-0057 for MYRANK 0057
+STDOUT goes to NOUT-0059 for MYRANK 0059
+Hello from MYRANK 053/071
+Hello from MYRANK 052/071
+Hello from MYRANK 048/071
+STDOUT goes to NOUT-0052 for MYRANK 0052
+STDOUT goes to NOUT-0053 for MYRANK 0053
+Hello from MYRANK 049/071
+STDOUT goes to NOUT-0048 for MYRANK 0048
+STDOUT goes to NOUT-0049 for MYRANK 0049
+Hello from MYRANK 015/071
+Hello from MYRANK 008/071
+STDOUT goes to NOUT-0015 for MYRANK 0015
+STDOUT goes to NOUT-0008 for MYRANK 0008
+Hello from MYRANK 018/071
+STDOUT goes to NOUT-0018 for MYRANK 0018
+Hello from MYRANK 066/071
+Hello from MYRANK 067/071
+Hello from MYRANK 058/071
+Hello from MYRANK 055/071
+Hello from MYRANK 064/071
+Hello from MYRANK 065/071
+STDOUT goes to NOUT-0058 for MYRANK 0058
+STDOUT goes to NOUT-0066 for MYRANK 0066
+STDOUT goes to NOUT-0067 for MYRANK 0067
+Hello from MYRANK 033/071
+Hello from MYRANK 056/071
+STDOUT goes to NOUT-0055 for MYRANK 0055
+STDOUT goes to NOUT-0065 for MYRANK 0065
+STDOUT goes to NOUT-0064 for MYRANK 0064
+STDOUT goes to NOUT-0056 for MYRANK 0056
+Hello from MYRANK 062/071
+STDOUT goes to NOUT-0033 for MYRANK 0033
+Hello from MYRANK 050/071
+Hello from MYRANK 051/071
+Hello from MYRANK 054/071
+STDOUT goes to NOUT-0062 for MYRANK 0062
+Hello from MYRANK 063/071
+Hello from MYRANK 071/071
+Hello from MYRANK 070/071
+Hello from MYRANK 040/071
+Hello from MYRANK 041/071
+STDOUT goes to NOUT-0050 for MYRANK 0050
+STDOUT goes to NOUT-0051 for MYRANK 0051
+Hello from MYRANK 046/071
+Hello from MYRANK 047/071
+STDOUT goes to NOUT-0054 for MYRANK 0054
+STDOUT goes to NOUT-0063 for MYRANK 0063
+Hello from MYRANK 012/071
+Hello from MYRANK 045/071
+Hello from MYRANK 044/071
+STDOUT goes to NOUT-0071 for MYRANK 0071
+STDOUT goes to NOUT-0070 for MYRANK 0070
+Hello from MYRANK 042/071
+Hello from MYRANK 043/071
+STDOUT goes to NOUT-0041 for MYRANK 0041
+STDOUT goes to NOUT-0040 for MYRANK 0040
+Hello from MYRANK 061/071
+Hello from MYRANK 060/071
+Hello from MYRANK 069/071
+Hello from MYRANK 036/071
+Hello from MYRANK 037/071
+Hello from MYRANK 038/071
+STDOUT goes to NOUT-0012 for MYRANK 0012
+STDOUT goes to NOUT-0045 for MYRANK 0045
+STDOUT goes to NOUT-0044 for MYRANK 0044
+Hello from MYRANK 068/071
+STDOUT goes to NOUT-0043 for MYRANK 0043
+STDOUT goes to NOUT-0042 for MYRANK 0042
+Hello from MYRANK 017/071
+Hello from MYRANK 016/071
+Hello from MYRANK 009/071
+Hello from MYRANK 001/071
+STDOUT goes to NOUT-0061 for MYRANK 0061
+STDOUT goes to NOUT-0060 for MYRANK 0060
+STDOUT goes to NOUT-0069 for MYRANK 0069
+STDOUT goes to NOUT-0038 for MYRANK 0038
+STDOUT goes to NOUT-0036 for MYRANK 0036
+STDOUT goes to NOUT-0037 for MYRANK 0037
+Hello from MYRANK 039/071
+STDOUT goes to NOUT-0068 for MYRANK 0068
+Hello from MYRANK 006/071
+STDOUT goes to NOUT-0009 for MYRANK 0009
+Hello from MYRANK 023/071
+Hello from MYRANK 014/071
+STDOUT goes to NOUT-0016 for MYRANK 0016
+STDOUT goes to NOUT-0017 for MYRANK 0017
+STDOUT goes to NOUT-0047 for MYRANK 0047
+STDOUT goes to NOUT-0046 for MYRANK 0046
+STDOUT goes to NOUT-0001 for MYRANK 0001
+Hello from MYRANK 035/071
+Hello from MYRANK 005/071
+STDOUT goes to NOUT-0039 for MYRANK 0039
+Hello from MYRANK 026/071
+STDOUT goes to NOUT-0014 for MYRANK 0014
+Hello from MYRANK 028/071
+Hello from MYRANK 032/071
+Hello from MYRANK 022/071
+Hello from MYRANK 004/071
+Hello from MYRANK 010/071
+Hello from MYRANK 011/071
+STDOUT goes to NOUT-0023 for MYRANK 0023
+Hello from MYRANK 029/071
+STDOUT goes to NOUT-0006 for MYRANK 0006
+STDOUT goes to NOUT-0035 for MYRANK 0035
+Hello from MYRANK 034/071
+Hello from MYRANK 019/071
+STDOUT goes to NOUT-0032 for MYRANK 0032
+STDOUT goes to NOUT-0005 for MYRANK 0005
+Hello from MYRANK 003/071
+Hello from MYRANK 002/071
+STDOUT goes to NOUT-0022 for MYRANK 0022
+STDOUT goes to NOUT-0026 for MYRANK 0026
+STDOUT goes to NOUT-0028 for MYRANK 0028
+Hello from MYRANK 013/071
+Hello from MYRANK 020/071
+Hello from MYRANK 021/071
+STDOUT goes to NOUT-0004 for MYRANK 0004
+STDOUT goes to NOUT-0029 for MYRANK 0029
+STDOUT goes to NOUT-0019 for MYRANK 0019
+Hello from MYRANK 007/071
+Hello from MYRANK 030/071
+Hello from MYRANK 031/071
+Hello from MYRANK 027/071
+STDOUT goes to NOUT-0034 for MYRANK 0034
+STDOUT goes to NOUT-0010 for MYRANK 0010
+STDOUT goes to NOUT-0011 for MYRANK 0011
+STDOUT goes to NOUT-0013 for MYRANK 0013
+Hello from MYRANK 024/071
+Hello from MYRANK 025/071
+STDOUT goes to NOUT-0003 for MYRANK 0003
+STDOUT goes to NOUT-0002 for MYRANK 0002
+STDOUT goes to NOUT-0021 for MYRANK 0021
+STDOUT goes to NOUT-0020 for MYRANK 0020
+STDOUT goes to NOUT-0007 for MYRANK 0007
+STDOUT goes to NOUT-0027 for MYRANK 0027
+STDOUT goes to NOUT-0030 for MYRANK 0030
+STDOUT goes to NOUT-0031 for MYRANK 0031
+STDOUT goes to NOUT-0025 for MYRANK 0025
+STDOUT goes to NOUT-0024 for MYRANK 0024
+Hello from MYRANK 000/071
+STDOUT goes to NOUT-0000 for MYRANK 0000
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+ Initializing kd-tree with  365795 locations
+Application 259213787 resources: utime ~135s, stime ~47s, Rss ~124752, inblocks ~709507, outblocks ~84518
+Run complete. Exiting...
+
+
+[sh.epilog.ecmwf-INFO] resources consumed by this shell:
+
+0m0.064s 0m0.052s
+0m0.488s 0m0.516s
+## INFO ----------------------------------------------------------------------------------
+## INFO  This is the ECMWF job Epilogue. Please report problems to calldesk, cdk@ecmwf.int
+## INFO ----------------------------------------------------------------------------------
+## INFO  
+## INFO Run at Thu Nov 23 12:16:34 2017 on CCA
+## INFO Job Name                  : OcnLETKF_OneSub
+## INFO Job ID                    : 525053.ccapar
+## INFO Queued                    : Thu Nov 23 12:09:28 2017
+## INFO Dispatched                : Thu Nov 23 12:16:24 2017
+## INFO Completed                 : Thu Nov 23 12:16:34 2017
+## INFO Waiting in the queue      : 416 seconds
+## INFO Runtime                   : 10 seconds
+## INFO Exit Code                 : 0
+## INFO Account                   : ecrdasdm
+## INFO Queue                     : np
+## INFO Owner                     : dasp
+## INFO STDOUT                    : /home/rd/dasp/perm/DATA/RUN_SUBGRIDS/OcnLETKF_OneSub.o525053
+## INFO STDERR                    : /home/rd/dasp/perm/DATA/RUN_SUBGRIDS/OcnLETKF_OneSub.e525053
+## INFO Hyperthreads              : 2
+## INFO SBU                       : 1.612977 units
+## INFO Logical CPUs              : 72
+## INFO Historic runtime average            : 10.00 seconds
+## INFO Historic runtime standard deviation : 0.00 seconds
+## INFO  
+## INFO   MOM RESOURCES USED | ncpus      cput       runtime    vmem       mem       
+## INFO ----------------------------------------------------------------------------
+## INFO   23.11.2017 - 12:16 | 72         1          10         39604kb    2968kb    
+## INFO  
+## INFO Note: Historic runtime average is 10 seconds with a standard deviation of 0.0 seconds
+## INFO This runtime falls within 1 standard deviation of average
+## INFO  
+## INFO Removing prologue-created EC_ORIG_SCRATCHDIR /lus/snx11064/TMP/JTMP/80/dasp.525053.ccapar.20171123T120928 on ccamom05 at 20171123T121634

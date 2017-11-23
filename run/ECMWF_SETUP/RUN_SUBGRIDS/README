@@ -1,8 +1,19 @@
+# Instructions for this directory:
+# This code is designed to set up and run the Ocean-LETKF for NEMO subgrids
+
 # Set up the global parameters that will populate all RUN/*.sh scripts:
 vim params.sh
 # Set up the background files in the working directory:
 sh setup_bgfiles.sh
-# Preprocess the NEMOVAR observation feedback files:
+# Preprocess the NEMO observation feedback files:
+# OPTIONS:
+# 1) if obs do not have perturbed locations, you can just run without qc
+#    (set GLOBAL_DO_QC=0 in params.sh) and input the fdbkqc file
+# 2) If obs have perturbed locations, then you can run with qc:
+#    (set GLOBAL_DO_QC=1 in params.sh), input the fdbk files and
+#    supply a fdbkqc control file as a 'mask' for what obs to keep
+# 3) Run with qc turned off entirely:
+#    (set GLOBAL_DO_QC=0 in params.sh) and input the fdbk files instead of fdbkqc
 sh preprocess_obs.sh
 # Compute the observation operator to change NEMOVAR netcdf to LETKF binary input format
 sh setup_obsop.sh
@@ -10,7 +21,9 @@ sh setup_obsop.sh
 sh link_obsop.sh
 # Set up the grid specification file for a subgrid (and flag if it contains no ocean data)
 sh setup_grid.sh
-# Run the main letkf analysis
+# Run the main letkf analysis on all subgrids:
 qsub run_subgrids.sh
+# -or- to run only 1 subgrid at a time:
+qsub run_one.sh 
 # Compute ensemble mean and standard deviation post-analysis:
-sh postprocess_ens.sh
+sh postprocess_one.sh  # For one subgrid

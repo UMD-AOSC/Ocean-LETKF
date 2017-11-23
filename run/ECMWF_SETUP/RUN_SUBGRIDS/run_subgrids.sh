@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -N Ocean-LETKF_test
+#PBS -N OcnLETKF_AllSubgrids
 #PBS -q np
 #PBS -l EC_total_tasks=288
 #PBS -l EC_hyperthreads=2

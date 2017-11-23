@@ -96,6 +96,8 @@ SUBROUTINE set_common_oceanmodel
   CALL initialize_vars_model   ! (checks to make sure it is initialized)
 
   !STEVE: debugging:
+
+# 97
   if (allocated(lon2d)) then
     WRITE(6,*) "pre-assignment:"
     WRITE(6,*) "SIZE(lon2d,1) = ", SIZE(lon2d,1)
@@ -125,9 +127,11 @@ SUBROUTINE set_common_oceanmodel
     WRITE(6,*) "lev is not allocated"
   endif
 
+
   !-----------------------------------------------------------------------------
   ! lon2d, lat2
   !-----------------------------------------------------------------------------
+# 130
   WRITE(6,*) "Reading x coordinate (lon2d)..."
   call check( NF90_INQ_VARID(ncid,grid_lon2d_name,varid) )   ! Longitude for T-cell
   call check( NF90_GET_VAR(ncid,varid,lon2d) )
@@ -592,7 +596,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
   USE params_model, ONLY: rsrt_u_name, rsrt_v_name
   USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
-! USE params_model, ONLY: DO_SUBGRID
   
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -610,38 +613,13 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !STEVE: for debugging:
   CHARACTER(32) :: testfile
   INTEGER :: iunit,iolen,n,irec
-  LOGICAL, PARAMETER :: dodebug = .false.
   CHARACTER(3) :: MEM3
   CHARACTER(32) :: sfc_infile
   CHARACTER(slen) :: varname
   INTEGER :: ivid
   INTEGER :: ncstat
-! INTEGER, DIMENSION(1) :: domain_number_total, domain_number
-! INTEGER, DIMENSION(2) :: domain_dimension_ids
-! INTEGER, DIMENSION(2) :: domain_size_global, domain_size_local
-! INTEGER, DIMENSION(2) :: domain_position_first, domain_position_last
-! INTEGER, DIMENSION(2) :: domain_halo_size_start, domain_halo_size_end
-! CHARACTER(slen) :: domain_type
+  LOGICAL, PARAMETER :: dodebug = .true.
 
-
-  !STEVE: (ISSUE) add logic for reading in subpanels and updating the model grid definition
-  !               e.g. perhaps read in above in the init routine a separte file to specify
-  !               the subpanel specifications.
-  !
-  ! Read these in and correct based on halo, etc.
-  !
-  ! // global attributes:
-  !             :DOMAIN_number_total = 78 ;
-  !             :DOMAIN_number = 0 ;                    ! Use to track filename
-  !             :DOMAIN_dimensions_ids = 1, 2 ;
-  !             :DOMAIN_size_global = 1442, 1021 ;      
-  !             :DOMAIN_size_local = 38, 511 ;          ! Use to define new grid domain
-  !             :DOMAIN_position_first = 1, 1 ;         ! Use to identify the proper lon2d/lat2d values
-  !             :DOMAIN_position_last = 38, 511 ;       ! ""
-  !             :DOMAIN_halo_size_start = 0, 0 ;
-  !             :DOMAIN_halo_size_end = 0, 0 ;
-  !             :DOMAIN_type = "BOX" ;
-  ! Input restart filename:
   tsfile = trim(infile)//'.'//trim(rsrt_tsbase)
 
   select case(prec)
@@ -656,31 +634,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   call check( NF90_OPEN(tsfile,NF90_NOWRITE,ncid) )
   WRITE(6,*) "read_restart:: just opened file ", tsfile
-
-! if (DO_SUBGRID) then
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number_total", domain_number_total)
-!   if (ncstat /= NF90_NOERR) then
-!     WRITE(6,*) "common_nemo.f90::read_restart:: DO_SUBGRID is set to .true."
-!     WRITE(6,*) "however, required subgrid information is not in restart file: "
-!     WRITE(6,*) trim(tsfile)
-!     WRITE(6,*) "EXITING..."
-!     STOP('DO_SUBGRID read_restart')
-!   endif
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number_total", domain_number_total)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_number", domain_number)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_dimension_ids", domain_number_total)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_size_global", domain_size_global)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_size_local", domain_size_local)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_position_first", domain_position_first)
-!   ncstat = NF90_GET_ATT(ncid, NF90_GLOBAL, "DOMAIN_position_last", domain_position_last)
-
-!   if (dodebug) then
-!     WRITE(6,*) "common_nemo.f90::read_restart:: DO_SUBGRID is set to .true."
-!     WRITE(6,*) "Reading domain ", domain_number(1), " of ", domain_number_total(1)
-!     WRITE(6,*) "Global domain = ", domain_size_global
-!     WRITE(6,*) "Local domain = ", domain_size_local
-!   endif
-! endif
 
   !-----------------------------------------------------------------------------
   !!! t
@@ -923,8 +876,10 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
       WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
       WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
     endif
+    !(NEMO) ECMWF compiler did not like this:
 !   WHERE (buf8 < min_t) buf8 = min_t
 !   WHERE (buf8 > max_t) buf8 = max_t
+    !(NEMO) using alternative:
     call apply_physlimit_3d(buf8,buf8,iv3d_t)
     if (dodebug) then
       WRITE(6,*) "post-physlimit:"
@@ -946,9 +901,25 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
   ! Apply physical limits to the output analysis:
   if (do_physlimit) then
+    if (dodebug) then
+      WRITE(6,*) "min_s = ", min_s
+      WRITE(6,*) "max_s = ", max_s
+    endif
+    if (dodebug) then
+      WRITE(6,*) "pre-physlimit:"
+      WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+      WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+    endif
+    !(NEMO) ECMWF compiler did not like this:
 !   WHERE (buf8 < min_s) buf8 = min_s
 !   WHERE (buf8 > max_s) buf8 = max_s
+    !(NEMO) using alternative:
     call apply_physlimit_3d(buf8,buf8,iv3d_s)
+    if (dodebug) then
+      WRITE(6,*) "post-physlimit:"
+      WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+      WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+    endif
   endif
 
   if (dodebug) WRITE(6,*) "Write data for salinity..."
@@ -1021,6 +992,10 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 END SUBROUTINE write_restart
 
 
+!-----------------------------------------------------------------------
+! Apply upper and lower limits the 3D analysis fields based on 
+! physical requirements specified via params_model.f90 or input.nml
+!-----------------------------------------------------------------------
 SUBROUTINE apply_physlimit_3d(v3d_in,v3d_out,iv)
   USE params_model, ONLY: nlon, nlat, nlev
   USE params_model, ONLY: nv3d
@@ -1062,6 +1037,11 @@ SUBROUTINE apply_physlimit_3d(v3d_in,v3d_out,iv)
 
 END SUBROUTINE apply_physlimit_3d
 
+
+!-----------------------------------------------------------------------
+! Apply upper and lower limits the 2D analysis fields based on 
+! physical requirements specified via params_model.f90 or input.nml
+!-----------------------------------------------------------------------
 SUBROUTINE apply_physlimit_2d(v2d_in,v2d_out,iv)
   USE params_model, ONLY: nlon, nlat
   USE params_model, ONLY: nv2d

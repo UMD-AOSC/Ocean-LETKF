@@ -15,7 +15,7 @@ print(obsfiles)
 
 # Variables to keep, dimensioned a: (nobs), and b: (nobs,depth)
 varlist_a = ['LONGITUDE','LATITUDE','JULD','POTM_QC','PSAL_QC','ORIGINAL_FILE_INDEX']
-varlist_b = ['DEPTH','POTM_OBS','PSAL_OBS','POTM_Hx0','PSAL_Hx0']
+varlist_b = ['DEPTH','POTM_OBS','PSAL_OBS','POTM_Hx','PSAL_Hx']
 
 # Loop through each observation file
 idx=0

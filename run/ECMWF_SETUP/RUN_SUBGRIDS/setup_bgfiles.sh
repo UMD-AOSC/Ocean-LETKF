@@ -43,10 +43,10 @@ while [ $SG -lt $SUBGRIDS ]; do
     afile=anal${MEM3}${FILE_SUFFIX}
 
     echo "Creating file: $bfile"
-    cp -f $SRCDIR/$MEM2/${RESTART_FILE_PREFIX}${SG4}${RESTART_FILE_SUFFIX} $DSTDIR/$bfile &
+    cp -f $SRCDIR/$MEM2/${GLOBAL_RESTART_FILE_PREFIX}${SG4}${GLOBAL_RESTART_FILE_SUFFIX} $DSTDIR/$bfile &
 
     echo "Creating file: $afile"
-    cp -f $SRCDIR/$MEM2/${RESTART_FILE_PREFIX}${SG4}${RESTART_FILE_SUFFIX} $DSTDIR/$afile &
+    cp -f $SRCDIR/$MEM2/${GLOBAL_RESTART_FILE_PREFIX}${SG4}${GLOBAL_RESTART_FILE_SUFFIX} $DSTDIR/$afile &
 
     MEM=`expr $MEM + 1`
   done

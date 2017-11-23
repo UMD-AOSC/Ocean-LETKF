@@ -115,8 +115,8 @@ PROGRAM obsop_ecmwf_tprof
   LOGICAL :: DO_REMOVE_BLACKSEA=.false.
   INTEGER :: cnt_blacksea=0
   REAL(r_size) :: dep_thresh = 100
-  CHARACTER(slen) :: obs_name='POTM_OBS' !(NEMO) default
-  CHARACTER(slen) :: hxb_name='POTM_Hx0' !(NEMO) default  
+  CHARACTER(slen) :: obs_name='POTM_OBS' !(NEMO) default. Change via command line argument
+  CHARACTER(slen) :: hxb_name='POTM_Hx'  !(NEMO) default. Change via command line argument
 
   ! BEGIN
   
@@ -135,7 +135,7 @@ PROGRAM obsop_ecmwf_tprof
   ! Read observations from ECMWF NEMOVAR feedback (fdbk) file
   !-----------------------------------------------------------------------------
   print *, "obsop_ecmwf_tprof.f90:: calling read_fdbk_nc for observations..."
-  CALL read_fdbk_nc(obsinfile,id_t_obs,obs_data,nobs,obs_name,hxb_name,1) !STEVE: use ,2) if obs errors can be read in
+  CALL read_fdbk_nc(obsinfile,id_t_obs,obs_data,nobs,trim(obs_name),trim(hxb_name),1) !STEVE: use ,2) if obs errors can be read in
   print *, "obsop_ecwmf_tprof.f90:: finished read_fdbk_nc."
 
   !-----------------------------------------------------------------------------

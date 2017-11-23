@@ -1,0 +1,50 @@
+#[12:16:23] 525053.ccapar.SC[29]> SG=200
+##[12:16:23] 525053.ccapar.SC[30]> printf %04d 200
+#[12:16:23] 525053.ccapar.SC[30]> SG4=0200
+#[12:16:23] 525053.ccapar.SC[32]> CDIR=/home/rd/dasp/perm/DATA/RUN_SUBGRIDS
+#[12:16:23] 525053.ccapar.SC[33]> source /home/rd/dasp/perm/DATA/RUN_SUBGRIDS/params.sh
+##[12:16:23] 525053.ccapar.SC[6]> GLOBAL_EXPNAME=TEST_5memOceanSubgrids
+##[12:16:23] 525053.ccapar.SC[9]> GLOBAL_MEM_START=0
+##[12:16:23] 525053.ccapar.SC[10]> GLOBAL_MEMBERS=5
+##[12:16:23] 525053.ccapar.SC[11]> GLOBAL_subgrid_start=0
+##[12:16:23] 525053.ccapar.SC[12]> GLOBAL_num_subgrids=480
+##[12:16:23] 525053.ccapar.SC[15]> GLOBAL_IYYYY=2017
+##[12:16:23] 525053.ccapar.SC[16]> GLOBAL_IMM=01
+##[12:16:23] 525053.ccapar.SC[17]> GLOBAL_IDD=01
+##[12:16:23] 525053.ccapar.SC[19]> GLOBAL_EYYYY=2017
+##[12:16:23] 525053.ccapar.SC[20]> GLOBAL_EMM=01
+##[12:16:23] 525053.ccapar.SC[21]> GLOBAL_EDD=06
+##[12:16:23] 525053.ccapar.SC[23]> GLOBAL_inc=5
+##[12:16:23] 525053.ccapar.SC[24]> GLOBAL_inc_units=days
+##[12:16:23] 525053.ccapar.SC[30]> GLOBAL_OBS_FILE_PREFIX=
+##[12:16:23] 525053.ccapar.SC[32]> GLOBAL_OBS_FILE_SUFFIX=profbqc_01_fdbk_00.nc
+##[12:16:23] 525053.ccapar.SC[33]> GLOBAL_OBS_FILE_SUFFIX_qc=profbqc_01_fdbk_00.nc
+##[12:16:23] 525053.ccapar.SC[36]> GLOBAL_RESTART_FILE_PREFIX=gucq_20170106_000000_restart_
+##[12:16:23] 525053.ccapar.SC[38]> GLOBAL_RESTART_FILE_SUFFIX=.nc
+##[12:16:23] 525053.ccapar.SC[42]> GLOBAL_PERM=/home/rd/dasp/perm
+##[12:16:23] 525053.ccapar.SC[43]> GLOBAL_SCRATCH=/lus/snx11064/scratch/rd/dasp
+##[12:16:23] 525053.ccapar.SC[45]> GLOBAL_LETKF_ROOT=/home/rd/dasp/perm/Ocean-LETKF
+##[12:16:23] 525053.ccapar.SC[46]> GLOBAL_LETKF_NAME=ECMWF_nemo.subgrid
+##[12:16:23] 525053.ccapar.SC[48]> GLOBAL_GRDDIR=/home/rd/dasp/perm/DATA/STATIC
+##[12:16:23] 525053.ccapar.SC[49]> GLOBAL_GRDFILE=mesh_mask.nc
+##[12:16:23] 525053.ccapar.SC[51]> GLOBAL_RUNDIR=/home/rd/dasp/perm/DATA/RUN_SUBGRIDS
+##[12:16:23] 525053.ccapar.SC[55]> GLOBAL_LETKF_FILE_SUFFIX=.restart.nc
+##[12:16:23] 525053.ccapar.SC[59]> GLOBAL_DO_QC=0
+##[12:16:23] 525053.ccapar.SC[63]> GLOBAL_QC_REF=/lus/snx11064/scratch/rd/dasp/TEST_5memOceanSubgrids/DATA/OBS/00/profbqc_01_fdbk_00.nc
+##[12:16:23] 525053.ccapar.SC[66]> GLOBAL_TPROF_OBS_NAME=POTM_OBS
+##[12:16:23] 525053.ccapar.SC[67]> GLOBAL_TPROF_Hxb_NAME=POTM_Hx
+##[12:16:23] 525053.ccapar.SC[68]> GLOBAL_SPROF_OBS_NAME=PSAL_OBS
+##[12:16:23] 525053.ccapar.SC[69]> GLOBAL_SPROF_Hxb_NAME=PSAL_Hx
+#[12:16:23] 525053.ccapar.SC[35]> RUNDIR=/home/rd/dasp/perm/DATA/RUN_SUBGRIDS
+#[12:16:23] 525053.ccapar.SC[36]> name=ECMWF_nemo.subgrid
+#[12:16:23] 525053.ccapar.SC[37]> EXEDIR=/home/rd/dasp/perm/Ocean-LETKF/build/build_letkf/ECMWF_nemo.subgrid.build
+#[12:16:23] 525053.ccapar.SC[38]> EXEFILE=letkf.ECMWF_nemo.subgrid.x
+#[12:16:23] 525053.ccapar.SC[40]> SCRATCH=/lus/snx11064/scratch/rd/dasp
+#[12:16:23] 525053.ccapar.SC[41]> EXPNAME=TEST_5memOceanSubgrids
+#[12:16:23] 525053.ccapar.SC[42]> DSTDIR=/lus/snx11064/scratch/rd/dasp/TEST_5memOceanSubgrids/WORK/0200
+#[12:16:23] 525053.ccapar.SC[43]> cd /lus/snx11064/scratch/rd/dasp/TEST_5memOceanSubgrids/WORK/0200
+#[12:16:23] 525053.ccapar.SC[46]> cp /home/rd/dasp/perm/DATA/RUN_SUBGRIDS/input.nml .
+#[12:16:23] 525053.ccapar.SC[47]> cp /home/rd/dasp/perm/Ocean-LETKF/build/build_letkf/ECMWF_nemo.subgrid.build/letkf.ECMWF_nemo.subgrid.x .
+#[12:16:23] 525053.ccapar.SC[50]> echo 'Running Ocean-LETKF...'
+#[12:16:23] 525053.ccapar.SC[51]> aprun -N 72 -n 72 -j 2 ./letkf.ECMWF_nemo.subgrid.x
+#[12:16:28] 525053.ccapar.SC[52]> echo 'Run complete. Exiting...'

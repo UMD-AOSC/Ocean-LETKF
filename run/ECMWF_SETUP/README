@@ -1,74 +1,25 @@
-These are sample setup files used to prepare a single anaylsis at ECMWF
-using the NEMO observation 'feedback' files that contained observations and 
-model equivalents at the observation locations.
+#-----------------------------------------------------------------------------
+# Start by preparing the forecast and observation datasets for this analysis
+#-----------------------------------------------------------------------------
 
-#---------------------------------------------------------------
-# Set up the observation feedback files in a scratch directory
-#---------------------------------------------------------------
-
-cd OBS/
-
-sh setup_obs.sh
-
-#---------------------------------------------------------------
-# Set up the forecast restart files in a scratch directory
-#---------------------------------------------------------------
-
+# Prepare the appropriate source and destination directories and run restart file setup script
 cd FCST/
+sh setup_fcst_DI.sh  # (for example; set up a new script for a new data source)
 
-sh setup_fcst.sh
+# Prepare the appropriate source and destination directories and run obs setup script
+cd OBS/
+sh setup_obs_DI.sh  # (for example)
 
-#---------------------------------------------------------------
-# To run the LETKF analysis once on the total global field
-#---------------------------------------------------------------
+# Prepare the static data (i.e. the grid specification file)
+cd STATIC/
+# copy the mesh_mask.nc nemo grid specification file here
+# see README to reduce the size of the file, if desired
 
-cd RUN/
+# Assiming the Ocean-LETKF and the obs operator have been built 
+# (in Ocean-LETKF via github: https://github.com/UMD-AOSC/Ocean-LETKF )
+# Either:
+cd RUN/              # to run up to a 4-member ensemble at 1/4-degree or any size ensemble at lower resolution
+# or:
+cd RUN_SUBGRIDS/     # tp run > 4-member ensemble at 1/4-degree resolution or higher
 
-# Set up the background files in the working directory
-sh setup_bgfiles.sh
-
-# Preprocess the NEMO observation feedback files to ensure corresponding obs across all members
-sh preprocess_obs.sh
-
-# Compute the observation operator to change NEMO netcdf to LETKF binary input format
-sh setup_obsop.sh
-
-# Run the main letkf analysis
-qsub run.sh
-
-# Note:
-prior to running run.sh, simple parameters (like ensemble size) can be specified in input.nml
-output is provided in NOUT-???? files in the working directory ('WORK')
-
-# Compute ensemble mean and standard deviation post-analysis:
-sh postprocess_ens.sh
-
-#---------------------------------------------------------------------------
-# (Alternatively) To run the LETKF analysis on subgrids of the total globe
-#---------------------------------------------------------------------------
-
-cd RUN_SUBGRIDS/
-
-# Set up the global parameters that will populate all RUN/*.sh scripts:
-vim params.sh
-
-# Set up the background files in the working directory:
-sh setup_bgfiles.sh
-
-# Preprocess the NEMO observation feedback files to ensure corresponding obs across all members
-sh preprocess_obs.sh
-
-# Compute the observation operator to change NEMO netcdf to LETKF binary input format
-sh setup_obsop.sh
-
-# Link obs to the subgrid working directories
-sh link_obsop.sh
-
-# Set up the grid specification file for a subgrid (and flag if it contains no ocean data so it can be skipped)
-sh setup_grid.sh
-
-# Run the main letkf analysis
-qsub run_subgrids.sh
-
-# Compute ensemble mean and standard deviation post-analysis:
-sh postprocess_ens.sh
+# From there, follow directions in the README files for each subdirectory

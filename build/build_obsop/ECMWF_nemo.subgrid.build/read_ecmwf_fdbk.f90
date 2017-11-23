@@ -57,15 +57,9 @@ LOGICAL :: DO_COMPUTE_OBE   ! Compute the observation error estimate using the N
 
 INTEGER :: undef = 99999
 
-!! Read temp data
-!infile = trim(indir1)//'/'//YYYY//MM//DD//'tmp.nc' !STEVE: sample
-!typ = id_t_obs
-!CALL read_fdbk_nc(infile,typ,obs_data,nobs)
-!print *, "temp nobs = ", nobs
-
 !! Write letkf file
 !do i=1,nobs
-!!STEVE: the following are required for miyoshi's letkf observation input:
+!!STEVE: the following are required for miyoshi's letkf observation input format:
 !!1 = obelm
 !!2 = lon
 !!3 = lat
@@ -83,7 +77,6 @@ INTEGER :: undef = 99999
 
 CONTAINS
 
-!SUBROUTINE read_fdbk_nc(infile,typ,obs_data,nobs,opt_in)
 SUBROUTINE read_fdbk_nc(infile,typ,obs_data,nobs,obs_name,mod_name,opt_in)
 !===============================================================================
 ! Read the argo profile data
@@ -115,13 +108,13 @@ CHARACTER(9), ALLOCATABLE, DIMENSION(:) :: plat
 CHARACTER(1), ALLOCATABLE, DIMENSION(:) :: qkey
 INTEGER, ALLOCATABLE, DIMENSION(:) :: qc
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: ovals, mvals, stde
-REAL(r_size), ALLOCATABLE, DIMENSION(:) :: depth ! profile depths
+REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: depth ! profile depths  (dimensioned: nobs, depth)
 REAL(r_size) :: val, hxb
 INTEGER :: cnt, nlv
 LOGICAL :: dodebug=.true.
-REAL(r_size) :: missing_value=99999 !-99.0
-REAL(r_sngl) :: mvc=999
-REAL(r_sngl) :: max_depth = 9999
+REAL(r_size) :: missing_value=99999 ! Missing value flag in the data
+REAL(r_sngl) :: max_value=999       ! Maximum value condition
+REAL(r_sngl) :: max_depth = 9999    ! Maximum depth condition
 
 CHARACTER(slen) :: tobs_name, tmod_name
 CHARACTER(slen) :: sobs_name, smod_name
@@ -141,7 +134,7 @@ if (typ .eq. id_t_obs) then
 ! tmod_name = 'POTM_Hx0qc'
 ! tmod_name = 'POTM_Hx'
   tobs_name = trim(obs_name)
-  tmod_name = trim(obs_name) 
+  tmod_name = trim(mod_name) 
 elseif (typ .eq. id_s_obs) then
 ! Example possible options:
 ! sobs_name = 'PSAL_OBS'
@@ -149,7 +142,7 @@ elseif (typ .eq. id_s_obs) then
 ! smod_name = 'PSAL_Hx0qc'
 ! smod_name = 'PSAL_Hx'
   sobs_name = trim(obs_name)
-  smod_name = trim(obs_name) 
+  smod_name = trim(mod_name) 
 endif
 
 if (opt==0) then
@@ -211,8 +204,9 @@ print *, "**************************"
 !-------------------------------------------------------------------------------
 ! Read the depths
 !-------------------------------------------------------------------------------
-ALLOCATE(depth(nlv))
+ALLOCATE(depth(nlv,cnt))
 istat = NF90_INQ_VARID(ncid,'DEPTH',varid)   
+
 if (istat /= NF90_NOERR) then
   print *, "NF90_INQ_VARID DEPTH failed"
   STOP
@@ -222,7 +216,7 @@ if (istat /= NF90_NOERR) then
   print *, "NF90_GET_VAR DEPTH failed"
   STOP
 ELSE
-  print *, "depth(:) = ", depth(:)
+  print *, "depth(:,:) = ", depth(:,:)
 !  STOP 0
 endif
 
@@ -274,7 +268,8 @@ endif
 ! Assign as an hour:
 !STEVE (ISSUE) - Need the datetime also to give a unique timestamp
 !                if the files contain multiple days of data
-hour = (hour - floor(hour))*24
+!hour = (hour - floor(hour))*24
+!STEVE: for now, using JULD in place of 'hour' this can be used for temporal smoothing
 
 !-------------------------------------------------------------------------------
 ! Read the platform
@@ -430,13 +425,13 @@ istat = NF90_CLOSE(ncid)
 if (istat /= NF90_NOERR) STOP
 
 !-------------------------------------------------------------------------------
-! STEVE: Either compute the standard error as Behringer did at NCEP based on the
-! vertical temperature gradient, OR use the precomputed standard error from the
-! NEMOVAR observation operator.
+! Either compute the standard error as Behringer did at NCEP based on the
+! vertical temperature gradient (DO_COMPUTE_OBE), OR use the precomputed 
+! standard error from the NEMOVAR observation operator (DO_READ_OBE).
 !-------------------------------------------------------------------------------
 if (DO_COMPUTE_OBE) then
   ALLOCATE(stde(nlv,cnt))
-  stde=0.0 !STEVE: placeholder for now. Perhaps better to do this in the calling function (e.g. obsop_tprof.f90)
+  stde=0.0
   if (typ .eq. id_t_obs) then
     se0 = 1.0
     seF = 1.5
@@ -449,6 +444,7 @@ endif
 ! CONVERT netcdf data to argo_data format:
 print *, "Finished reading netCDF file, formatting data..."
 
+! Loop through all profiles and create a new observation for each unique data point
 nobs = cnt * nlv
 print *, "ALLOCATING obs_data with nobs = ", nobs
 ALLOCATE(obs_data(nobs))
@@ -456,7 +452,7 @@ n = 0
 do i=1,cnt
   if (dodebug) print *, "i = ", i
   if (DO_COMPUTE_OBE) then
-    CALL cmpTz(stde(:,i),se0,seF,ovals(:,i),depth(:),nlv,missing_value)  
+    CALL cmpTz(stde(:,i),se0,seF,ovals(:,i),depth(:,i),nlv,missing_value)  
       !STEVE: I would prefer to call this in the calling function, but it's
       !       easier here where the data is still organized in profiles
   endif
@@ -478,20 +474,26 @@ do i=1,cnt
     ! Assign observation error:
     if (DO_COMPUTE_OBE .or. DO_READ_OBE) then
       err = stde(k,i)
+      ! NaN check:
+!     if (isnan(err)) then
+!       err = max(se0,seF)
+!       print *, "WARNING: NaN computed for stde, using instead err = ", err
+!       print *, "This is a sign of something wrong in the read_ecmwf_fdbk.f90 routine."
+!       print *, "Exiting..."
+!       STOP('NaN stde computed.')
+!     endif
     else
       err = 0.0
     endif
 
-    if (abs(val) < abs(mvc) .and. abs(val) < abs(missing_value-1)) then
+    if (abs(val) < abs(max_value) .and. abs(val) < abs(missing_value-1) .and. depth(k,i) < max_depth) then
       n = n+1
-
-!     if (dodebug) print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
-      if (dodebug) print *, "n,lon,lat,depth,hour,val,err,hxb,qc = ", n,xlon(i),ylat(i),depth(k),hour(i),val,err,hxb,qc(i)
+      if (dodebug) print *, "n,lon,lat,depth,hour,val,err,hxb,qc = ", n,xlon(i),ylat(i),depth(k,i),hour(i),val,err,hxb,qc(i)
 
       obs_data(n)%typ = typ
       obs_data(n)%x_grd(1) = xlon(i)
       obs_data(n)%x_grd(2) = ylat(i)
-      obs_data(n)%x_grd(3) = depth(k)
+      obs_data(n)%x_grd(3) = depth(k,i)
       obs_data(n)%hour = hour(i)
       obs_data(n)%value = val
       obs_data(n)%hxb   = hxb
