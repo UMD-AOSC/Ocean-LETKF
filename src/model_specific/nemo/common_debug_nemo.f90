@@ -108,18 +108,44 @@ subroutine debug_ens_diversity(calling_routine,gues3d,dodebug)
 ! INPUTS:
 !  gues3d  :: the 1st guess array
 !  dodebug :: flag to identify print level
+
+  use params_letkf, ONLY: nbv
+  use params_model, ONLY: nv3d, nlev
  
   CHARACTER(*) :: calling_routine
   REAL(r_size), DIMENSION(:,:,:,:), INTENT(IN) :: gues3d  
   LOGICAL, INTENT(IN) :: dodebug
+  INTEGER :: max_val, min_val, mxv0, mnv0
+  INTEGER :: n,m,k
+
+#ifdef DYNAMIC
+  WRITE(6,*) "debug_ens_diversity:: WARNING - Turning off check for ensemble diversity for DYNAMIC mode."
+  return
+#endif
 
   if (dodebug) then
     WRITE(6,*) "debug_ens_diversity From: ", calling_routine
     WRITE(6,*) "After computing perturbations..."
-    WRITE(6,*) "min val for level gues3d(:,1,:,1) = ", MINVAL(gues3d(:,1,:,1))
-    WRITE(6,*) "max val for level gues3d(:,1,:,1) = ", MAXVAL(gues3d(:,1,:,1))
+
+    min_val=99999
+    max_val=-99999
+    do n=1,nv3d
+      do m=1,nbv
+        do k=1,nlev
+            mxv0 = maxval(gues3d(:,k,m,n))
+            mnv0 = minval(gues3d(:,k,m,n))
+            max_val = max(max_val,mxv0)
+            min_val = min(min_val,mnv0)
+        enddo
+      enddo
+    enddo
+   
+    WRITE(6,*) "min_val for level gues3d(:,:,:,:) = ", min_val
+    WRITE(6,*) "max_val for level gues3d(:,:,:,:) = ", max_val
   endif
-  if (MAXVAL(gues3d(:,1,:,1)) == MINVAL(gues3d(:,1,:,1))) then
+
+  ! Make sure all ensemble perturbations are not zero:
+  if (abs(max_val) <= epsilon(1.0d0) .and. abs(min_val) <= epsilon(1.0d0)) then
     WRITE(6,*) "das_letkf:: It appears that all the ensemble members are identical. EXITING..."
     STOP("STOP::debug_ens_diversity")
   endif

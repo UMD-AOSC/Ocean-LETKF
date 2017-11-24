@@ -2,18 +2,18 @@
 
 #PBS -N OcnLETKF_OneSubgrid
 #PBS -q np
-#PBS -l EC_total_tasks=72
+#PBS -l EC_total_tasks=36
 #PBS -l EC_hyperthreads=2
 #PBS -l EC_threads_per_task=1
 
 #PBS -l EC_nodes=1
 ##PBS -l EC_predicted_walltime=600
 
-#PBS -l EC_max_threads_per_node=72
-#PBS -l EC_tasks_per_node=72
+#PBS -l EC_max_threads_per_node=36
+#PBS -l EC_tasks_per_node=36
 
 #PBS -l EC_job_tmpdir=DEFAULT
-#PBS -l EC_threads_per_numa_node=36
+#PBS -l EC_threads_per_numa_node=18
 #PBS -l EC_tmpdir_mem=0
 #PBS -l EC_billing_account=ecrdasdm
 

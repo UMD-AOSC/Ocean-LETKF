@@ -80,7 +80,7 @@ PUBLIC
 
   !0001_nrt_20161228_000000_restart.nc
   CHARACTER(12) :: gridfile  = 'mesh_mask.nc'   !'MOM.res.nc'
-  CHARACTER(12) :: gridfile1 = 'anal001.restart.nc'   !'MOM.res_1.nc' (NEMO) use for subgrid definition
+  CHARACTER(12) :: gridfile1 = 'mesh_mask.nc'   !'MOM.res_1.nc'     (NEMO) n/a
   CHARACTER(14) :: gridfile2 = 'bathy_meter.nc' !'ocean_topog.nc'   (NEMO) n/a
   CHARACTER(14) :: gridfile3 = 'bathy_meter.nc' !'ocean_hgrid.nc'   (NEMO) n/a
 
@@ -139,11 +139,19 @@ PUBLIC
   CHARACTER(7) :: rsrt_lat_name = 'nav_lat'
   CHARACTER(7) :: rsrt_lev_name = 'nav_lev'
   CHARACTER(2) :: rsrt_temp_name = 'tn'
-  CHARACTER(2) :: rsrt_salt_name = 'tn'
+  CHARACTER(2) :: rsrt_salt_name = 'sn'
   CHARACTER(2) :: rsrt_u_name = 'un'
   CHARACTER(2) :: rsrt_v_name = 'vn'
   CHARACTER(4) :: rsrt_ssh_name = 'sshn'
   CHARACTER(1) :: rsrt_h_name = 'h'              ! (NEMO) n/a
+
+  !STEVE: flags to specify whether to read in each variable
+  !       only the observed variables are needed from the restart file
+  LOGICAL :: rsrt_DO_temp = .true.
+  LOGICAL :: rsrt_DO_salt = .true.
+  LOGICAL :: rsrt_DO_u    = .true.
+  LOGICAL :: rsrt_DO_v    = .true.
+  LOGICAL :: rsrt_DO_ssh  = .true.
 
   ! Flag to identify whether this is reading a subgrid
 ! LOGICAL :: DO_SUBGRID = .false.
