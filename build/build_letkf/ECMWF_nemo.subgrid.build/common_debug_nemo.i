@@ -1,3 +1,4 @@
+# 1 "common_debug_nemo.f90"
 module common_debug_oceanmodel
 ! This module is for debugging, but also for standard checks
 ! that should be maintained to catch any problems immediately and exit
@@ -118,11 +119,13 @@ subroutine debug_ens_diversity(calling_routine,gues3d,dodebug)
   INTEGER :: max_val, min_val, mxv0, mnv0
   INTEGER :: n,m,k
 
-#ifdef DYNAMIC
+
+# 122
   WRITE(6,*) "debug_ens_diversity:: WARNING - Turning off check for ensemble diversity for DYNAMIC mode."
   return
-#endif
 
+
+# 126
   if (dodebug) then
     WRITE(6,*) "debug_ens_diversity From: ", calling_routine
     WRITE(6,*) "After computing perturbations..."

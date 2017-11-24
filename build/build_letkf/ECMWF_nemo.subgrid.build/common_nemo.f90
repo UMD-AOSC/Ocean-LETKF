@@ -591,6 +591,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
   USE params_model, ONLY: rsrt_u_name, rsrt_v_name
   USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
+  USE params_model, ONLY: rsrt_DO_temp, rsrt_DO_salt, rsrt_DO_u, rsrt_DO_v, rsrt_DO_ssh
   
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -633,121 +634,134 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !-----------------------------------------------------------------------------
   !!! t
   !-----------------------------------------------------------------------------
-  varname=rsrt_temp_name
-  ivid=iv3d_t
+  if (rsrt_DO_temp) then
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-  select case(prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = buf4(:,:,:)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
-  end select
+    varname=rsrt_temp_name
+    ivid=iv3d_t
 
-  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable temp"
-  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable temp"
-  if (dodebug) then
-    WRITE(6,*) "POST-TEMP"
-    WRITE(6,*) "read_restart :: tsfile = ", tsfile
-    do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_t) = ",MAXVAL(v3d(:,:,k,iv3d_t))
-    enddo
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    select case(prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4) )
+        v3d(:,:,:,ivid) = buf4(:,:,:)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8) )
+        v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
+    end select
+
+    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable temp"
+    if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable temp"
+    if (dodebug) then
+      WRITE(6,*) "POST-TEMP"
+      WRITE(6,*) "read_restart :: tsfile = ", tsfile
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_t) = ",MAXVAL(v3d(:,:,k,iv3d_t))
+      enddo
+    endif
+
   endif
 
   !-----------------------------------------------------------------------------
   !!! s
   !-----------------------------------------------------------------------------
-  varname=rsrt_salt_name
-  ivid=iv3d_s
+  if (rsrt_DO_salt) then
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-  select case(prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = buf4(:,:,:)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
-  end select
+    varname=rsrt_salt_name
+    ivid=iv3d_s
 
-  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable salt"
-  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable salt"
-  if (dodebug) then
-    WRITE(6,*) "POST-SALT"
-    WRITE(6,*) "read_restart :: tsfile = ", tsfile
-    do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_s) = ", MAXVAL(v3d(:,:,k,iv3d_s))
-    enddo 
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    select case(prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4) )
+        v3d(:,:,:,ivid) = buf4(:,:,:)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8) )
+        v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
+    end select
+
+    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable salt"
+    if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable salt"
+    if (dodebug) then
+      WRITE(6,*) "POST-SALT"
+      WRITE(6,*) "read_restart :: tsfile = ", tsfile
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_s) = ", MAXVAL(v3d(:,:,k,iv3d_s))
+      enddo 
+    endif
+
   endif
 
   !-----------------------------------------------------------------------------
   !!! u
   !-----------------------------------------------------------------------------
-  varname=rsrt_u_name
-  ivid=iv3d_u
+  if (rsrt_DO_u) then
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-  select case(prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = buf4(:,:,:)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
-  end select
+    varname=rsrt_u_name
+    ivid=iv3d_u
 
-  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable u"
-  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable u"
-  if (dodebug) then
-    WRITE(6,*) "POST-U"
-    WRITE(6,*) "read_restart :: uvfile = ", uvfile
-    do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_u) = ",MAXVAL(v3d(:,:,k,iv3d_u))
-    enddo
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    select case(prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4) )
+        v3d(:,:,:,ivid) = buf4(:,:,:)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8) )
+        v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
+    end select
+
+    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable u"
+    if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable u"
+    if (dodebug) then
+      WRITE(6,*) "POST-U"
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_u) = ",MAXVAL(v3d(:,:,k,iv3d_u))
+      enddo
+    endif
+
   endif
 
   !-----------------------------------------------------------------------------
   !!! v
   !-----------------------------------------------------------------------------
-  varname=rsrt_v_name
-  ivid=iv3d_v
+  if (rsrt_DO_v) then
 
-  call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-  select case(prec)
-    case(1)
-      buf4=0.0
-      call check( NF90_GET_VAR(ncid,varid,buf4) )
-      v3d(:,:,:,ivid) = buf4(:,:,:)
-    case(2)
-      buf8=0.0d0
-      call check( NF90_GET_VAR(ncid,varid,buf8) )
-      v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
-  end select
+    varname=rsrt_v_name
+    ivid=iv3d_v
+  
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    select case(prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4) )
+        v3d(:,:,:,ivid) = buf4(:,:,:)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8) )
+        v3d(:,:,:,ivid) = REAL(buf8(:,:,:),r_sngl)
+    end select
+  
+    if (dodebug) WRITE(6,*) "read_restart :: just got data for variable v"
+    if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable v"
+    if (dodebug) then
+      WRITE(6,*) "POST-V"
+      do k=1,nlev
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_v) = ", MAXVAL(v3d(:,:,k,iv3d_v))
+      enddo 
+    endif
 
-  if (dodebug) WRITE(6,*) "read_restart :: just got data for variable v"
-  if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable v"
-  if (dodebug) then
-    WRITE(6,*) "POST-V"
-    WRITE(6,*) "read_restart :: uvfile = ", uvfile
-    do k=1,nlev
-      WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_v) = ", MAXVAL(v3d(:,:,k,iv3d_v))
-    enddo 
   endif
-
+  
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Use the forecast time-average SSH
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  altimetry : if (DO_ALTIMETRY) then
+  if (rsrt_DO_ssh) then
 
-    !!! SSH
     varname=rsrt_ssh_name
     ivid=iv2d_ssh
 
@@ -771,14 +785,11 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
     if (dodebug) WRITE(6,*) "read_restart :: finished processing data for variable SSH"
     if (dodebug) then
       WRITE(6,*) "POST-eta"
-      WRITE(6,*) "read_restart :: bfile = ", bfile
       WRITE(6,*) "max val for level v2d(:,:,iv2d_ssh) = ", MAXVAL(v2d(:,:,iv2d_ssh))
       WRITE(6,*) "min val for level v2d(:,:,iv2d_ssh) = ", MINVAL(v2d(:,:,iv2d_ssh))
     endif
 
-  else
-    WRITE(6,*) "read_restart :: Skipping reading eta/ssh. Enabled only when using DO_ALTIMETRY=.true."
-  endif altimetry
+  endif 
 
   call check( NF90_CLOSE(ncid) )
 
@@ -809,6 +820,7 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   USE params_model, ONLY: min_t, max_t, min_s, max_s
   USE params_model, ONLY: min_u, max_u, min_v, max_v
   USE params_model, ONLY: min_eta, max_eta
+  USE params_model, ONLY: rsrt_DO_temp, rsrt_DO_salt, rsrt_DO_u, rsrt_DO_v, rsrt_DO_ssh
 
   CHARACTER(*),INTENT(IN) :: outfile
   REAL(r_sngl),INTENT(IN) :: v3d_in(nlon,nlat,nlev,nv3d)
@@ -855,111 +867,159 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   call check( NF90_OPEN(tsfile,NF90_WRITE,ncid) )
   if (dodebug) WRITE(6,*) "Opened restart."
 
-  if (dodebug) WRITE(6,*) "Get id for temperature..."
-  call check( NF90_INQ_VARID(ncid,rsrt_temp_name,varid) )
+  !-----------------------------------------------------------------------------
+  ! Output temperature analysis
+  !-----------------------------------------------------------------------------
+  if (rsrt_DO_temp) then
 
-  buf8 = REAL(v3d_in(:,:,:,iv3d_t),r_size)
+    if (dodebug) WRITE(6,*) "Get id for temperature..."
+    call check( NF90_INQ_VARID(ncid,rsrt_temp_name,varid) )
 
-  ! Apply physical limits to the output analysis:
-  if (do_physlimit) then
-    if (dodebug) then
-      WRITE(6,*) "min_t = ", min_t
-      WRITE(6,*) "max_t = ", max_t
+    buf8 = REAL(v3d_in(:,:,:,iv3d_t),r_size)
+
+    ! Apply physical limits to the output analysis:
+    if (do_physlimit) then
+      if (dodebug) then
+        WRITE(6,*) "min_t = ", min_t
+        WRITE(6,*) "max_t = ", max_t
+      endif
+      if (dodebug) then
+        WRITE(6,*) "pre-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
+      !(NEMO) ECMWF compiler did not like this:
+!     WHERE (buf8 < min_t) buf8 = min_t
+!     WHERE (buf8 > max_t) buf8 = max_t
+      !(NEMO) using alternative:
+      call apply_physlimit_3d(buf8,buf8,iv3d_t)
+      if (dodebug) then
+        WRITE(6,*) "post-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
     endif
-    if (dodebug) then
-      WRITE(6,*) "pre-physlimit:"
-      WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
-      WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
-    endif
-    !(NEMO) ECMWF compiler did not like this:
-!   WHERE (buf8 < min_t) buf8 = min_t
-!   WHERE (buf8 > max_t) buf8 = max_t
-    !(NEMO) using alternative:
-    call apply_physlimit_3d(buf8,buf8,iv3d_t)
-    if (dodebug) then
-      WRITE(6,*) "post-physlimit:"
-      WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
-      WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
-    endif
+
+    if (dodebug) WRITE(6,*) "Write data for temperature..."
+    call check( NF90_PUT_VAR(ncid,varid,buf8) )
+
   endif
 
-  if (dodebug) WRITE(6,*) "Write data for temperature..."
-  call check( NF90_PUT_VAR(ncid,varid,buf8) )
-
   !-----------------------------------------------------------------------------
-  !!! s
+  ! Output salinity analysis
   !-----------------------------------------------------------------------------
-  if (dodebug) WRITE(6,*) "Get id for salinity..."
-  call check( NF90_INQ_VARID(ncid,rsrt_salt_name,varid) )
+  if (rsrt_DO_salt) then
 
-  buf8 = REAL(v3d_in(:,:,:,iv3d_s),r_size)
+    if (dodebug) WRITE(6,*) "Get id for salinity..."
+    call check( NF90_INQ_VARID(ncid,rsrt_salt_name,varid) )
 
-  ! Apply physical limits to the output analysis:
-  if (do_physlimit) then
-    if (dodebug) then
-      WRITE(6,*) "min_s = ", min_s
-      WRITE(6,*) "max_s = ", max_s
+    buf8 = REAL(v3d_in(:,:,:,iv3d_s),r_size)
+
+    ! Apply physical limits to the output analysis:
+    if (do_physlimit) then
+      if (dodebug) then
+        WRITE(6,*) "min_s = ", min_s
+        WRITE(6,*) "max_s = ", max_s
+      endif
+      if (dodebug) then
+        WRITE(6,*) "pre-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
+      !(NEMO) ECMWF compiler did not like this:
+!     WHERE (buf8 < min_s) buf8 = min_s
+!     WHERE (buf8 > max_s) buf8 = max_s
+      !(NEMO) using alternative:
+      call apply_physlimit_3d(buf8,buf8,iv3d_s)
+      if (dodebug) then
+        WRITE(6,*) "post-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
     endif
-    if (dodebug) then
-      WRITE(6,*) "pre-physlimit:"
-      WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
-      WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
-    endif
-    !(NEMO) ECMWF compiler did not like this:
-!   WHERE (buf8 < min_s) buf8 = min_s
-!   WHERE (buf8 > max_s) buf8 = max_s
-    !(NEMO) using alternative:
-    call apply_physlimit_3d(buf8,buf8,iv3d_s)
-    if (dodebug) then
-      WRITE(6,*) "post-physlimit:"
-      WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
-      WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
-    endif
+
+    if (dodebug) WRITE(6,*) "Write data for salinity..."
+    call check( NF90_PUT_VAR(ncid,varid,buf8) )
+
   endif
 
-  if (dodebug) WRITE(6,*) "Write data for salinity..."
-  call check( NF90_PUT_VAR(ncid,varid,buf8) )
-
   !-----------------------------------------------------------------------------
-  !!! u
+  ! Output u analysis
   !-----------------------------------------------------------------------------
-  if (dodebug) WRITE(6,*) "Get id for u component of velocity..."
-  call check( NF90_INQ_VARID(ncid,rsrt_u_name,varid) )
+  if (rsrt_DO_u) then
 
-  buf8 = REAL(v3d_in(:,:,:,iv3d_u),r_size)
+    if (dodebug) WRITE(6,*) "Get id for u component of velocity..."
+    call check( NF90_INQ_VARID(ncid,rsrt_u_name,varid) )
 
-  ! Apply physical limits to the output analysis:
-  if (do_physlimit) then
-!   WHERE (buf8 < min_u) buf8 = min_u
-!   WHERE (buf8 > max_u) buf8 = max_u
-    call apply_physlimit_3d(buf8,buf8,iv3d_u)
+    buf8 = REAL(v3d_in(:,:,:,iv3d_u),r_size)
+
+    ! Apply physical limits to the output analysis:
+    if (do_physlimit) then
+      if (dodebug) then
+        WRITE(6,*) "min_u = ", min_u
+        WRITE(6,*) "max_u = ", max_u
+      endif
+      if (dodebug) then
+        WRITE(6,*) "pre-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
+!     WHERE (buf8 < min_u) buf8 = min_u
+!     WHERE (buf8 > max_u) buf8 = max_u
+      call apply_physlimit_3d(buf8,buf8,iv3d_u)
+      if (dodebug) then
+        WRITE(6,*) "post-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
+    endif
+
+    if (dodebug) WRITE(6,*) "Write data for u component of velocity..."
+    call check( NF90_PUT_VAR(ncid,varid,buf8) )
+
   endif
 
-  if (dodebug) WRITE(6,*) "Write data for u component of velocity..."
-  call check( NF90_PUT_VAR(ncid,varid,buf8) )
-
   !-----------------------------------------------------------------------------
-  !!! v
+  ! Output v analysis
   !-----------------------------------------------------------------------------
-  if (dodebug) WRITE(6,*) "Get id for v component of velocity..."
-  call check( NF90_INQ_VARID(ncid,rsrt_v_name,varid) )
+  if (rsrt_DO_v) then
 
-  buf8 = REAL(v3d_in(:,:,:,iv3d_v),r_size)
+    if (dodebug) WRITE(6,*) "Get id for v component of velocity..."
+    call check( NF90_INQ_VARID(ncid,rsrt_v_name,varid) )
 
-  ! Apply physical limits to the output analysis:
-  if (do_physlimit) then
-!   WHERE (buf8 < min_v) buf8 = min_v
-!   WHERE (buf8 > max_v) buf8 = max_v
-    call apply_physlimit_3d(buf8,buf8,iv3d_v)
+    buf8 = REAL(v3d_in(:,:,:,iv3d_v),r_size)
+
+    ! Apply physical limits to the output analysis:
+    if (do_physlimit) then
+      if (dodebug) then
+        WRITE(6,*) "min_v = ", min_v
+        WRITE(6,*) "max_v = ", max_v
+      endif
+      if (dodebug) then
+        WRITE(6,*) "pre-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
+!     WHERE (buf8 < min_v) buf8 = min_v
+!     WHERE (buf8 > max_v) buf8 = max_v
+      call apply_physlimit_3d(buf8,buf8,iv3d_v)
+      if (dodebug) then
+        WRITE(6,*) "post-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
+    endif
+
+    if (dodebug) WRITE(6,*) "Write data for v component of velocity..."
+    call check( NF90_PUT_VAR(ncid,varid,buf8) )
+
   endif
 
-  if (dodebug) WRITE(6,*) "Write data for v component of velocity..."
-  call check( NF90_PUT_VAR(ncid,varid,buf8) )
+  !-----------------------------------------------------------------------------
+  ! Output ssh analysis
+  !-----------------------------------------------------------------------------
+  if (rsrt_DO_ssh) then
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Write the updated eta_t to analysis restart file
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (DO_ALTIMETRY) then
     if (dodebug) WRITE(6,*) "Get id for ssh..."
     call check( NF90_INQ_VARID(ncid,rsrt_ssh_name,varid) )
 
@@ -967,19 +1027,35 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
     ! Transform Sea Level Anomaly (SLA) back to modeled anomaly
     ! by adding back in the pre-computed model climatology
+    !(STEVE: not sure if this is better placed before or after the physlimit)
     if (DO_SLA) then
       buf8(:,:,1) = buf8(:,:,1) + SSHclm_m(:,:)
     endif
 
     ! Apply physical limits to the output analysis:
     if (do_physlimit) then
+      if (dodebug) then
+        WRITE(6,*) "min_eta = ", min_eta
+        WRITE(6,*) "max_eta = ", max_eta
+      endif
+      if (dodebug) then
+        WRITE(6,*) "pre-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
 !     WHERE (buf8(:,:,1) < min_eta) buf8(:,:,1) = min_eta
 !     WHERE (buf8(:,:,1) > max_eta) buf8(:,:,1) = max_eta
       call apply_physlimit_2d(buf8(:,:,1),buf8(:,:,1),iv2d_ssh)
+      if (dodebug) then
+        WRITE(6,*) "post-physlimit:"
+        WRITE(6,*) "min(buf8) = ", MINVAL(buf8)
+        WRITE(6,*) "max(buf8) = ", MAXVAL(buf8)
+      endif
     endif
 
     if (dodebug) WRITE(6,*) "Write data for ssh..."
     call check( NF90_PUT_VAR(ncid,varid,buf8(:,:,1)) )
+
   endif
 
   call check( NF90_CLOSE(ncid) )

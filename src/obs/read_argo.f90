@@ -105,7 +105,7 @@ REAL(r_size) :: val
 INTEGER :: cnt, nlv
 LOGICAL :: dodebug=.false.
 REAL(r_size) :: missing_value=-99.0
-REAL(r_sngl) :: mvc=999
+REAL(r_sngl) :: max_value=999
 REAL(r_sngl) :: max_depth=99999
 
 
@@ -372,7 +372,7 @@ do i=1,cnt
   do k=1,nlv
     val = vals(k,i)
     err = stde(k,i)
-    if (val < mvc .and. depth(k) < max_depth .and. abs(val - missing_value) > 1.0) then
+    if (val < max_value .and. depth(k) < max_depth .and. abs(val - missing_value) > 1.0) then
       n = n+1
       if (dodebug) print *, "n,lon,lat,depth,hour,val,err,plat,ptyp,sid,qkey = ", n,xlon(i),ylat(i),depth(k),hour(i),val,err,plat(i), ptyp(i), sid(i), qkey(i)
       obs_data(n)%typ = typ

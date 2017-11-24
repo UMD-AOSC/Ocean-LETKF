@@ -18,14 +18,17 @@ DSTDIR=$SCRATCH/$EXPNAME/WORK/$SG4
 cd $DSTDIR
 
 # Compute forecast ensemble mean and spread
-cdo ensavg gs01???.restart.nc bmean.restart.nc &
-cdo ensstd gs01???.restart.nc bsprd.restart.nc &
+cdo -O ensavg gs01???.restart.nc bmean.restart.nc &
+cdo -O ensstd gs01???.restart.nc bsprd.restart.nc &
 
 # Compute analysis ensemble mean and spread
-cdo ensavg anal???.restart.nc amean.restart.nc &
-cdo ensstd anal???.restart.nc asprd.restart.nc &
+cdo -O ensavg anal???.restart.nc amean.restart.nc &
+cdo -O ensstd anal???.restart.nc asprd.restart.nc &
 
 time wait
+
+cdo -O sub amean.restart.nc bmean.restart.nc ainc.restart.nc
+
 end=`date +%s`
 runtime0=$((end-start0))
 echo "runtime :: $runtime0"

@@ -67,5 +67,4 @@ GLOBAL_TPROF_OBS_NAME=POTM_OBS
 GLOBAL_TPROF_Hxb_NAME=POTM_Hx
 GLOBAL_SPROF_OBS_NAME=PSAL_OBS
 GLOBAL_SPROF_Hxb_NAME=PSAL_Hx
-
-# NOTE: these may need to be changed manually in the python script
+# NOTE: these may need to be changed manually in the python scripts
