@@ -1,0 +1,9 @@
+get_bin.csh
+
+input.a and input.b are old archive files.
+data.bin is the bindary file for letkf.
+
+input:input.a
+      input.b
+
+output:data.bin

@@ -1,0 +1,14 @@
+! Specify the subgrid in this file
+
+&params_model_nml
+ istart=85,
+ iend=105,
+ jstart=50,
+ jend=70,
+/
+
+&params_obs_nml
+/
+
+&params_letkf_nml
+/

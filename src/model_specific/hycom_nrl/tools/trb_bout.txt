@@ -1,0 +1,9 @@
+ mx =           187
+ ny =           121
+ lz =            32
+ reclen =       2896256
+ Finished assigning buf4 to indata.
+ buf4(m/2,y/2,1)=     18.10147    
+  max/min buf4 =     20.79831       -999.0000    
+ indata(m/2,y/2,1)=     18.13464    
+  max/min indata =     18.97145        13.10138    

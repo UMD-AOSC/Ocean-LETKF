@@ -1,0 +1,10 @@
+! Put the global grid dimensions in this file
+
+ &gridnl
+
+  kko     = 32,
+  m       = 187,
+  n       = 121,
+  
+ /
+

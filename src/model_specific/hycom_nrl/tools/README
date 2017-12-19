@@ -1,0 +1,15 @@
+# Test routines for reading and writing NCODA bindary data:
+
+
+1) test_io_subgrid.f90
+This compiles when building letkf. It will sample calls to read_restart and write_restart.
+Using the ncoda namelists oanl and gridnl and the LETKF namelist input.nml, a small 
+subgrid will be updated by adding 1 to the value of the input file only within the small local patch.
+
+setup and run with: iotest.sh
+
+2) test_read_bin.f90
+This program simply reads the binary ncoda data and prints a few values and max/min.
+
+
+
