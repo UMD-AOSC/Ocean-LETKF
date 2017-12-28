@@ -475,8 +475,6 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
   REAL(r_size), INTENT(OUT)   :: v2d(nlon,nlat,nv2d)
   INTEGER                     :: k,n,nrec
   INTEGER, PARAMETER          :: fid=12
-  INTEGER, PARAMETER, DIMENSION(nv2d) :: input_order_2d = (/ 1,2,3 /),output_order_2d = (/ 1,2,3 /)                  
-  INTEGER, PARAMETER, DIMENSION(nv3d) :: input_order_3d = (/ 1,2,3,4,5 /),output_order_3d = (/ 1,2,5,3,4/)                                            
 
   character cline*80
   character ctitle(4)*80
@@ -522,8 +520,8 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("srfhgt  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
-        v2d(:,:,output_order_2d(1))=dummy_2d
-        where (abs(dummy_2d-hycom_undef) > hycom_eps) v2d(:,:,output_order_2d(1))=dummy_2d/9.806  
+        v2d(:,:,iv2d_ssh)=dummy_2d
+        where (abs(dummy_2d-hycom_undef) > hycom_eps) v2d(:,:,iv2d_ssh)=dummy_2d/9.806  
 
 ! read steric
         CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
@@ -585,15 +583,13 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-
 ! read u_batro
         CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
         read(110,'(a)') cline
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("u_btrop ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
-        v2d(:,:,output_order_2d(2))=dummy_2d
-
+        v2d(:,:,iv2d_ubt)=dummy_2d
 
 ! read v_batro
         CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
@@ -601,7 +597,7 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("v_btrop ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
-        v2d(:,:,output_order_2d(3))=dummy_2d
+        v2d(:,:,iv2d_vbt)=dummy_2d
 
 
 !***************************************************
@@ -621,9 +617,9 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("u-vel.  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
-!        v3d(:,:,k,output_order_3d(1))=dummy_2d+v2d(:,:,output_order_2d(2))
+!        v3d(:,:,k,iv3d_u)=dummy_2d+v2d(:,:,iv2d_ubt)
 ! For now, use u perturbation
-        v3d(:,:,k,output_order_3d(1))=dummy_2d
+        v3d(:,:,k,iv3d_u)=dummy_2d
 
 ! total v   
         CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
@@ -631,9 +627,9 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("v-vel.  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
-!        v3d(:,:,k,output_order_3d(2))=dummy_2d+v2d(:,:,output_order_2d(3))
+!        v3d(:,:,k,iv3d_v)=dummy_2d+v2d(:,:,iv2d_vbt)
 ! For now, use v perturbation
-        v3d(:,:,k,output_order_3d(2))=dummy_2d
+        v3d(:,:,k,iv3d_v)=dummy_2d
 
 
 
@@ -643,8 +639,8 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("thknss  ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
-        v3d(:,:,k,output_order_3d(3))=dummy_2d
-        where (abs(dummy_2d-hycom_undef) > hycom_eps) v3d(:,:,k,output_order_3d(3))=dummy_2d/9806.                  
+        v3d(:,:,k,iv3d_h)=dummy_2d
+        where (abs(dummy_2d-hycom_undef) > hycom_eps) v3d(:,:,k,iv3d_h)=dummy_2d/9806.                  
 
 ! temp    
         CALL ZAIORD(dummy_2d,MSK,.FALSE.,HMINA,HMAXA,21)
@@ -652,7 +648,7 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("temp    ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
-        v3d(:,:,k,output_order_3d(4))=dummy_2d
+        v3d(:,:,k,iv3d_t)=dummy_2d
 
 
 ! saln
@@ -661,7 +657,7 @@ SUBROUTINE get_hycom(file_in_a,file_in_b,v3d,v2d)
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
         call check_ab("salin   ",cline(1:8),hmina,hminb,hmaxa,hmaxb)
-        v3d(:,:,k,output_order_3d(5))=dummy_2d
+        v3d(:,:,k,iv3d_s)=dummy_2d
 
 
 ! dens 
@@ -1125,8 +1121,6 @@ SUBROUTINE put_hycom(file_in_a,file_in_b,v3d,v2d)
   REAL(r_sngl),DIMENSION(:,:,:) :: v2d !(nlon,nlat,nv2d)
   INTEGER                     :: k,n,nrec
   INTEGER, PARAMETER          :: fid=12
-  INTEGER, PARAMETER, DIMENSION(nv2d) :: input_order_2d = (/ 1,2,3/),output_order_2d = (/ 1,2,3/)                       
-  INTEGER, PARAMETER, DIMENSION(nv3d) :: input_order_3d = (/ 1,2,3,4,5/),output_order_3d = (/ 1,2,5,3,4/)     
   character cline*80
   character ctitle(4)*80
   real :: dummy_2d(nlon,nlat)
@@ -1190,9 +1184,9 @@ mskv=0
         read(110,'(a)') cline
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
-        v2d(:,:,1)=v2d(:,:,1)*9.806
+        v2d(:,:,iv2d_ssh)=v2d(:,:,iv2d_ssh)*9.806
 
-        CALL ZAIOWR(v2d(:,:,1),mskp,.true.,xmin,xmax,24,.false.)
+        CALL ZAIOWR(v2d(:,:,iv2d_ssh),mskp,.true.,xmin,xmax,24,.false.)
         write(24,117) 'srfhgt  ',nstep,time(1),layer,thbase,xmin,xmax
 
 ! read steric 
@@ -1293,7 +1287,7 @@ mskv=0
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        CALL ZAIOWR(v2d(:,:,2),msku,.true.,xmin,xmax,24,.false.)
+        CALL ZAIOWR(v2d(:,:,iv2d_ubt),msku,.true.,xmin,xmax,24,.false.)
         write(24,117) 'u_btrop ',nstep,time(1),layer,thbase,xmin,xmax
 
 ! read v_batro 
@@ -1302,7 +1296,7 @@ mskv=0
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        CALL ZAIOWR(v2d(:,:,3),mskv,.true.,xmin,xmax,24,.false.)
+        CALL ZAIOWR(v2d(:,:,iv2d_vbt),mskv,.true.,xmin,xmax,24,.false.)
         write(24,117) 'v_btrop ',nstep,time(1),layer,thbase,xmin,xmax
 
 ! 3d variables
@@ -1315,7 +1309,7 @@ mskv=0
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        CALL ZAIOWR(v3d(:,:,k,1),msku,.true.,xmin,xmax,24,.false.)
+        CALL ZAIOWR(v3d(:,:,k,iv3d_u),msku,.true.,xmin,xmax,24,.false.)
         write(24,117) 'u-vel.  ',nstep,time(1),layer,thbase,xmin,xmax
 
 ! v pert
@@ -1324,7 +1318,7 @@ mskv=0
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        CALL ZAIOWR(v3d(:,:,k,2),mskv,.true.,xmin,xmax,24,.false.)
+        CALL ZAIOWR(v3d(:,:,k,iv3d_v),mskv,.true.,xmin,xmax,24,.false.)
         write(24,117) 'v-vel.  ',nstep,time(1),layer,thbase,xmin,xmax
 
 
@@ -1343,7 +1337,7 @@ mskv=0
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        CALL ZAIOWR(v3d(:,:,k,3),mskp,.true.,xmin,xmax,24,.false.)
+        CALL ZAIOWR(v3d(:,:,k,iv3d_t),mskp,.true.,xmin,xmax,24,.false.)
         write(24,117) 'temp    ',nstep,time(1),layer,thbase,xmin,xmax
 
 ! saln 
@@ -1352,7 +1346,7 @@ mskv=0
         i= index(cline,'=')
         read (cline(i+1:),*) nstep,time(1),layer,thbase,hminb,hmaxb
 
-        CALL ZAIOWR(v3d(:,:,k,4),mskp,.true.,xmin,xmax,24,.false.)
+        CALL ZAIOWR(v3d(:,:,k,iv3d_s),mskp,.true.,xmin,xmax,24,.false.)
         write(24,117) 'salin    ',nstep,time(1),layer,thbase,xmin,xmax
 
 ! density 
