@@ -1,0 +1,33 @@
+&params_model_nml
+ gridfile  = 'mesh_mask.nc', 
+ do_physlimit = .true.,
+ max_t = 40.0,
+ min_t = -4,
+/
+
+&params_obs_nml
+ obs1nrec = 6,
+ obs2nrec = 9,
+/
+
+&params_letkf_nml
+ nbv = 4,
+ nslots = 1,
+ nbslot = 1,
+ sigma_obs = 720.0d3,
+ sigma_obs0 = 200.0d3,
+ gross_error = 3.0d0
+ DO_WRITE_ENS_MEAN_SPRD=.false.,
+ DO_DRIFTERS = F,
+ DO_ALTIMETRY = F,
+ DO_SLA = F,
+ DO_ADT = F,
+ DO_NO_VERT_LOC = T,
+ DO_MLD = F,
+ DO_MLD_MAXSPRD = F,
+ DO_REMOVE_65N = F,
+ localization_method = 1,
+ cov_infl_mul = 1.0d0,
+ sp_infl_add = 0.d0,
+/
+

@@ -1,0 +1,15 @@
+# Set up the global parameters that will populate all RUN/*.sh scripts:
+vim params.sh
+# Set up the background files in the working directory:
+sh setup_bgfiles.sh
+# Preprocess the NEMOVAR observation files: (potentially to match up observations if they are out of order for each member)
+#sh preprocess_obs.sh
+# Compute the observation operator to change NEMOVAR netcdf to LETKF binary input format
+sh setup_obsop.sh
+# Check land/sea mask and identify tiles with no ocean:
+sh setup_noocean.sh
+# Run the main letkf analysis for all tiles:
+sh run_all.sh
+# Merge the files into one global analysis increment file:
+sh run_merge.sh
+
