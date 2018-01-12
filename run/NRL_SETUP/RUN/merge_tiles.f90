@@ -127,9 +127,9 @@ PROGRAM merge_tiles
   ! If computing analysis increments, mask out any areas not analyzed
   !-----------------------------------------------------------------------------
   if (DO_INC) then
+    print *, "merge_tiles.f90:: mask out unanalyzed points..."
     do k=1,kmax
       maskout : where (maskout_global==0)
-        print *, "merge_tiles.f90:: mask out unanalyzed points..."
         buf4_global(:,:,k) = undef
       end where maskout
     enddo
@@ -138,9 +138,9 @@ PROGRAM merge_tiles
   !-----------------------------------------------------------------------------
   ! Double check land/sea mask to filter land points
   !-----------------------------------------------------------------------------
+  print *, "merge_tiles.f90:: mask out land points..."
   do k=1,kmax
     lsmask : where (bufint_global(:,:,1)<k)
-      print *, "merge_tiles.f90:: mask out land points..."
       buf4_global(:,:,k) = undef
     end where lsmask
   enddo

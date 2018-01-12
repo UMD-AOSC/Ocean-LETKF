@@ -86,13 +86,20 @@ do
     infiles=$filelist_file
     outfile=anal${MEM3}.${var}.dat
     nfiles=`grep -c '' filelist.txt`
-    $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .true. -ntiles $nfiles #$NTILES
-#   $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .false. -ntiles $nfiles #$NTILES
+    $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .true. -ntiles $nfiles  &
+#   $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .false. -ntiles $nfiles
 
-    exit 1
+#   echo "Finished merging member = ${mem}, var = ${var}. Exiting on purpose..."
+#   exit 1
   done
+
+  time wait
+
+  echo "Finished all members for var = ${var}. Exiting on purpose..."
+  exit 1
+
 done
 
-echo "Merge complete. Exiting..."
+echo "Merge complete. Analysis constructed for all members and all analyzed variables. Exiting..."
 
 exit 0
