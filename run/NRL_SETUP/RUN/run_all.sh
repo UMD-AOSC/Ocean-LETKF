@@ -57,25 +57,7 @@ while [ $SGX -le $GLOBAL_NX ]; do
     #---------------------------------------------------------------------------
     # Copy necessary files to here:
     #---------------------------------------------------------------------------
-    cp $RUNDIR/input.nml .    # input namelist
     cp $EXEDIR/$EXEFILE .     # executable file
-
-    # Specify the grid range
-    SGXF=`expr $SGX + $GLOBAL_SG_NX - 1`
-    SGYF=`expr $SGY + $GLOBAL_SG_NY - 1`
-
-    # Keep a separate file for the record to verify the input.nml subgrid definitions
-    echo "X0 = $SGX, Y0 = $SGY" > subgrid_def.txt
-    echo "Xf = $SGXF, Yf = $SGYF" >> subgrid_def.txt
-
-    # Fix the grid range in the input.nml file
-    sed -i "s/^.*istart.*$/ istart = $SGX,/"  input.nml
-    sed -i "s/^.*iend.*$/ iend = $SGXF,/"     input.nml
-    sed -i "s/^.*jstart.*$/ jstart = $SGY,/"  input.nml
-    sed -i "s/^.*jend.*$/ jend = $SGYF,/"     input.nml
-
-#   echo "Exiting early on purpose (1)..."
-#   exit 1
 
     #---------------------------------------------------------------------------
     # Check if it is subgrid with ocean points
@@ -91,22 +73,6 @@ while [ $SGX -le $GLOBAL_NX ]; do
       IDX=`expr $IDX + 1`
 
       #---------------------------------------------------------------------------
-      # Copy all links from parent directory and link to analysis files
-      #---------------------------------------------------------------------------
-      cp -d $DSTDIR/gs*.dat .
-      cp -d $DSTDIR/gl??.dat .
-      cp -d $DSTDIR/kmt.dat .
-      cp $DSTDIR/gridnl .
-      cp $DSTDIR/oanl .
-      ln -fs $DSTDIR/obs?????.dat .
-      if [ "$GLOBAL_DO_WRITE_TILE" == "1" ]; then
-        echo "letkf executable will write out this tile's analysis field to a new file."
-        rm -f anal???.*.dat
-      else
-        ln -fs $DSTDIR/anal*.dat .
-      fi
-
-      #---------------------------------------------------------------------------
       # Run Ocean-LETKF DA system:
       #---------------------------------------------------------------------------
       echo "-------------------------------------------------------------"
@@ -114,19 +80,9 @@ while [ $SGX -le $GLOBAL_NX ]; do
       echo "..."
       #aprun -N $EC_tasks_per_node -n $EC_total_tasks -j $EC_hyperthreads ./$EXEFILE
       mpirun -n 4 ./$EXEFILE
-#     mpirun -n 4 ./$EXEFILE &
       echo "..."
       echo "Run complete for subgrid $SG4. Continuing..."
       echo "-------------------------------------------------------------"
-
-#     echo "Exiting early on purpose (1)..."
-#     exit 1
-
-      # Wait for every 4 LETKF runs to finish
-#     n=`expr $IDX % 4`
-#     if [ "$n" == "0" ]; then
-#       time wait 
-#     fi
     fi
 
 #   echo "Exiting early on purpose (2)..."

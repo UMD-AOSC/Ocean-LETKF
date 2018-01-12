@@ -38,6 +38,7 @@ while [ $SGX -le $GLOBAL_NX ]; do
     # Copy necessary files to here:
     #---------------------------------------------------------------------------
     cp $RUNDIR/input.nml .    # input namelist
+    cp -d $DSTDIR/kmt.dat .
 
     # Specify the grid range
     SGXF=`expr $SGX + $GLOBAL_SG_NX - 1`
@@ -65,10 +66,23 @@ while [ $SGX -le $GLOBAL_NX ]; do
       echo "-------------------------------------------------------------"
       echo "Will process analysis for subgrid ${SG4} ..."
       echo "-------------------------------------------------------------"
-    fi
 
-#   exit 1
-#   read -n 1 -p "Press any key to continue:" dummy
+      #---------------------------------------------------------------------------
+      # Copy all links from parent directory and link to analysis files
+      #---------------------------------------------------------------------------
+      cp -d $DSTDIR/gs*.dat .
+      cp -d $DSTDIR/gl??.dat .
+      cp $DSTDIR/gridnl .
+      cp $DSTDIR/oanl .
+      ln -fs $DSTDIR/obs?????.dat .
+      if [ "$GLOBAL_DO_WRITE_TILE" == "1" ]; then
+        echo "letkf executable will write out this tile's analysis field to a new file."
+        rm -f anal???.*.dat
+      elif [ "$GLOBAL_DO_ANALYSIS_TEMPLATE" == "1" ]; then
+        echo "Using global analysis template file as template for local tile."
+        ln -fs $DSTDIR/anal*.dat .
+      fi
+    fi
 
     SGY=`expr $SGYF + 1`
   done

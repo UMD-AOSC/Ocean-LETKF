@@ -59,10 +59,12 @@ do
   ln -fs $SRCDIR/$EXPNAME${MEM3}/restartm/$SSHFILE gs${ISLOT2}${MEM3p1}.ssh${FILE_SUFFIX}
 
   # Set up restart template files to be overwritten by the LETKF analysis
-  for var in t s u v ssh
-  do
-    cp gs${ISLOT2}${MEM3p1}.${var}.dat anal${MEM3p1}.${var}.dat
-  done
+  if [ "$GLOBAL_DO_ANALYSIS_TEMPLATE" == "1"]; then
+    for var in t s u v ssh
+    do
+      cp gs${ISLOT2}${MEM3p1}.${var}.dat anal${MEM3p1}.${var}.dat
+    done
+  fi
 
   MEM=$MEMp1
 done

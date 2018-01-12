@@ -40,18 +40,6 @@ SUBGRIDS=$(($SUBGRIDS_X * SUBGRIDS_Y))
 echo "Estimated total subgrids: $SUBGRIDS"
 echo "Input total subgrids via params.sh: $GLOBAL_NTILES"
 
-# Make the tile list:
-tiledef_file='tiledef.txt'
-rm -f $tiledef_file
-for tile in [0-9][0-9][0-9][0-9]
-do
-  istart=$(awk -F'[ ,]' '/istart = / { print $4 } ' $tile/input.nml)
-  iend=$(awk -F'[ ,]' '/iend = / { print $4 } ' $tile/input.nml)
-  jstart=$(awk -F'[ ,]' '/jstart = / { print $4 } ' $tile/input.nml)
-  jend=$(awk -F'[ ,]' '/jend = / { print $4 } ' $tile/input.nml)
-  echo -e "${istart[$ij]} \t ${iend[$ij]} \t ${jstart[$ij]} \t ${jend[$ij]}" >> $tiledef_file
-done
-
 # Merge the output tiles into a single global analysis file for each ensemble member
 for var in t s u v
 do
@@ -73,15 +61,33 @@ do
     done
 
     #---------------------
-    # Create the grid specification file
+    # Make a tilelist that corresponds with the filelist
+    #---------------------
+    tilelist=$(awk -F '/' '{print $1}' $filelist_file)
+    echo "tilelist = $tilelist"
+    tiledef_file='tiledef.txt'
+    rm -f $tiledef_file
+    for tile in $tilelist
+    do
+      echo "Tile = $tile"
+      istart=$(awk -F'[ ,]' '/istart = / { print $4 } ' $tile/input.nml)
+      iend=$(awk -F'[ ,]' '/iend = / { print $4 } ' $tile/input.nml)
+      jstart=$(awk -F'[ ,]' '/jstart = / { print $4 } ' $tile/input.nml)
+      jend=$(awk -F'[ ,]' '/jend = / { print $4 } ' $tile/input.nml)
+      echo -e "${istart[$ij]} \t ${iend[$ij]} \t ${jstart[$ij]} \t ${jend[$ij]}" >> $tiledef_file
+    done
+
+    #---------------------
+    # Merge the tiles into a single analysis file (or analysis increment file)
     #---------------------
 
     # Run fortran program to read filelist and tilelist and output a global anaylsis
     bgfile="gs01$MEM3.$var.dat"
     infiles=$filelist_file
     outfile=anal${MEM3}.${var}.dat
-#   echo "length of filelist = ${#filelist[@]}"
-    $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .true. -ntiles 5 #$NTILES
+    nfiles=`grep -c '' filelist.txt`
+    $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .true. -ntiles $nfiles #$NTILES
+#   $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .false. -ntiles $nfiles #$NTILES
 
     exit 1
   done

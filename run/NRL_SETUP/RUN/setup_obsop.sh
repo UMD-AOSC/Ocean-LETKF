@@ -12,7 +12,6 @@ function run_obsop {
 # local ISLOT2=$4
 # local MEM3=$5
 
-
   # Process T/S profiles
   obsinfile=MVO_prp.dat
   ensinfile=MVO_ENS_obs.dat
@@ -20,7 +19,7 @@ function run_obsop {
   $EXEDIR/$EXE_3d $args
 
   # Process sea surface height data
-  if [ "$DO_SSH"==1 ]; then
+  if [ "$DO_SSH" == "1" ]; then
     obsinfile=SSH_prp.dat
     ensinfile=SSH_ENS_obs.dat
     args="-obsin $obsinfile -ensin $ensinfile -obsout obs${ISLOT2}${MEM3}.${type2}.dat -mem $MEM -superob .true."
@@ -44,10 +43,19 @@ function run_obsop {
 MEM=$GLOBAL_MEM_START
 MEMBERS=$GLOBAL_MEMBERS
 
-IYYYY=$GLOBAL_IYYYY
-IMM=$GLOBAL_IMM
-IDD=$GLOBAL_IDD
-IHH=$GLOBAL_IHH
+#IYYYY=$GLOBAL_IYYYY
+#IMM=$GLOBAL_IMM
+#IDD=$GLOBAL_IDD
+#IHH=$GLOBAL_IHH
+
+# Step forward number of forecast hours to get observations at the appropriate datetime
+IYYYY=`$date -d "$GLOBAL_IYYYY-$GLOBAL_IMM-$GLOBAL_IDD $GLOBAL_IHH $GLOBAL_FCST_HRS4 hours" +%Y`
+IMM=`$date -d "$GLOBAL_IYYYY-$GLOBAL_IMM-$GLOBAL_IDD $GLOBAL_IHH $GLOBAL_FCST_HRS4 hours" +%m`
+IDD=`$date -d "$GLOBAL_IYYYY-$GLOBAL_IMM-$GLOBAL_IDD $GLOBAL_IHH $GLOBAL_FCST_HRS4 hours" +%d`
+IHH=`$date -d "$GLOBAL_IYYYY-$GLOBAL_IMM-$GLOBAL_IDD $GLOBAL_IHH $GLOBAL_FCST_HRS4 hours" +%H`
+
+#echo "$IYYYY-$IMM-$IDD $IHH"
+#exit 1
 
 inc=$GLOBAL_inc
 inc_units=$GLOBAL_inc_units
@@ -97,23 +105,22 @@ while [ $MEM -le $MEMBERS ]; do
   echo "The next date is:"
   echo "$NY-$NM-$ND :: $HH"
 
-# MEM2=`printf "%02d" $MEM`
-# FILE=sorted_${MEM2}_${FILE_PREFIX}${YYYY}${MM}${DD}${HH}_${NY}${NM}${ND}${HH}${FILE_SUFFIX}
-
-  echo "The input observation/innovation file is: $obsinfile"
-
   MEM=`expr $MEM + 1`
   MEM3=`printf "%03d" $MEM`
 
+  # Prepare the T/S profiles
   file1=${GLOBAL_OBS_FILE_PREFIX}MVO_prp${GLOBAL_OBS_FILE_SUFFIX}${YYYY}${MM}${DD}${HH}
   file2=${GLOBAL_OBS_FILE_PREFIX}MVO_ENS_obs${GLOBAL_OBS_FILE_SUFFIX}${YYYY}${MM}${DD}${HH}
   ln -fs $SRCDIR/$file1 MVO_prp.dat
   ln -fs $SRCDIR/$file2 MVO_ENS_obs.dat
 
-  file1=${GLOBAL_OBS_FILE_PREFIX}SSH_prp${GLOBAL_OBS_FILE_SUFFIX}${YYYY}${MM}${DD}${HH}
-  file2=${GLOBAL_OBS_FILE_PREFIX}SSH_ENS_obs${GLOBAL_OBS_FILE_SUFFIX}${YYYY}${MM}${DD}${HH}
-  ln -fs $SRCDIR/$file1 SSH_prp.dat
-  ln -fs $SRCDIR/$file2 SSH_ENS_obs.dat
+  # Prepare the satellite altimetry
+  if [ "$DO_SSH"=="1" ]; then
+    file1=${GLOBAL_OBS_FILE_PREFIX}SSH_prp${GLOBAL_OBS_FILE_SUFFIX}${YYYY}${MM}${DD}${HH}
+    file2=${GLOBAL_OBS_FILE_PREFIX}SSH_ENS_obs${GLOBAL_OBS_FILE_SUFFIX}${YYYY}${MM}${DD}${HH}
+    ln -fs $SRCDIR/$file1 SSH_prp.dat
+    ln -fs $SRCDIR/$file2 SSH_ENS_obs.dat
+  fi
 
   run_obsop # use locally defined function (above) to permit parallel execution
 

@@ -22,6 +22,7 @@ PROGRAM merge_tiles
   INTEGER :: is,ie,js,je
   REAL, DIMENSION(:,:,:), ALLOCATABLE :: buf4, buf4_global
   INTEGER, DIMENSION(:,:,:), ALLOCATABLE :: bufint_global
+  INTEGER, DIMENSION(:,:), ALLOCATABLE :: maskout_global
   CHARACTER(slen), DIMENSION(:), ALLOCATABLE :: filelist
   INTEGER, DIMENSION(:), ALLOCATABLE :: is_array, ie_array, js_array, je_array
   INTEGER :: fid = 21
@@ -84,6 +85,11 @@ PROGRAM merge_tiles
   allocate(buf4_global(glon,glat,glev))
   CALL read_global(trim(infile),buf4_global,kmax)
 
+  if (DO_INC) then
+    allocate(maskout_global(glon,glat))
+    maskout_global=0
+  endif
+
   !-----------------------------------------------------------------------------
   ! Read tiled data and put into global array (add to -buf4_global to get an
   ! increment instead)
@@ -107,6 +113,7 @@ PROGRAM merge_tiles
       where (bufint_global(is:ie,js:je,1:nlev)>0) 
         buf4_global(is:ie,js:je,1:nlev) = buf4(1:nlon,1:nlat,1:nlev) - buf4_global(is:ie,js:je,1:nlev)
       end where
+      maskout_global(is:ie,js:je) = 1
     else
       where (bufint_global(is:ie,js:je,1:nlev)>0) 
         buf4_global(is:ie,js:je,1:nlev) = buf4(1:nlon,1:nlat,1:nlev)
@@ -117,12 +124,26 @@ PROGRAM merge_tiles
   enddo
 
   !-----------------------------------------------------------------------------
+  ! If computing analysis increments, mask out any areas not analyzed
+  !-----------------------------------------------------------------------------
+  if (DO_INC) then
+    do k=1,kmax
+      maskout : where (maskout_global==0)
+        print *, "merge_tiles.f90:: mask out unanalyzed points..."
+        buf4_global(:,:,k) = undef
+      end where maskout
+    enddo
+  endif
+
+  !-----------------------------------------------------------------------------
   ! Double check land/sea mask to filter land points
   !-----------------------------------------------------------------------------
-  if (DO_INC) undef = 0.0
-  lsmask : where (bufint_global==0)
-    buf4_global = undef
-  end where lsmask
+  do k=1,kmax
+    lsmask : where (bufint_global(:,:,1)<k)
+      print *, "merge_tiles.f90:: mask out land points..."
+      buf4_global(:,:,k) = undef
+    end where lsmask
+  enddo
 
   !-----------------------------------------------------------------------------
   ! Write global data
@@ -313,17 +334,17 @@ SUBROUTINE write_global(filename,buf4,kmax)
   endif
 
   inquire (file=trim(filename), exist=ex)
-  if (ex) then
+  if (.not. ex) then
     if (dodebug) write(6,*) "write_global: Opening file: ", trim(filename)
     if (dodebug) write(6,*) "with reclen: ", reclen
-    open (unit=fid, file=trim(filename), status='old', access='direct', form='unformatted', recl=reclen)
+    open (unit=fid, file=trim(filename), status='new', access='direct', form='unformatted', recl=reclen)
     ! This may take a long time, so output a note of what is happening...
     write (6, *) 'write_global:: Writing analysis file: ', trim(filename)
     write (fid,rec=1) buf4(:,:,1:kmax)
     close (fid)
     write (6, *) 'write_global:: Finished writing analysis file: ', trim(filename)
   else
-    write (6, *) 'write_global:: global analysis file missing: ', trim(filename)
+    write (6, *) 'write_global:: global analysis file already exists: ', trim(filename)
     STOP("merge_tiles.f90:: EXITING...")
   endif
 
