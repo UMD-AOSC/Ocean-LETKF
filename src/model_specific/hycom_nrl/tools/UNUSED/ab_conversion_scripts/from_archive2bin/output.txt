@@ -1,4 +1,0 @@
-
-xcspmd: idm,jdm = 1500 1100
-
- nrecl=     1650688

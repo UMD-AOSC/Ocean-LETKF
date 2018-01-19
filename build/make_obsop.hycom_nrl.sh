@@ -30,28 +30,17 @@ set -exv
 
 CDIR=`pwd`
 
-#MACHINE="GAEA3"
 CONFIGDIR=../config
 source $CONFIGDIR/machine.sh
 source $CONFIGDIR/$MACHINE.fortran.sh
-source $CONFIGDIR/$MACHINE.netcdf.sh
-source $CONFIGDIR/$MACHINE.bufr.sh
-source $CONFIGDIR/$MACHINE.modules_ldtn.sh
-source $CONFIGDIR/$MACHINE.modules.sh
-
-
+source $CONFIGDIR/$MACHINE.mpi.sh
 
 # Model name:
-model=hycom
+model=hycom_nrl
 
 # Experiment name:
-name=${MACHINE}_${model}.2dlonlat.kdtree_update
-#name=test_$model
-#name=TESTc3
+name=${MACHINE}_${model}
 PGM=obsop.$name
-
-F90_FPP='-fpp' # Fortran preprocessor
-
 
 # Build directory
 BDIR=$CDIR/build_obsop/$name.build
@@ -67,42 +56,26 @@ rm -f $BDIR/*.dat
 
 sh $CDIR/lnkcommon_obsop.sh $model $CDIR/../
 
-$F90 $OMP $F90_OPT_HYCOM_IO $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG mod_xc.F
-$F90 $OMP $F90_OPT_HYCOM_IO $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG mod_xc.o mod_za.F
-$F90 $OMP $F90_OPT_HYCOM_IO $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG wtime.F
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90
 $F90 $OMP $F90_OPT $F90_FPP $F90_OBJECT_FLAG params_model.f90
 $F90 $OMP $F90_OPT $F90_FPP $F90_OBJECT_FLAG vars_model.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_letkf.f90
-###$F90 $OMP $F90_OPT $F90_DEBUG $F90_ENDIAN $F90_OBJECT_FLAG mod_xc.o mod_za.o wtime.o ${model}_io.f90 #hycom io
-$F90 $OMP $F90_OPT_HYCOM_IO $F90_DEBUG $F90_OBJECT_FLAG mod_xc.o mod_za.o wtime.o ${model}_io.f90 #hycom io
+$F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_obs.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG ${model}_io.f90 #hycom io
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG input_nml_${model}.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $NETCDF_INC $F90_OBJECT_FLAG common_$model.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG params_obs.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG vars_obs.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG kdtree.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG mod_ppsw.F
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG layer2z.f
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG mod_ppsw.o layer2z.o hycom_intrp.f
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG common_obs_$model.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG compute_profile_error.f90
-$F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_argo.f90
-$F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_avhrr_pathfinder.f90
-$F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_aviso_adt.f90
-$F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_bufr_hycom.f90
-
+$F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_ncoda_prep.f90
 
 #--
-# Equation of state for converting from model to obs space is in here:
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_oceanographic_toolbox.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_pot_to_insitu.f90
-#--
-$F90 $OMP $F90_OPT obsop_tprof.f90 -o ${PGM}.tprof.x *.o $NETCDF_LIB $BUFR_LIB
-$F90 $OMP $F90_OPT obsop_sprof.f90 -o ${PGM}.sprof.x *.o $NETCDF_LIB $BUFR_LIB
-$F90 $OMP $F90_OPT obsop_adt.f90   -o ${PGM}.adt.x   *.o $NETCDF_LIB $BUFR_LIB
-$F90 $OMP $F90_OPT obsop_sst.f90   -o ${PGM}.sst.x   *.o $NETCDF_LIB $BUFR_LIB
-$F90 $OMP $F90_OPT obsop_bufr_tprof_hycom.f90 -o ${PGM}.bufr_tprof.x *.o $NETCDF_LIB $BUFR_LIB
-$F90 $OMP $F90_OPT obsop_bufr_sprof_hycom.f90 -o ${PGM}.bufr_sprof.x *.o $NETCDF_LIB $BUFR_LIB
+$F90 $OMP $F90_OPT obsop_ncoda_3d.f90 -o ${PGM}.ncoda_3d.x *.o $NETCDF_LIB $BUFR_LIB
+rm -f obsop_ncoda_3d.o
+$F90 $OMP $F90_OPT obsop_ncoda_ssh.f90 -o ${PGM}.ncoda_ssh.x *.o $NETCDF_LIB $BUFR_LIB
 
 rm -f *.mod
 rm -f *.o
