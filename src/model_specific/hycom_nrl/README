@@ -1,12 +1,11 @@
-# HYCOM model I/O, parameters, etc.
+# NCODA-HYCOM model I/O, parameters, etc.
 
-This directory contains files specific to the HYCOM build of the Ocean-LETKF system.
+This directory contains files specific to the NCODA-HYCOM build of the Ocean-LETKF system.
 
-blkdat.input                :: a sample input file for testing
-common_mpi_hycom.f90        :: mpi support routines for this model setup (can potentially be generalized across models)
-hycom_io.f90                :: I/O routines specific to hycom (should be replaced with identically-named routines that read hycom ab-format)
+common_debug_hycom_nrl.f90  :: routines supporting general debugging throughout the letkf main code
+common_mpi_hycom_nrl.f90    :: mpi support routines for this model setup (can potentially be generalized across models)
+hycom_nrl_io.f90            :: I/O routines specific to hycom (should be replaced with identically-named routines that read hycom ab-format)
 vars_model.f90              :: variables used by this model, often sourced throughout the code
-common_hycom.f90            :: the main reading and writing routines for restart or diagnostic model files
-common_obs_hycom.f90        :: the main reading and writing routines for observation data and interpolating from model grid to obs locations
+common_hycom_nrl.f90        :: the main reading and writing routines for restart or diagnostic model files
+common_obs_hycom_nrl.f90    :: the main reading and writing routines for observation data and interpolating from model grid to obs locations
 params_model.f90            :: fixed parameters and input parameters for the model
-test_io.f90                 :: code to test the i/o routines

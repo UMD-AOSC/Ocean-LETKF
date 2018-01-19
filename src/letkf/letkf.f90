@@ -45,6 +45,7 @@ PROGRAM letkf
   USE input_nml_oceanmodel, ONLY: read_input_namelist
 
   IMPLICIT NONE
+
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:)     :: gues2d, anal2d
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:,:)   :: gues3d, anal3d
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:,:,:) :: gues4d, anal4d

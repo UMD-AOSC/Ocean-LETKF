@@ -136,7 +136,7 @@ PROGRAM obsop_ecmwf_tprof
   !-----------------------------------------------------------------------------
   print *, "obsop_ecmwf_tprof.f90:: calling read_fdbk_nc for observations..."
   CALL read_fdbk_nc(obsinfile,id_t_obs,obs_data,nobs,trim(obs_name),trim(hxb_name),1) !STEVE: use ,2) if obs errors can be read in
-  print *, "obsop_ecwmf_tprof.f90:: finished read_fdbk_nc."
+  print *, "obsop_ecmwf_tprof.f90:: finished read_fdbk_nc."
 
   !-----------------------------------------------------------------------------
   ! Allocate memory for observation data
