@@ -7,14 +7,19 @@ MODULE common_mpi
 !   09/06/2005 Takemasa MIYOSHI  created
 !
 !=======================================================================
+
   IMPLICIT NONE
+
   PUBLIC
+
   INCLUDE 'mpif.h'
 
   INTEGER,SAVE :: nprocs
   INTEGER,SAVE :: myrank
 
 CONTAINS
+
+
 SUBROUTINE initialize_mpi
   IMPLICIT NONE
   INTEGER :: ierr
@@ -25,11 +30,13 @@ SUBROUTINE initialize_mpi
 
 END SUBROUTINE initialize_mpi
 
+
 SUBROUTINE finalize_mpi
   IMPLICIT NONE
   INTEGER :: ierr
   CALL MPI_FINALIZE(ierr)
 
 END SUBROUTINE finalize_mpi
+
 
 END MODULE common_mpi

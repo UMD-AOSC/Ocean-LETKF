@@ -30,8 +30,9 @@ PUBLIC
   INTEGER,PARAMETER :: nv3d=4 ! u,v,t,s               !(OCEAN)(NCODA)
 ! INTEGER,PARAMETER :: nv3d=5 ! u,v,t,s,h             !(OCEAN)(MOM6)(HYCOM)
   INTEGER,PARAMETER :: nv4d=3 ! x,y,z                 !(OCEAN) STEVE: add t,x,y,z,id for DRIFTERS
-! INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss          !(OCEAN)
-  INTEGER,PARAMETER :: nv2d=3 ! ssh,ubt,vbt           !(OCEAN) !(ALTIMETRY)(HYCOM)
+! INTEGER,PARAMETER :: nv2d=3 ! ssh,sst,sss           !(OCEAN)
+! INTEGER,PARAMETER :: nv2d=3 ! ssh,ubt,vbt           !(OCEAN) !(ALTIMETRY)(HYCOM)
+  INTEGER,PARAMETER :: nv2d=1 ! ssh                   !(OCEAN) !(ALTIMETRY)(HYCOM)
 
   INTEGER,PARAMETER :: ilev_sfc=1
 
@@ -86,15 +87,7 @@ PUBLIC
   CHARACTER(8)  :: gridfile_lev  = 'glev.dat'
   CHARACTER(8)  :: gridfile_kmt  = 'kmt.dat'
 
-  !For input/output of model binary files (converted form HYCOM ab-format):
-  CHARACTER(8) :: base  = '.fsd.bin'! (HYCOM)(All variables assembled in one binary file)
-  CHARACTER(2) :: base_a  = '.a'! (HYCOM)(All variables assembled in one file)
-  CHARACTER(2) :: base_b  = '.b'! (HYCOM)(All variables assembled in one file)
-
-  !model input and output file direct/sequential
-  INTEGER, PARAMETER :: hycom_io_access = 1  ! 0 == direct, 1 == sequential
-
-  CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
+  CHARACTER(14)   :: SSHclm_file = 'aEtaCds9399.nc'  ! Used for MOM4p1 GODAS (HYCOM n/a)
   CHARACTER(slen) :: rsrt_tbase = 't.dat'
   CHARACTER(slen) :: rsrt_sbase = 's.dat'
   CHARACTER(slen) :: rsrt_ubase = 'u.dat'
@@ -119,10 +112,27 @@ PUBLIC
 
   LOGICAL,SAVE :: params_model_initialized = .false.
 
+  ! Write only the subgrid tile instead of updating the full global grid
+  ! analysis file
+  LOGICAL :: DO_WRITE_TILE = .true.
+  INTEGER :: reclen_mult = 4
+
+  !-----------------------------------------------------------------------------
+  ! Not used for NRL NCODA-HYCOM version:
+  !-----------------------------------------------------------------------------
   CHARACTER(slen) :: sample_file_a = 'hycom_sample.a'
   CHARACTER(slen) :: sample_file_b = 'hycom_sample.b'
   CHARACTER(slen) :: grid_file_a   = 'regional.grid.a'
   CHARACTER(slen) :: grid_file_b   = 'regional.grid.b' !(n/a)
+
+  !For input/output of model binary files (converted form HYCOM ab-format):
+  CHARACTER(8) :: base  = '.fsd.bin' ! (HYCOM)(All variables assembled in one binary file)
+  CHARACTER(2) :: base_a  = '.a'     ! (HYCOM)(All variables assembled in one file)
+  CHARACTER(2) :: base_b  = '.b'     ! (HYCOM)(All variables assembled in one file)
+
+  !model input and output file direct/sequential
+  INTEGER, PARAMETER :: hycom_io_access = 1  ! 0 == direct, 1 == sequential
+  
 
 CONTAINS
 

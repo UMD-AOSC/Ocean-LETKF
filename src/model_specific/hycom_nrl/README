@@ -2,6 +2,7 @@
 
 This directory contains files specific to the NCODA-HYCOM build of the Ocean-LETKF system.
 
+common_debug_hycom_nrl.f90  :: routines supporting general debugging throughout the letkf main code
 common_mpi_hycom_nrl.f90    :: mpi support routines for this model setup (can potentially be generalized across models)
 hycom_nrl_io.f90            :: I/O routines specific to hycom (should be replaced with identically-named routines that read hycom ab-format)
 vars_model.f90              :: variables used by this model, often sourced throughout the code

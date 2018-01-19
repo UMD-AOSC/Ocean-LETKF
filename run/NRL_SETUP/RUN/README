@@ -1,12 +1,14 @@
 # Set up the global parameters that will populate all RUN/*.sh scripts:
+# (Almost all of the changes needed to port the code can be made here)
 vim params.sh
 # Set up the background files in the working directory:
 sh setup_bgfiles.sh
-# Compute the observation operator to change NEMOVAR netcdf to LETKF binary input format
+# Compute the observation operator to change NEMOVAR netcdf to LETKF binary input format:
 sh setup_obsop.sh
 # Cretae subdirectories and check land/sea mask and identify tiles with no ocean:
 sh setup_tiles.sh
-# Run the main letkf analysis for all tiles:
+# Run the main letkf analysis for all tiles (change aprun/mpirun here for your machine setup)
+# (This is the only script that requires MPI)
 sh run_all.sh
 # Merge the files into one global analysis increment file:
 sh run_merge.sh

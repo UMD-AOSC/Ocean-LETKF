@@ -1,7 +1,5 @@
 MODULE hycom_io
   USE common, ONLY: r_size, r_sngl, slen
-  USE params_model
-! USE mod_za
 
   IMPLICIT NONE
 
@@ -19,15 +17,16 @@ SUBROUTINE read_hycom_ncoda(infile,v3d,v2d)
 ! Read in an ncoda-formatted hycom background file
 !===============================================================================
   !STEVE: This subroutine reads the HYCOM/NCODA restart file.
-  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv3d_h
+  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_ssh
   USE params_model, ONLY: rsrt_tbase,rsrt_sbase,rsrt_ubase,rsrt_vbase,rsrt_sshbase
+  USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
 
   CHARACTER(*),INTENT(IN) :: infile
   REAL(r_sngl),ALLOCATABLE,DIMENSION(:,:,:,:),INTENT(OUT) :: v3d !(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),ALLOCATABLE,DIMENSION(:,:,:),  INTENT(OUT) :: v2d !(nlon,nlat,nv2d)
   CHARACTER(slen) :: filename
   REAL(r_sngl), ALLOCATABLE :: buf4(:,:,:)
-  LOGICAL :: dodebug = .true.
+  LOGICAL :: dodebug = .false.
 
   allocate( buf4(nlon,nlat,nlev) )
   allocate( v3d(nlon,nlat,nlev,nv3d), v2d(nlon,nlat,nv2d) )
@@ -87,14 +86,16 @@ SUBROUTINE read_hycom_ncoda(infile,v3d,v2d)
   !
   ! ssh
   !
-  filename = trim(infile)//'.'//trim(rsrt_sshbase)
-  if (dodebug) write(6,*)'read_ens_mpi, reading file: ',trim(filename)
-  buf4 = 0.0
-  CALL read_ncoda_bckgrnd(filename,buf4(:,:,1:1),1)
-  v2d(:,:,iv2d_ssh) = buf4(:,:,1)
-  if (dodebug) then
-    write (6,*) "v2d(m/2,n/2,iv2d_ssh)= ", v2d(nlon/2,nlat/2,iv2d_ssh)
-    write (6,*) " max/min v2d = ",  maxval(v2d(:,:,iv2d_ssh)), minval(v2d(:,:,iv2d_ssh))
+  if (iv2d_ssh <= nv2d) then
+    filename = trim(infile)//'.'//trim(rsrt_sshbase)
+    if (dodebug) write(6,*)'read_ens_mpi, reading file: ',trim(filename)
+    buf4 = 0.0
+    CALL read_ncoda_bckgrnd(filename,buf4(:,:,1:1),1)
+    v2d(:,:,iv2d_ssh) = buf4(:,:,1)
+    if (dodebug) then
+      write (6,*) "v2d(m/2,n/2,iv2d_ssh)= ", v2d(nlon/2,nlat/2,iv2d_ssh)
+      write (6,*) " max/min v2d = ",  maxval(v2d(:,:,iv2d_ssh)), minval(v2d(:,:,iv2d_ssh))
+    endif
   endif
 
 END SUBROUTINE read_hycom_ncoda
@@ -113,6 +114,7 @@ SUBROUTINE read_ncoda_bckgrnd(filename, indata, kmax)
   USE params_model, ONLY: glon, glat, glev
   USE params_model, ONLY: nlon, nlat, nlev
   USE params_model, ONLY: istart, iend, jstart, jend
+  USE params_model, ONLY: reclen_mult
 
   CHARACTER(*), INTENT(IN) :: filename
   REAL(r_sngl), DIMENSION(:,:,:), INTENT(OUT) :: indata
@@ -121,7 +123,7 @@ SUBROUTINE read_ncoda_bckgrnd(filename, indata, kmax)
   INTEGER :: is,ie,js,je
   INTEGER, PARAMETER :: fid=21
   LOGICAL   :: ex
-  INTEGER :: mx, ny, lz, reclen, iolen
+  INTEGER :: mx, ny, lz, reclen
   LOGICAL :: dodebug = .false.
 
   !
@@ -136,8 +138,7 @@ SUBROUTINE read_ncoda_bckgrnd(filename, indata, kmax)
   ny = glat
   lz = min(glev,kmax)
 
-  INQUIRE(IOLENGTH=iolen) iolen
-  reclen = mx * ny * lz * iolen
+  reclen = mx * ny * lz * reclen_mult
   allocate(buf4(mx,ny,lz)) !STEVE: TEMPORORAY - replace with direct access read of subgrid
 
   if (dodebug) then
@@ -168,7 +169,7 @@ SUBROUTINE read_ncoda_bckgrnd(filename, indata, kmax)
     read (fid,rec=1) buf4
     close (fid)
     indata = buf4(is:ie,js:je,1:lz) 
-    WRITE(6,*) "read_ncoda_bckgrnd:: Finished assigning buf4 to indata."
+    if (dodebug) WRITE(6,*) "read_ncoda_bckgrnd:: Finished assigning buf4 to indata."
   else
     write (6,*) 'read_ncoda_bckgrnd:: Background file missing: ', trim(filename)
     STOP("read_ncoda_bckgrnd:: EXITING...")
@@ -177,7 +178,7 @@ SUBROUTINE read_ncoda_bckgrnd(filename, indata, kmax)
   if (dodebug) then
     write (6, *) "buf4(m/2,y/2,1)= ", buf4(mx/2,ny/2,1)
     write (6, *) " max/min buf4 = ",  maxval(buf4), minval(buf4)
-    write (6, *) "indata(m/2,y/2,1)= ", indata(mx/2,ny/2,1)
+    write (6, *) "indata(nlon/2,nlat/2,1)= ", indata(nlon/2,nlat/2,1)
     write (6, *) " max/min indata = ",  maxval(indata), minval(indata)
   endif
 
@@ -196,6 +197,7 @@ SUBROUTINE read_ncoda_intfile(filename, indata, kmax)
   USE params_model, ONLY: glon, glat, glev
   USE params_model, ONLY: nlon, nlat, nlev
   USE params_model, ONLY: istart, iend, jstart, jend
+  USE params_model, ONLY: reclen_mult
 
   CHARACTER(*), INTENT(IN) :: filename
   INTEGER, DIMENSION(:,:,:), INTENT(OUT) :: indata
@@ -218,7 +220,7 @@ SUBROUTINE read_ncoda_intfile(filename, indata, kmax)
   ny = glat
   lz = min(glev,kmax)
 
-  reclen = mx * ny * lz * 4
+  reclen = mx * ny * lz * reclen_mult
   allocate(buf4(glon,glat,lz)) !STEVE: TEMPORORAY - replace with direct access read of subgrid
 
   !---------------------------------
@@ -251,12 +253,13 @@ SUBROUTINE read_grdfiles(lon2d,lat2d) !,lev) !,lev3d)
   USE params_model, ONLY: glon, glat, glev
   USE params_model, ONLY: gridfile_lon, gridfile_lat, gridfile_lev
   USE params_model, ONLY: istart,iend,jstart,jend
+  USE params_model, ONLY: nlon, nlat
 
   REAL(r_size), DIMENSION(:,:), INTENT(OUT) :: lon2d, lat2d
   CHARACTER(slen) :: filename
   REAL(r_sngl), ALLOCATABLE :: buf4(:,:,:)
   LOGICAL :: ex
-  LOGICAL :: dodebug = .true.
+  LOGICAL :: dodebug = .false.
 
   allocate( buf4(nlon,nlat,1) )
 
@@ -289,14 +292,14 @@ SUBROUTINE read_kmt(kmt)
 ! Read in an ncoda-formatted land/sea mask specifying depth of ocean grid cells
 !===============================================================================
   !STEVE: This subroutine reads the HYCOM/NCODA grid specification file
-  USE params_model, ONLY: nlon, nlat, nlev
+  USE params_model, ONLY: nlon, nlat
   USE params_model, ONLY: gridfile_kmt
   USE params_model, ONLY: istart,iend,jstart,jend
 
   INTEGER, DIMENSION(:,:), INTENT(OUT) :: kmt
   CHARACTER(slen) :: filename
   INTEGER, ALLOCATABLE :: buf4(:,:,:)
-  LOGICAL :: dodebug = .true.
+  LOGICAL :: dodebug = .false.
 
   allocate( buf4(nlon,nlat,1) )
 
@@ -320,15 +323,16 @@ SUBROUTINE write_hycom_ncoda(outfile,v3d,v2d)
 ! Write an ncoda-formatted hycom analysis file
 !===============================================================================
   !STEVE: This subroutine write to the HYCOM/NCODA restart file.
-  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv3d_h
+  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_ssh
   USE params_model, ONLY: rsrt_tbase,rsrt_sbase,rsrt_ubase,rsrt_vbase,rsrt_sshbase
+  USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
 
   CHARACTER(*),INTENT(IN) :: outfile
   REAL(r_sngl),DIMENSION(:,:,:,:),INTENT(IN) :: v3d !(nlon,nlat,nlev,nv3d)
   REAL(r_sngl),DIMENSION(:,:,:),  INTENT(IN) :: v2d !(nlon,nlat,nv2d)
   CHARACTER(slen) :: filename
   REAL(r_sngl), ALLOCATABLE :: buf4(:,:,:)
-  LOGICAL :: dodebug = .true.
+  LOGICAL :: dodebug = .false.
 
   allocate( buf4(nlon,nlat,nlev) )
 
@@ -362,15 +366,17 @@ SUBROUTINE write_hycom_ncoda(outfile,v3d,v2d)
   filename = trim(outfile)//'.'//trim(rsrt_vbase)
   if (dodebug) write(6,*)'write_hycom_ncoda, writing file: ',trim(filename)
   buf4 = v3d(:,:,:,iv3d_v)
-  CALL read_ncoda_bckgrnd(filename,buf4,nlev)
+  CALL write_ncoda_analysis(filename,buf4,nlev)
 
   !
   ! ssh
   !
-  filename = trim(outfile)//'.'//trim(rsrt_sshbase)
-  if (dodebug) write(6,*)'write_hycom_ncoda, writing file: ',trim(filename)
-  buf4(:,:,1) = v2d(:,:,iv2d_ssh)
-  CALL write_ncoda_analysis(filename,buf4(:,:,1:1),1)
+  if (iv2d_ssh <= nv2d) then
+    filename = trim(outfile)//'.'//trim(rsrt_sshbase)
+    if (dodebug) write(6,*)'write_hycom_ncoda, writing file: ',trim(filename)
+    buf4(:,:,1) = v2d(:,:,iv2d_ssh)
+    CALL write_ncoda_analysis(filename,buf4(:,:,1:1),1)
+  endif
 
 
 END SUBROUTINE write_hycom_ncoda
@@ -380,50 +386,80 @@ SUBROUTINE write_ncoda_analysis(filename, outdata, kmax)
   USE params_model, ONLY: glon, glat, glev
   USE params_model, ONLY: nlon, nlat, nlev
   USE params_model, ONLY: istart, iend, jstart, jend
+  USE params_model, ONLY: reclen_mult
+  USE params_model, ONLY: DO_WRITE_TILE
+! USE common_mpi
 
   CHARACTER(*), INTENT(IN) :: filename
-  REAL(r_sngl), DIMENSION(nlon,nlat,nlev), INTENT(IN) :: outdata
+  REAL(r_sngl), DIMENSION(:,:,:), INTENT(IN) :: outdata
   INTEGER, INTENT(IN) :: kmax
   REAL(r_sngl), DIMENSION(:,:,:), ALLOCATABLE :: buf4
   INTEGER :: is,ie,js,je
   INTEGER, PARAMETER :: fid=20
   LOGICAL   :: ex
   INTEGER*8 :: mx, ny, lz, reclen
+  LOGICAL :: dodebug = .false.
 
 !
 ! global  ..long integer array dimensions
 !
-  is = istart
-  ie = iend
-  js = jstart
-  je = jend
-
-  mx = glon
-  ny = glat
-  lz = min(glev,kmax)
-
-  reclen = mx * ny * lz * 4
-  allocate(buf4(glon,glat,lz)) !STEVE: TEMPORORAY - replace with stream access write of subgrid
+  lz = min(glev,nlev)
+  lz = min(lz,kmax)
 
 !---------------------------------
 ! Write the NCODA analysis file
 !---------------------------------
-  inquire (file=trim(filename), exist=ex)
-  if (ex) then
-    open (unit=fid, file=trim(filename), status='old', access='direct', form='unformatted', recl=reclen)
-!STEVE: (ISSUE) replace with stream I/O to write only desired section and cut down on I/O costs
-!   open (unit=fid, file=trim(filename), status='old', access='stream', form='unformatted', recl=reclen)
-    read (fid,rec=1) buf4
-    buf4(is:ie,js:je,1:lz) = outdata
-    write (fid,rec=1) buf4
-    close (fid)
-    write (6, *) 'write_ncoda_analysis:: Finished writing analysis file: ', trim(filename)
+  if (DO_WRITE_TILE) then
+    ! Write a smaller file containing only the subgrid data for this local tile analysis 
+    if (dodebug) WRITE(6,*) "Writing update to SUBGRID analysis tile file..."
+    reclen = nlon * nlat * nlev * reclen_mult
+    if (dodebug) then
+      WRITE(6,*) "nlon = ", nlon
+      WRITE(6,*) "nlon = ", nlat
+      WRITE(6,*) "nlon = ", nlev
+      WRITE(6,*) "reclen_mult = ", reclen_mult
+      WRITE(6,*) "reclen = ", reclen
+    endif
+
+    if (dodebug) WRITE(6,*) "Opening file: ", trim(filename)
+    open (unit=fid, file=trim(filename), status='new', access='direct', form='unformatted', recl=reclen)
+
+    if (dodebug) WRITE(6,*) "Writing file: ", trim(filename)
+    write (fid,rec=1) outdata(1:nlon,1:nlat,1:lz)
+
+    if (dodebug) WRITE(6,*) "Closing file: ", trim(filename)
+    close (fid) 
   else
-    write (6, *) 'write_ncoda_analysis:: Analysis file missing: ', trim(filename)
-    STOP("write_ncoda_analysis:: EXITING...")
+    if (dodebug) WRITE(6,*) "Writing update to GLOBAL GRID analysis file..."
+    is = istart
+    ie = iend
+    js = jstart
+    je = jend
+
+    reclen = glon * glat * glev * reclen_mult
+    allocate(buf4(glon,glat,glev)) !STEVE: TEMPORORAY - replace with stream access write of subgrid
+
+    ! Write the tile update to the global grid in the global file itself
+    inquire (file=trim(filename), exist=ex)
+    if (ex) then
+      open (unit=fid, file=trim(filename), status='old', access='direct', form='unformatted', recl=reclen)
+!STEVE: (ISSUE) replace with stream I/O to write only desired section and cut down on I/O costs
+!     open (unit=fid, file=trim(filename), status='old', access='stream', form='unformatted', recl=reclen)
+      read (fid,rec=1) buf4
+      buf4(is:ie,js:je,1:lz) = outdata
+      write (fid,rec=1) buf4
+      close (fid)
+      write (6, *) 'write_ncoda_analysis:: Finished writing analysis file: ', trim(filename)
+    else
+      write (6, *) 'write_ncoda_analysis:: Analysis file missing: ', trim(filename)
+      STOP("write_ncoda_analysis:: EXITING...")
+    endif
+  
+    if (ALLOCATED(buf4)) then
+      DEALLOCATE(buf4)
+    endif
   endif
 
-  deallocate(buf4)
 
 END SUBROUTINE write_ncoda_analysis
 
@@ -455,7 +491,7 @@ SUBROUTINE read_blkdat(infile,dims,sigma)
   CHARACTER(70)    :: dummy2
   INTEGER :: i,j,k, ierr
 
-  LOGICAL, PARAMETER :: dodebug = .true.
+  LOGICAL, PARAMETER :: dodebug = .false.
 
   !-----------------------------------------------------------------------------
   ! Open the blkdat.input file

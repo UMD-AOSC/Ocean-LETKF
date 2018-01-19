@@ -30,7 +30,6 @@ set -exv
 
 CDIR=`pwd`
 
-#MACHINE="GAEA3"
 CONFIGDIR=../config
 source $CONFIGDIR/machine.sh
 source $CONFIGDIR/$MACHINE.fortran.sh
@@ -39,19 +38,12 @@ source $CONFIGDIR/$MACHINE.bufr.sh
 source $CONFIGDIR/$MACHINE.modules_ldtn.sh
 source $CONFIGDIR/$MACHINE.modules.sh
 
-
-
 # Model name:
 model=hycom
 
 # Experiment name:
 name=${MACHINE}_${model}.2dlonlat.kdtree_update
-#name=test_$model
-#name=TESTc3
 PGM=obsop.$name
-
-F90_FPP='-fpp' # Fortran preprocessor
-
 
 # Build directory
 BDIR=$CDIR/build_obsop/$name.build
