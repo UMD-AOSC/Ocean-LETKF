@@ -146,8 +146,8 @@ SUBROUTINE set_vars_model
   !
   WRITE(6,*) "Computing Coriolis parameter..."
   fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
-  do j=1,nlat
-    do i=1,nlon
+  do j=1,nlon
+    do i=1,nlat
       fcori2d(i,j) = 2.0d0 * r_omega * sin(lat2d(i,j)*pi/180.0d0)
     enddo
   enddo

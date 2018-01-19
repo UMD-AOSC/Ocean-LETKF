@@ -29,7 +29,7 @@ GLOBAL_inc_units='days'
 #OBS_FILE_SUFFIX=_profb_01_fdbk.nc
 GLOBAL_OBS_FILE_PREFIX=
 #GLOBAL_OBS_FILE_SUFFIX=profb_01_fdbk_00.nc
-GLOBAL_OBS_FILE_SUFFIX=profbqc_01_fdbk_00.nc    #STEVE: skipping preprocessing because obs locations aren't perturbed in this run
+GLOBAL_OBS_FILE_SUFFIX=profbqc_01_fdbk_00.nc    #STEVE: skipping preprocessing because obs locatiosn aren't perturbed in this run
 GLOBAL_OBS_FILE_SUFFIX_qc=profbqc_01_fdbk_00.nc
 
 # Specify restart file naming formats:

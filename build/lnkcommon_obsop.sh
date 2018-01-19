@@ -72,11 +72,6 @@ if [ ${model} == "nemo" ]; then
    cp $OBSDIR/obsop_ecmwf_sprof.f90 ./
 fi
 
-if [ ${model} == "hycom_nrl" ]; then
-   cp $OBSDIR/read_ncoda_prep.f90 ./
-   cp $OBSDIR/obsop_ncoda_3d.f90 ./
-   cp $OBSDIR/obsop_ncoda_ssh.f90 ./
-fi
 
 # Software package for equation of state computation from TEOS-2010
 GSWDIR=$root/src/obs/gsw_fortran_v3_03

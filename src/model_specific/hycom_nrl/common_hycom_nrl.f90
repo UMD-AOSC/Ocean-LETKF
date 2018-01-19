@@ -47,7 +47,6 @@ SUBROUTINE set_common_oceanmodel
   INTEGER :: ncid,ncid2,ncid3,istat,varid,dimid
   LOGICAL :: ex
   INTEGER :: fid=21
-  INTEGER :: ierr
 
   ! For debugging:
   LOGICAL :: dodebug = .true.
@@ -86,17 +85,6 @@ SUBROUTINE set_common_oceanmodel
     WRITE(6,*) "jstart,jend = ", jstart, jend
   endif
 
-  ! Set subgrid to whole domain if they are not input via namelist:
-  if (iend == 0) then
-    istart = 1
-    iend = glon
-  endif
-  if (jend == 0) then
-    jstart = 1
-    jend = glat
-  endif
-
-  ! Calculate the grid dimensions for the analysis domain
   nlon   = abs(iend - istart) + 1
   nlat   = abs(jend - jstart) + 1
   nlev   = glev
@@ -359,10 +347,6 @@ SUBROUTINE write_restart(outfile,v3d,v2d)
   REAL(r_sngl),DIMENSION(:,:,:),  INTENT(INOUT) :: v2d !(nlon,nlat,nv2d)
 
   INTEGER :: m,k,j,i !STEVE: for debugging
-
-  LOGICAL :: dodebug = .false.
-
-  if (dodebug) WRITE(6,*) "write_restart:: begin..."
   
   ! STEVE: for safety, clean up the variables for output:
   ! JILI for land grids, also set variables to undef
@@ -417,16 +401,14 @@ SUBROUTINE write_restart(outfile,v3d,v2d)
 
           ! Check allowable ssh bounds
           if (k==1) then
-            if (iv2d_ssh <= nv2d) then
-              if (v2d(i,j,iv2d_ssh) < min_ssh) then
-                WRITE(6,*) "WARNING: Bad ssh value in analysis output:"
-                WRITE(6,*) "v2d(",i,",",j,") = ", v2d(i,j,iv2d_ssh)
-                v2d(i,j,iv2d_ssh) = min_ssh
-              elseif (v2d(i,j,iv2d_ssh) > max_ssh) then
-                WRITE(6,*) "WARNING: Bad ssh value in analysis output:"
-                WRITE(6,*) "v2d(",i,",",j,") = ", v2d(i,j,iv2d_ssh)
-                v2d(i,j,iv2d_ssh) = max_ssh
-              endif
+            if (v2d(i,j,iv2d_ssh) < min_ssh) then
+              WRITE(6,*) "WARNING: Bad ssh value in analysis output:"
+              WRITE(6,*) "v2d(",i,",",j,") = ", v2d(i,j,iv2d_ssh)
+              v2d(i,j,iv2d_ssh) = min_ssh
+            elseif (v2d(i,j,iv2d_ssh) > max_ssh) then
+              WRITE(6,*) "WARNING: Bad ssh value in analysis output:"
+              WRITE(6,*) "v2d(",i,",",j,") = ", v2d(i,j,iv2d_ssh)
+              v2d(i,j,iv2d_ssh) = max_ssh
             endif
           endif
 
@@ -437,9 +419,8 @@ SUBROUTINE write_restart(outfile,v3d,v2d)
   endif physlimit
 
   ! Write local analysis
-  if (dodebug) WRITE(6,*) "write_restart:: writing local analysis..."
+  WRITE(6,*) "write_restart:: writing local analysis..."
   CALL write_hycom_ncoda(trim(outfile),v3d,v2d)
-  if (dodebug) WRITE(6,*) "write_restart:: complete." 
 
 END SUBROUTINE write_restart
 
