@@ -76,7 +76,7 @@ PROGRAM merge_tiles
   !-----------------------------------------------------------------------------
   ! Read global land/sea mask
   !-----------------------------------------------------------------------------
-  allocate(bufint_global(glon,glat,glev))
+  allocate(bufint_global(glon,glat,1))
   CALL read_global_int(trim(lsmask_file),bufint_global,1)
 
   !-----------------------------------------------------------------------------
@@ -110,14 +110,10 @@ PROGRAM merge_tiles
     ! Assign subgrid to section of global output array
     ! If specified, compute increment instead of analysis field
     if (DO_INC) then
-      where (bufint_global(is:ie,js:je,1:nlev)>0) 
-        buf4_global(is:ie,js:je,1:nlev) = buf4(1:nlon,1:nlat,1:nlev) - buf4_global(is:ie,js:je,1:nlev)
-      end where
+      buf4_global(is:ie,js:je,1:kmax) = buf4(1:nlon,1:nlat,1:kmax) - buf4_global(is:ie,js:je,1:kmax)
       maskout_global(is:ie,js:je) = 1
     else
-      where (bufint_global(is:ie,js:je,1:nlev)>0) 
-        buf4_global(is:ie,js:je,1:nlev) = buf4(1:nlon,1:nlat,1:nlev)
-      end where
+      buf4_global(is:ie,js:je,1:kmax) = buf4(1:nlon,1:nlat,1:kmax)
     endif
 
     deallocate(buf4) 
@@ -127,7 +123,7 @@ PROGRAM merge_tiles
   ! If computing analysis increments, mask out any areas not analyzed
   !-----------------------------------------------------------------------------
   if (DO_INC) then
-    print *, "merge_tiles.f90:: mask out unanalyzed points..."
+    print *, "merge_tiles.f90:: mask out unanalyzed points from final analysis increment..."
     do k=1,kmax
       maskout : where (maskout_global==0)
         buf4_global(:,:,k) = undef
