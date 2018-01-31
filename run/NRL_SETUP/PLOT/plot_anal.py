@@ -21,13 +21,16 @@ figname="test_letkf_ainc.png"
 #-------------------------------------------------------------------------------
 mem=1
 vartype='t'
-k_index=0
+k_index=1
 dtg='2014020112'
 
 # Get figure title and filename:
 title='vartype=%s mem=%s dtg=%s k=%d'%(vartype,mem,dtg,k_index)
 fn=wdir+'/'+'anal'+'%3.3d'%(mem)+'.'+vartype+'.dat'
-#fn=wdir+'/'+'gs01'+'%3.3d'%(mem)+'.'+vartype+'.dat'
+
+# Outfile name:
+figname='test_letkf_anal.'+vartype+'.'+'mem%3.3d'%(mem)+'.'+'lvl%2.2d'%(k_index)+'.png'
+
 
 nest=1
 doreduce=0   # doreduce = 0, keep the input dimensions
