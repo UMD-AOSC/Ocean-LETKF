@@ -89,8 +89,9 @@ do
     $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .true. -ntiles $nfiles  &
 #   $GLOBAL_MERGE_EXE -f $bgfile -flist $infiles -o $outfile -kmax 32 -inc .false. -ntiles $nfiles
 
-    echo "Finished merging member = ${mem}, var = ${var}. Exiting on purpose..."
-    exit 1
+#   time wait
+#   echo "Finished merging member = ${mem}, var = ${var}. Exiting on purpose..."
+#   exit 1
   done
 
   time wait

@@ -19,7 +19,7 @@ wdir='/home/spenny/Research/osprey/TESTCASE/expt_75.1m'
 #-------------------------------------------------------------------------------
 mem=1
 vartype='t'
-k_index=0
+k_index=10   # Level
 dtg='2014020112'
 
 # Get figure title and filename:
@@ -27,7 +27,7 @@ title='vartype=%s mem=%s dtg=%s k=%d'%(vartype,mem,dtg,k_index)
 fn=wdir+'/'+'anal'+'%3.3d'%(mem)+'.'+vartype+'.dat'
 
 # Outfile name:
-figname='test_letkf_ainc.'+vartype+'.'+'%3.3d'%(mem)+'.png'
+figname='test_letkf_ainc.'+vartype+'.'+'mem%3.3d'%(mem)+'.'+'lvl%2.2d'%(k_index)+'.png'
 
 nest=1
 doreduce=0   # doreduce = 0, keep the input dimensions
