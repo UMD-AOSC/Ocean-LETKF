@@ -37,29 +37,29 @@ PUBLIC
   REAL(r_size),ALLOCATABLE,DIMENSION(:),SAVE :: dz !(nlev)
 !-----------------------------------------------------------------------------
 #else
-  REAL(r_size),DIMENSION(nlon),SAVE      :: lon !(nlon)
-  REAL(r_size),DIMENSION(nlat),SAVE      :: lat !(nlat)
-  REAL(r_size),DIMENSION(nlev),SAVE      :: lev !(nlev)                     !(OCEAN)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lon2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
+# REAL(r_size),DIMENSION(nlon),SAVE      :: lon !(nlon)
+# REAL(r_size),DIMENSION(nlat),SAVE      :: lat !(nlat)
+# REAL(r_size),DIMENSION(nlev),SAVE      :: lev !(nlev)                     !(OCEAN)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lon2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
 
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dx !(nlon,nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dy !(nlon,nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: area_t !(nlon,nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: phi0 !(nlon,nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
-  REAL(r_size),DIMENSION(nlon,nlat,nlev),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: depth !(nlon,nlat)               !(OCEAN)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: wet !(nlon,nlat)               !(OCEAN)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dx !(nlon,nlat)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dy !(nlon,nlat)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: area_t !(nlon,nlat)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: phi0 !(nlon,nlat)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
+# REAL(r_size),DIMENSION(nlon,nlat,nlev),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: depth !(nlon,nlat)               !(OCEAN)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: wet !(nlon,nlat)               !(OCEAN)
 
-  REAL(r_size),DIMENSION(nlat),SAVE      :: fcori !(nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: fcori2d !(nlon,nlat)
-  INTEGER,DIMENSION(nlon,nlat),SAVE      :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
+# REAL(r_size),DIMENSION(nlat),SAVE      :: fcori !(nlat)
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: fcori2d !(nlon,nlat)
+# INTEGER,DIMENSION(nlon,nlat),SAVE      :: kmt            !(OCEAN) STEVE: the bottom topography for mom4
+# REAL(r_size),DIMENSION(nlon,nlat),SAVE :: SSHclm_m       !(OCEAN)(SLA) Stores model climatology to subtract from model eta_t when assimilating SLA
   ! For AMOC computation
-  REAL(r_size),DIMENSION(nlev),SAVE :: zb !(nlev)
-  REAL(r_size),DIMENSION(nlev),SAVE :: dz !(nlev)
+# REAL(r_size),DIMENSION(nlev),SAVE :: zb !(nlev)
+# REAL(r_size),DIMENSION(nlev),SAVE :: dz !(nlev)
 !-----------------------------------------------------------------------------
 #endif
 
