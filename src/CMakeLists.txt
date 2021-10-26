@@ -86,11 +86,11 @@ ecbuild_add_executable (
     LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
     )
 #sst
-#ecbuild_add_executable (
-#   TARGET OCN.obsOp_${MODEL}.sst.x 
-#   SOURCES obs/obsop_sst.f90
-#   LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
-#   )
+ ecbuild_add_executable (
+    TARGET OCN.obsOp_${MODEL}.sst.x 
+    SOURCES obs/obsop_sst.f90
+    LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
+    )
 #t-profile
  ecbuild_add_executable (
     TARGET OCN.obsOp_${MODEL}.tprof.x 
