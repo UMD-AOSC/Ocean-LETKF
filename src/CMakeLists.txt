@@ -1,4 +1,6 @@
-esma_set_this (OVERRIDE OCN.letkf)
+cmake_minimum_required (VERSION 3.18)
+
+include(GNUInstallDirs)
 
 # This is for selecting the MOM6 ocean model
 ## We default to MOM6 and look if something is passed in...
@@ -24,7 +26,7 @@ set (SRCS
   common_all/kdtree.f90
   common_all/netlib.f
   common_all/netlibblas.f
-#--  
+#--
 # from letkf/
   letkf/params_letkf.f90
   letkf/letkf_local.f90
@@ -32,7 +34,7 @@ set (SRCS
   letkf/letkf_tools.f90
   letkf/vars_letkf.f90
   letkf/vars_obs.f90
-#--  
+#--
 # from model_specific/${MODEL}/
   model_specific/${MODEL}/vars_model.f90
   model_specific/${MODEL}/params_model.f90
@@ -41,7 +43,7 @@ set (SRCS
   model_specific/${MODEL}/common_mpi_${MODEL}.f90
   model_specific/${MODEL}/common_${MODEL}.f90
   model_specific/${MODEL}/common_debug_${MODEL}.f90
-#--  
+#--
 # from obs/
   obs/params_obs.f90
   obs/compute_profile_error.f90
@@ -55,57 +57,28 @@ set (SRCS
   obs/gsw_fortran_v3_03/gsw_oceanographic_toolbox.f90
   )
 
-if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
-   set( CMAKE_Fortran_FLAGS_RELEASE "${FOPT3} ${BIG_ENDIAN} ${BYTERECLEN} ${EXTENDED_SOURCE} ${ALIGNCOM}")
-endif ()
+add_library(OCN.letkf ${SRCS})
+target_link_libraries(OCN.letkf PUBLIC NetCDF::NetCDF_Fortran MPI::MPI_Fortran Threads::Threads)
+set_target_properties (OCN.letkf PROPERTIES Fortran_PREPROCESS ON) # Need to preprocess .f90 files for ifdef on next line
+target_compile_definitions(OCN.letkf PRIVATE DYNAMIC)
+install(TARGETS OCN.letkf)
 
-# MAT There is a bug in common_mom4.f90 that cannot handle bounds-checking
-#     For now build with release flags even in debug
-set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_RELEASE}")
-
-esma_add_library (${this}
-  SRCS ${SRCS}
-  INCLUDES ${INC_NETCDF}
-  DEPENDENCIES ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES}
-  )
-
-set_target_properties (${this} PROPERTIES COMPILE_OPTIONS ${PP})
-target_compile_definitions(${this} PRIVATE DYNAMIC)
-
-ecbuild_add_executable (
-   TARGET OCN.letkf_${MODEL}.x 
-   SOURCES letkf/letkf.f90 
-   LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
-   )
+## Programs
+# letkf
+add_executable(OCN.letkf_${MODEL}.x letkf/letkf.f90)
+target_link_libraries(OCN.letkf_${MODEL}.x PRIVATE OCN.letkf)
+install(TARGETS OCN.letkf_${MODEL}.x)
 
 # different observation operators or H(.)
-#adt
- ecbuild_add_executable (
-    TARGET OCN.obsOp_${MODEL}.adt.x 
-    SOURCES obs/obsop_adt.f90
-    LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
-    )
-#sst
- ecbuild_add_executable (
-    TARGET OCN.obsOp_${MODEL}.sst.x 
-    SOURCES obs/obsop_sst.f90
-    LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
-    )
-#t-profile
- ecbuild_add_executable (
-    TARGET OCN.obsOp_${MODEL}.tprof.x 
-    SOURCES obs/obsop_tprof.f90
-    LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
-    )
-#s-profile
- ecbuild_add_executable (
-    TARGET OCN.obsOp_${MODEL}.sprof.x 
-    SOURCES obs/obsop_sprof.f90
-    LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
-    )
-#sea-ice concentration
- ecbuild_add_executable (
-    TARGET OCN.obsOp_${MODEL}.icefrac.x 
-    SOURCES obs/obsop_icefrac.f90
-    LIBS ${this} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} Threads::Threads
-    )
+set(operators
+  adt
+  sst
+  tprof
+  sprof
+  icefrac
+  )
+foreach(operator ${operators})
+  add_executable(OCN.obsOp_${MODEL}.${operator}.x obs/obsop_${operator}.f90)
+  target_link_libraries(OCN.obsOp_${MODEL}.${operator}.x PRIVATE OCN.letkf)
+  install(TARGETS OCN.obsOp_${MODEL}.${operator}.x)
+endforeach()
