@@ -109,8 +109,8 @@ PROGRAM obsop_sst
   INTEGER :: min_quality_level=4  !STEVE: (default) for AVHRR
   INTEGER :: typ = id_sst_obs
   LOGICAL :: DO_SUPEROBS = .false.
-  REAL(r_size), DIMENSION(nlon,nlat) :: superobs, delta, M2 ! for online computation of the mean and variance
-  INTEGER, DIMENSION(nlon,nlat) :: supercnt
+  REAL(r_size), DIMENSION(:,:), ALLOCATABLE :: superobs, delta, M2 ! for online computation of the mean and variance
+  INTEGER, DIMENSION(:,:), ALLOCATABLE :: supercnt
   INTEGER :: idx
   INTEGER :: cnt_obs_thinning = 0
   REAL(r_size) :: min_oerr = 1.0 !ÂC !ÂC
@@ -120,6 +120,8 @@ PROGRAM obsop_sst
   !-----------------------------------------------------------------------------
   CALL set_common_oceanmodel
   CALL process_command_line !(get: -obsin <obsinfile> -gues <guesfile> -obsout <obsoutfile>)
+
+  ALLOCATE(superobs(nlon,nlat),delta(nlon,nlat),M2(nlon,nlat),supercnt(nlon,nlat))
 
   !-----------------------------------------------------------------------------
   ! Read observations from file
