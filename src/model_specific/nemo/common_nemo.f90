@@ -61,7 +61,7 @@ SUBROUTINE set_common_oceanmodel
   IF(.not. ex) THEN
     WRITE(6,*) "The file does not exist: ", gridfile 
     WRITE(6,*) "Exiting common_mom6.f90..."
-    STOP(2)
+    STOP (2)
   ENDIF
   WRITE(6,'(A)') '  >> accessing file: ', gridfile
   call check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
@@ -219,7 +219,7 @@ SUBROUTINE set_common_oceanmodel
     else
       WRITE(6,*) "The file does not exist: ", SSHclm_file
       WRITE(6,*) "Exiting common_mom6.f90..."
-      STOP(1)
+      STOP (1)
     endif
   endif
 
@@ -844,7 +844,7 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
 
   if (prec == 1) then
     WRITE(6,*) "common_nemo.f90::write_restart:: input argument prec=1 (single precision) is not yet supported. Update write_restart subroutine. EXITING..."
-    STOP(24)
+    STOP (24)
   endif
 
   select case(prec)

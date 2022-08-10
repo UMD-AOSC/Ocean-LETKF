@@ -269,14 +269,14 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
       if (k>1 .and. lev(k)==0.0) then
         WRITE(6,*) "common_obs_mom4.f90::phys2ijk:: lev(k)==0.0 but k>1. ERROR, EXITING..."
         WRITE(6,*) "(model levels array lev() was not appropriately set)"
-        STOP(934)
+        STOP (934)
       endif
     enddo
 
     if (rk > nlev) then
       WRITE(6,*) "common_obs_mom4.f90::phys2ijk:: rk>nlev. ERROR, EXITING..."
       WRITE(6,*) "(appropriate model leve not found for rlev = ",rlev,")"
-      STOP(935)
+      STOP (935)
     endif
 
     if (k .eq. 1) then
@@ -651,7 +651,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 
   if (nn .eq. 0) then
     WRITE(6,*) "get_nobs:: No observations have been found. Exiting..."
-    STOP(60)
+    STOP (60)
   endif
 
 END SUBROUTINE get_nobs
@@ -713,13 +713,13 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
     WRITE(6,*) "read_obs:: Error: MAX(observation lon, i.e. rlon) > lonf"
     WRITE(6,*) "rlon = ", rlon
     WRITE(6,*) "lonf = ", lonf
-    STOP(2)
+    STOP (2)
   endif
   if (MINVAL(rlon) < lon0) then
     WRITE(6,*) "read_obs:: Error: MIN(observation lon, i.e. rlon) < lon0"
     WRITE(6,*) "rlon = ", rlon
     WRITE(6,*) "lon0 = ", lon0
-    STOP(2)
+    STOP (2)
   endif
 
 END SUBROUTINE read_obs
@@ -755,7 +755,7 @@ SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
       WRITE(6,*) "Perhaps the observations are not identical across members?"
       WRITE(6,*) "(They should be - please check your input.)"
       WRITE(6,*) "read_obs2:: EXITING on purpose..."
-      STOP(9522)
+      STOP (9522)
     endif
     elem(n) = REAL(wk(1),r_size)
     rlon(n) = REAL(wk(2),r_size)
@@ -958,13 +958,13 @@ SUBROUTINE center_obs_coords(rlon,oerr,nn)
     WRITE(6,*) "read_obs:: Error: MAX(observation lon, i.e. rlon) > lonf"
     WRITE(6,*) "MAXVAL(rlon) = ", MAXVAL(rlon)
     WRITE(6,*) "lonf = ", lonf
-    STOP(22)
+    STOP (22)
   endif
   if (MINVAL(rlon) < lon0) then
     WRITE(6,*) "read_obs:: Error: MIN(observation lon, i.e. rlon) < lon0"
     WRITE(6,*) "MINVAL(rlon) = ", MINVAL(rlon)
     WRITE(6,*) "lon0 = ", lon0
-    STOP(23)
+    STOP (23)
   endif
 
 END SUBROUTINE center_obs_coords
