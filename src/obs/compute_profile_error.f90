@@ -65,7 +65,7 @@ SUBROUTINE cmpTz(se,se0,seF,t,z,kd,spv)
   ! Check input quality:
   if (MAXVAL(z) < TINY(1.0d0)) then
     print *, "cmpTz :: input depths are zero, check input arguments. EXITING..."
-    STOP(13)
+    STOP (13)
   endif
 
   ! Estimate profile gradients
