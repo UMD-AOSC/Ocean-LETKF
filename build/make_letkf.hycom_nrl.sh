@@ -80,10 +80,12 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE -o ${PGM} *.o $MPI_LIB $NETCDF_LIB $LB
 
 # Build io read/write test:
 rm letkf.o
-ln -fs /home/spenny/Research/Ocean-LETKF/src/model_specific/hycom_nrl/tools/test_io_subgrid.f90 .
+#ln -fs /home/spenny/Research/Ocean-LETKF/src/model_specific/hycom_nrl/tools/test_io_subgrid.f90 .
+# CDA: move this part to lnkcommon.sh
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG test_io_subgrid.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_INLINE -o iotest.x *.o $MPI_LIB $NETCDF_LIB $LBLAS
-mv iotest.x /home/spenny/Research/Ocean-LETKF/src/model_specific/hycom_nrl/tools/
+#mv iotest.x /home/spenny/Research/Ocean-LETKF/src/model_specific/hycom_nrl/tools/
+mv iotest.x $CDIR/../src/model_specific/${model}/tools/
 
 #STEVE: keep a record of the build by keeping the *.f90 files
 rm -f *.mod

@@ -50,7 +50,7 @@ subroutine debug_post_obslocal(calling_routine,ij,debug_hdxf_0,nobstotal,nobsl,h
     WRITE(6,*) "dep(1:nobsl) = ", dep
     WRITE(6,*) "parm = ", parm
     WRITE(6,*) "trans(:,:,n) = ", trans(:,:)
-    STOP("STOP::debug_post_obslocal::1")
+    STOP ("STOP::debug_post_obslocal::1")
   endif
 
   ! Make sure there is no observation error that was input as less than 0
@@ -58,7 +58,7 @@ subroutine debug_post_obslocal(calling_routine,ij,debug_hdxf_0,nobstotal,nobsl,h
     WRITE(6,*) "debug_post_obslocal:: From: ", calling_routine
     WRITE(6,*) "ERROR: rdiag <=0 (i.e. there is an obserr <= 0)"
     WRITE(6,*) "MINVAL(rdiag) = ",MINVAL(rdiag)
-    STOP("STOP::debug_post_obslocal::2")
+    STOP ("STOP::debug_post_obslocal::2")
   endif
 
 end subroutine debug_post_obslocal
@@ -78,7 +78,7 @@ subroutine debug_post_obslocal2d(calling_routine,nobsl,rdiag)
     WRITE(6,*) "debug_post_obslocal2d:: From: ", calling_routine
     WRITE(6,*) "ERROR: rdiag <=0 (i.e. there is an obserr <= 0)"
     WRITE(6,*) "MINVAL(rdiag) = ",MINVAL(rdiag)
-    STOP("STOP::debug_post_obslocal2d")
+    STOP ("STOP::debug_post_obslocal2d")
   endif
 
 end subroutine debug_post_obslocal2d
@@ -101,7 +101,7 @@ subroutine debug_post_letkfcore(calling_routine,debug_zeroinc,nobsl,n,trans)
     WRITE(6,*) "n = ", n
     WRITE(6,*) "trans(:,:,n) = ", trans
     WRITE(6,*) "letkf_tools.f90::das_letkf:: EXITING on purpose..."
-    STOP("STOP::debug_post_letkfcore")
+    STOP ("STOP::debug_post_letkfcore")
   endif
 
 end subroutine debug_post_letkfcore
@@ -123,7 +123,7 @@ subroutine debug_ens_diversity(calling_routine,gues3d,dodebug)
   endif
   if (MAXVAL(gues3d(:,1,:,1)) == MINVAL(gues3d(:,1,:,1))) then
     WRITE(6,*) "from letkf_tools.f90::das_letkf:: It appears that all the ensemble members are identical. EXITING..."
-    STOP("STOP::debug_ens_diversity")
+    STOP ("STOP::debug_ens_diversity")
   endif
 
 end subroutine debug_ens_diversity
@@ -180,7 +180,7 @@ subroutine debug_post_anal3d(calling_routine,anal3d,gues3d,lon1,lat1,k,ij,ilev,m
     WRITE(6,*) "dep(1:nobsl) = ", dep
     WRITE(6,*) "parm = ", parm
     WRITE(6,*) "trans(k,m,n) = ", trans
-    STOP("STOP::debug_post_anal3d")
+    STOP ("STOP::debug_post_anal3d")
   endif
 
 end subroutine debug_post_anal3d
