@@ -76,7 +76,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)        !(OCEAN)
     print *, "available id's = ", id_u_obs, id_v_obs, id_t_obs, id_s_obs, &
                                   id_ssh_obs, id_eta_obs, id_sst_obs, id_sss_obs
     print *, "STEVE: STOPPING ON PURPOSE..."
-    STOP(1)
+    STOP (1)
   END SELECT
 
 END SUBROUTINE Trans_XtoY
@@ -282,14 +282,14 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
       if (k>1 .and. lev(k)==0.0) then
         WRITE(6,*) "common_obs_mom4.f90::phys2ijk:: lev(k)==0.0 but k>1. ERROR, EXITING..."
         WRITE(6,*) "(model levels array lev() was not appropriately set)"
-        STOP(934)
+        STOP (934)
       endif
     enddo
 
     if (rk > nlev) then
       WRITE(6,*) "common_obs_mom4.f90::phys2ijk:: rk>nlev. ERROR, EXITING..."
       WRITE(6,*) "(appropriate model leve not found for rlev = ",rlev,")"
-      STOP(935)
+      STOP (935)
     endif
 
     if (k .eq. 1) then
@@ -796,14 +796,14 @@ SUBROUTINE center_obs_coords(rlon,oerr,nn)
     WRITE(6,*) "MAXVAL(rlon) = ", MAXVAL(rlon)
     WRITE(6,*) "lonf = ", lonf
 !   WRITE(6,*) "lon(nlon) = ", lon(nlon)
-    STOP(22)
+    STOP (22)
   endif
   if (MINVAL(rlon) < lon0) then
     WRITE(6,*) "read_obs:: Error: MIN(observation lon, i.e. rlon) < lon0"
     WRITE(6,*) "MINVAL(rlon) = ", MINVAL(rlon)
     WRITE(6,*) "lon0 = ", lon0
 !   WRITE(6,*) "lon(1) = ", lon(1)
-    STOP(23)
+    STOP (23)
   endif
 
 END SUBROUTINE center_obs_coords
