@@ -45,7 +45,7 @@ else
   LBLAS=""
 fi
 
-F90_FPP='-fpp' # Fortran preprocessor
+F90_FPP="$F90_FPP" # Fortran preprocessor
 
 $F90 $OMP $F90_OPT_HYCOM_IO $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG  mod_xc.F 
 $F90 $OMP $F90_OPT_HYCOM_IO $F90_DEBUG $F90_INLINE $F90_OBJECT_FLAG  mod_xc.o mod_za.F

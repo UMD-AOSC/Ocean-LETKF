@@ -77,7 +77,7 @@ SUBROUTINE set_common_oceanmodel
   IF(.not. ex) THEN
     WRITE(6,*) "The file does not exist: ", "regional.grid.a" 
     WRITE(6,*) "Exiting common_hycom.f90..."
-    STOP(2)
+    STOP (2)
   ENDIF
   call get_hycom_depth(phi0,lat2d,lon2d,dx,dy) 
   WRITE(6,'(A)') '  >> accessing file: ', "regional.grid.a" 
@@ -284,7 +284,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
     WRITE(6,*) "read_diag::  using double precision read..."
   else
     WRITE(6,*) "read_diag:: unsupported option, prec = ", prec
-    STOP
+    STOP 126 ! CDA: STOP number missing, use 126 temporarily
   endif
 
   ! STEVE: this is provided externally at the moment

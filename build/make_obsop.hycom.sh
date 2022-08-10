@@ -50,7 +50,7 @@ name=${MACHINE}_${model}.2dlonlat.kdtree_update
 #name=TESTc3
 PGM=obsop.$name
 
-F90_FPP='-fpp' # Fortran preprocessor
+F90_FPP="$F90_FPP" # Fortran preprocessor
 
 
 # Build directory
