@@ -56,7 +56,7 @@ SUBROUTINE set_common_oceanmodel
   IF(.not. ex) THEN
     WRITE(6,*) "The file does not exist: ", gridfile
     WRITE(6,*) "Exiting common_sis.f90..."
-    STOP(2)
+    STOP (2)
   ENDIF
   WRITE(6,'(A)') '  >> accessing file: ', gridfile
 
