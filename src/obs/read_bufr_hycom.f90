@@ -233,7 +233,7 @@ MODULE read_bufr
             n = nobs
             if (nobs > maxobs) then
               print *, "read_bufr_dumpjb:: ERROR! Must increase size of maxobs = ", maxobs                 
-              STOP(99)
+              STOP (99)
             endif
           else
             if (dodebug) then
