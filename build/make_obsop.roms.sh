@@ -45,7 +45,7 @@ name=${MACHINE}_${model}
 PGM=obsop.$name
 
 # Build directory
-BDIR=$CDIR/obsop_build/$name.build
+BDIR=$CDIR/build_obsop/$name.build
 mkdir -p $BDIR
 cd $BDIR
 
