@@ -62,7 +62,7 @@ SUBROUTINE initialize_vars_model
   if (.not. params_model_initialized) then
     WRITE(6,*) "vars_model.f90::initialize_vars_model::"
     WRITE(6,*) "ERROR: must call initialize_params_model before calling initialize_vars_model. EXITING..."
-    STOP(85)
+    STOP (85)
   elseif (vars_model_initialized) then
     WRITE(6,*) "initialize_vars_model:: already initialized, RETURNING..."
     RETURN
@@ -114,7 +114,7 @@ SUBROUTINE set_vars_model
 
   if (.not. vars_model_initialized) then
     WRITE(6,*) "Not initialized: vars_model_initialized, EXITING..." 
-    STOP(86)
+    STOP (86)
   else
     WRITE(6,*) "set_vars_model..."
   endif
@@ -138,7 +138,7 @@ SUBROUTINE set_vars_model
   if (allocated(lev)) then
     lev(1:nlev) = z_lvl(1:nlev)
   else
-    STOP("set_vars_model:: lev array is not allocated. EXITING...")
+    STOP ("set_vars_model:: lev array is not allocated. EXITING...")
   endif
 
   !
@@ -164,7 +164,7 @@ SUBROUTINE set_vars_model
 
   if (lon0 .eq. lonf) then
     WRITE(6,*) "ERROR in vars_model.f90::initialize_vars_model(), lon0==lonf==",lon0
-    STOP(25)
+    STOP (25)
   endif
 
   ! STEVE: for (more) generalized (longitude) grid:

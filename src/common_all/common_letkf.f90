@@ -153,7 +153,7 @@ SUBROUTINE letkf_core(nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans)
       WRITE(6,*) "rdiag(1:nobsl) = ", rdiag(1:nobsl) 
       WRITE(6,*) "rloc(1:nobsl) = ", rloc(1:nobsl)
       !STEVE: (1) This should not happen. (2) If it does, consider replacing non positive evals with mean of all positive evals...
-      STOP(1)
+      STOP (1)
     endif
     !STEVE: end
 

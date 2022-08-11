@@ -67,7 +67,7 @@ MODULE vars_letkf
     CASE DEFAULT
         WRITE(6,*) "vars_letkf.f90 :: there is no variable localization for obs-type :: ", oelm
         WRITE(6,*) "vars_letkf.f90 :: FATAL ERROR, exiting..."
-        STOP(95)
+        STOP (95)
     END SELECT
   END SUBROUTINE get_iobs
 

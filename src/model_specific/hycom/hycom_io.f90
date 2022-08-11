@@ -89,7 +89,7 @@ SUBROUTINE read_hycom(file_in,v3d,v2d)
 
   else
     WRITE(6,*) "read_hycom:: access not supported :: hycom_io_access = ", hycom_io_access
-    STOP(894)
+    STOP (894)
   endif
 
 END SUBROUTINE read_hycom
@@ -176,7 +176,7 @@ SUBROUTINE write_hycom(file_out,v3d,v2d)
 
   else
     WRITE(6,*) "write_hycom:: access not supported :: hycom_io_access = ", hycom_io_access
-    STOP(892)
+    STOP (892)
   endif
 
 END SUBROUTINE write_hycom

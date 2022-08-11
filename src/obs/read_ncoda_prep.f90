@@ -145,7 +145,7 @@ if (ex) then
 ! rewind(fid)
 else
   print *, "infile = ", trim(infile) 
-  STOP('ERROR: prp file is missing. EXITING...')
+  STOP ('ERROR: prp file is missing. EXITING...')
 endif
 
 !-------------------------------------------------------------------------------
@@ -213,7 +213,7 @@ if (cnt .gt. 0) then
 
 else
   WRITE (6,*) "cnt==0, EXITING..."
-  STOP(13)
+  STOP (13)
 endif 
 
 !-------------------------------------------------------------------------------
@@ -230,7 +230,7 @@ if (ex) then
 ! rewind(fid)
 else
   print *, "infile2 = ", trim(infile2) 
-  STOP('ERROR: ENS_obs file is missing. EXITING...')
+  STOP ('ERROR: ENS_obs file is missing. EXITING...')
 endif
 print *, 'read innovation file 2: ', trim(infile2)
 

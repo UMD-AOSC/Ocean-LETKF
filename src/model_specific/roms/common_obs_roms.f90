@@ -607,14 +607,14 @@ SUBROUTINE center_obs_coords(rlon,oerr,nn)
     WRITE(6,*) "MAXVAL(rlon) = ", MAXVAL(rlon)
     WRITE(6,*) "lonf = ", lonf
 !   WRITE(6,*) "lon(nlon) = ", lon(nlon)
-    STOP(22)
+    STOP (22)
   endif
   if (MINVAL(rlon) < lon0) then
     WRITE(6,*) "read_obs:: Error: MIN(observation lon, i.e. rlon) < lon0"
     WRITE(6,*) "MINVAL(rlon) = ", MINVAL(rlon)
     WRITE(6,*) "lon0 = ", lon0
 !   WRITE(6,*) "lon(1) = ", lon(1)
-    STOP(23)
+    STOP (23)
   endif
 
 END SUBROUTINE center_obs_coords

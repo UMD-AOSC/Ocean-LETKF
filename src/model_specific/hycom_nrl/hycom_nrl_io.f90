@@ -172,7 +172,7 @@ SUBROUTINE read_ncoda_bckgrnd(filename, indata, kmax)
     if (dodebug) WRITE(6,*) "read_ncoda_bckgrnd:: Finished assigning buf4 to indata."
   else
     write (6,*) 'read_ncoda_bckgrnd:: Background file missing: ', trim(filename)
-    STOP("read_ncoda_bckgrnd:: EXITING...")
+    STOP ("read_ncoda_bckgrnd:: EXITING...")
   endif
 
   if (dodebug) then
@@ -237,7 +237,7 @@ SUBROUTINE read_ncoda_intfile(filename, indata, kmax)
     indata = buf4(is:ie,js:je,1:lz) 
   else
     write (6, '( ''read_ncoda_intfile:: Background file missing: '',  a)' ) trim(filename)
-    STOP("read_ncoda_intfile:: EXITING...")
+    STOP ("read_ncoda_intfile:: EXITING...")
   endif
 
   deallocate(buf4)
@@ -452,7 +452,7 @@ SUBROUTINE write_ncoda_analysis(filename, outdata, kmax)
       write (6, *) 'write_ncoda_analysis:: Finished writing analysis file: ', trim(filename)
     else
       write (6, *) 'write_ncoda_analysis:: Analysis file missing: ', trim(filename)
-      STOP("write_ncoda_analysis:: EXITING...")
+      STOP ("write_ncoda_analysis:: EXITING...")
     endif
   
     if (ALLOCATED(buf4)) then

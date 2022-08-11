@@ -11,3 +11,4 @@ F90_DEBUG=
 F90_IEEE= #'-Kieee' #'-fltconsistency'
 F90_OBJECT_FLAG='-c' #STEVE: for some reason, mpxlf doesn't use -c, but rather -g
 BLAS=0
+F90_FPP="-fpp"

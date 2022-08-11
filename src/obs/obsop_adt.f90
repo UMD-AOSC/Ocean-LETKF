@@ -432,7 +432,7 @@ PROGRAM obsop_adt
         WRITE(6,*) "odat(n) = ", odat(n)
         WRITE(6,*) "ohx(n)  = ", ohx(n)
         WRITE(6,*) "-----------------------"
-        STOP(962)
+        STOP (962)
       endif
     endif
 

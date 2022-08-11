@@ -247,7 +247,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
     WRITE(6,*) "read_diag::  using double precision read..."
   else
     WRITE(6,*) "read_diag:: unsupported option, prec = ", prec
-    STOP
+    STOP (126)  ! CDA: missing STOP number, temporarily set 126
   endif
 
   ! STEVE: this is provided externally at the moment

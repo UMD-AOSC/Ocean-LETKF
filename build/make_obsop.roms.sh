@@ -71,6 +71,7 @@ $F90 $OMP $F90_OPT $F90_OBJECT_FLAG compute_profile_error.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_argo.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_avhrr_pathfinder.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_aviso_adt.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG input_nml_${model}.f90
 #--
 # Equation of state for converting from model to obs space is in here:
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_oceanographic_toolbox.f90

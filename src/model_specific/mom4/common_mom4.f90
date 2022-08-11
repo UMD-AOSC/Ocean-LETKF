@@ -71,11 +71,11 @@ SUBROUTINE set_common_oceanmodel
     INQUIRE(FILE=trim(SSHclm_file),EXIST=ex)
     if (ex) then
       ! Read in the model climatology
-      CALL read_etaclm(SSHclm_file,SSHclm_m)
+      CALL read_etaclm()
     ELSE
       WRITE(6,*) "The model SSH climatology file does not exist: ", SSHclm_file
       WRITE(6,*) "Exiting set_common_mom4.f90..."
-      STOP(1)
+      STOP (1)
     ENDIF
   endif
 
@@ -88,7 +88,7 @@ SUBROUTINE set_common_oceanmodel
   if (.not. ex) then
     WRITE(6,*) "The file does not exist: ", gridfile 
     WRITE(6,*) "Exiting set_common_mom4.f90..."
-    STOP(2)
+    STOP (2)
   ENDIF
 
   if (doverbose) then
@@ -232,7 +232,7 @@ SUBROUTINE check(status)
 END SUBROUTINE check
 
 
-SUBROUTINE read_etaclm(SSHclm_file,SSHclm_m)
+SUBROUTINE read_etaclm()
 !===============================================================================
 ! Read in the model mean climatology (e.g. 1991-1999), the real climatology 
 ! assumed to be subtracted already from the observation data.
@@ -242,8 +242,7 @@ SUBROUTINE read_etaclm(SSHclm_file,SSHclm_m)
   USE vars_model
   USE params_letkf, ONLY: DO_ALTIMETRY, DO_DRIFTERS, DO_MLD, DO_SLA, DO_MLD_MAXSPRD  
   IMPLICIT NONE
-  CHARACTER(*), INTENT(IN) :: SSHclm_file
-  REAL(r_size), INTENT(OUT) :: SSHclm_m(nlon,nlat)
+
   REAL(r_sngl) :: buf4(nlon,nlat)
   INTEGER :: i,j
   INTEGER :: ncid, varid
@@ -733,7 +732,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec_in)
 
     WRITE(6,*) "Initially read from file: ", infile
     WRITE(6,*) "STOP 10"
-    STOP(10)
+    STOP (10)
   endif
 ! !STEVE: debug end
 

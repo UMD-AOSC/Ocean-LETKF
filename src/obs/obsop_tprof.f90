@@ -179,7 +179,7 @@ PROGRAM obsop_tprof
       print *, "nobs_t = ", nobs
       print *, "nobs_s = ", nobs_s
       print *, "EXITING..."
-      STOP(52)
+      STOP (52)
     endif
 
     ALLOCATE( selm(nobs) )
