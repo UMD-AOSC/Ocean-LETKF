@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.18)
+#cmake_minimum_required (VERSION 3.18)
 
 include(GNUInstallDirs)
 
@@ -58,7 +58,12 @@ set (SRCS
   )
 
 add_library(OCN.letkf ${SRCS})
-target_link_libraries(OCN.letkf PUBLIC NetCDF::NetCDF_Fortran MPI::MPI_Fortran Threads::Threads)
+if (${SOLO_BUILD})
+    set (OCNLETKF_LD_LIBS NetCDF::NetCDF_Fortran MPI::MPI_Fortran)
+else()
+    set (OCNLETKF_LD_LIBS NetCDF::NetCDF_Fortran MPI::MPI_Fortran Threads::Threads)
+endif()
+target_link_libraries(OCN.letkf PUBLIC ${OCNLETKF_LD_LIBS})
 set_target_properties (OCN.letkf PROPERTIES Fortran_PREPROCESS ON) # Need to preprocess .f90 files for ifdef on next line
 target_compile_definitions(OCN.letkf PRIVATE DYNAMIC)
 install(TARGETS OCN.letkf)
