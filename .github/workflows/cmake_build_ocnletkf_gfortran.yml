@@ -1,0 +1,34 @@
+name: cmake_build_ocnletkf_gfortran
+
+on:
+  push:
+  pull_request:
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: install MPI
+      run: sudo apt install mpich   
+
+    - name: install NetCDF
+      run: sudo apt install libnetcdf-dev libnetcdff-dev netcdf-bin
+
+    - name: check nc-config
+      run: nc-config --all
+
+    - name: check nf-config
+      run: nf-config --all
+
+    - name: Configure letkf for model: mom6
+      run: cmake -B ${{github.workspace}}/build_ocnletkf -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_Fortran_COMPILER=gfortran -DSOLO_BUILD=ON -DMODEL=mom6
+
+    - name: Build letkf for model: mom6
+      run: cmake --build ${{github.workspace}}/build_ocnletkf --config ${{env.BUILD_TYPE}}
+
