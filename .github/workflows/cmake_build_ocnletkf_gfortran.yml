@@ -26,9 +26,9 @@ jobs:
     - name: check nf-config
       run: nf-config --all
 
-    - name: Configure letkf for model: mom6
+    - name: Configure letkf for model MOM6
       run: cmake -B ${{github.workspace}}/build_ocnletkf -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_Fortran_COMPILER=gfortran -DSOLO_BUILD=ON -DMODEL=mom6
 
-    - name: Build letkf for model: mom6
+    - name: Build letkf for model MOM6
       run: cmake --build ${{github.workspace}}/build_ocnletkf --config ${{env.BUILD_TYPE}}
 
