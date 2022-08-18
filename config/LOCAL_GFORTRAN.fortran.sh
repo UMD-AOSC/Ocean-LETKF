@@ -1,7 +1,7 @@
 #!/bin/bash
 
 F90=mpif90
-F90s=mpif90
+F90s="gfortran"   #used to compile BUFRLIBS
 #F90_OPT='-O2 -ffree-form -ffree-line-length-none'
 #STEVE: -mcmodel=medium needed for large model grid sizes (e.g. higher than 1 degree resolution of om3_core3)
 # explanation of -mcmodel=medium and -shared-intel: http://software.intel.com/en-us/forums/showthread.php?t=43717#18089

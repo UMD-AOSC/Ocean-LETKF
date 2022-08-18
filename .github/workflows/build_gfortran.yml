@@ -1,4 +1,4 @@
-name: build_test_gfortran
+name: build_gfortran
 
 on:
   push:
@@ -8,10 +8,11 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
-  cmake_build_test:
+  cmake_build:
     strategy:
       matrix: 
         model: [mom6]
+      fail-fast: false
     runs-on: ubuntu-22.04
 
     steps:
@@ -26,6 +27,7 @@ jobs:
       run: |
            nf-config --all
            nc-config --all
+           gcc -v
            gfortran -v
            mpif90 -v
            pwd
@@ -40,10 +42,11 @@ jobs:
            cmake --build ${{github.workspace}}/build_ocnletkf --config ${{env.BUILD_TYPE}}
 
 
-  sh_build_test:
+  sh_build:
     strategy:
       matrix: 
-        model: [mom6_dynamic, mom6, mom4, roms, nemo, cice5, sis]
+        model: [mom6_dynamic, mom6, mom4, roms, nemo, cice5, sis, hycom, hycom_nrl]
+      fail-fast: false
     runs-on: ubuntu-22.04
 
     steps:
