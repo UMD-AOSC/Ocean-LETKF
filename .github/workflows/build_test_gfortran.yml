@@ -1,0 +1,76 @@
+name: build_test_gfortran
+
+on:
+  push:
+  pull_request:
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  cmake_build_test:
+    strategy:
+      matrix: 
+        model: [mom6]
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: "install MPI & NetCDF"
+      run: |
+           sudo apt install mpich   
+           sudo apt install libnetcdf-dev libnetcdff-dev netcdf-bin
+
+    - name: "check version and envs"
+      run: |
+           nf-config --all
+           nc-config --all
+           gfortran -v
+           mpif90 -v
+           pwd
+
+    - name: "cmake build for each model"
+      run: |
+           echo "===================================="
+           echo "cmake build for ${{matrix.model}}"
+           echo ""
+           echo "===================================="
+           cmake -B ${{github.workspace}}/build_ocnletkf -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_Fortran_COMPILER=gfortran -DSOLO_BUILD=ON -DMODEL=${{matrix.model}}
+           cmake --build ${{github.workspace}}/build_ocnletkf --config ${{env.BUILD_TYPE}}
+
+
+  sh_build_test:
+    strategy:
+      matrix: 
+        model: [mom6_dynamic, mom6, mom4, roms, nemo, cice5, sis]
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: "install MPI & NetCDF"
+      run: |
+           sudo apt install mpich   
+           sudo apt install libnetcdf-dev libnetcdff-dev netcdf-bin
+
+    - name: "check version and envs"
+      run: |
+           nf-config --all
+           nc-config --all
+           gfortran -v
+           mpif90 -v
+           pwd
+
+    - name: "build/make_*.sh for model"
+      run: |
+           echo "===================================="
+           echo "build/make_*.sh for ${{matrix.model}}"
+           echo ""
+           echo "===================================="
+           cd ${{github.workspace}}/build && pwd
+           rm -rf build_letkf/*
+           rm -rf build_obsop/*
+           bash -xe make_obsop.${{matrix.model}}.sh
+           bash -xe make_letkf.${{matrix.model}}.sh
+

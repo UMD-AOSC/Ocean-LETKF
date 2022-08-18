@@ -1,5 +1,4 @@
 # Ocean-LETKF:  
-[![cmake_build_ocnletkf_gfortran](https://github.com/cd10kfsu/Ocean-LETKF/actions/workflows/cmake_build_ocnletkf_gfortran.yml/badge.svg?branch=cmake-update)](https://github.com/cd10kfsu/Ocean-LETKF/actions/workflows/cmake_build_ocnletkf_gfortran.yml)
 
 Main repository for the Ocean-LETKF development
 

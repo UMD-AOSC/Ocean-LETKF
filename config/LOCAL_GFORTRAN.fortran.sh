@@ -7,7 +7,7 @@ F90s=mpif90
 # explanation of -mcmodel=medium and -shared-intel: http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
 #F90_OPT='-O2 -ffree-line-length-none -frecord-marker=4 -finit-local-zero' #CDA: for gfortran version < 10
 F90_OPT='-O2 -ffree-line-length-none -frecord-marker=4 -finit-local-zero -fbacktrace -fcheck=bounds' #CDA: for gfortran version < 10
-#F90_OPT='-O2 -ffree-line-length-none -frecord-marker=4 -fallow-argument-mismatch' #CDA: for gfortran version >= 10
+F90_OPT="$F90_OPT -fallow-argument-mismatch" #CDA: for gfortran version >= 10
 F90_INLINE=
 F90_DEBUG=
 F90_IEEE= #'-Kieee' #'-fltconsistency'

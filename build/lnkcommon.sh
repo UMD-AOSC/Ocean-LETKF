@@ -40,7 +40,7 @@ cp $LDIR/vars_letkf.f90 ./
 cp $LDIR/vars_obs.f90 ./
 
 #if [ ${model} == "hycom" ] || [ ${model} == "hycom_nrl" ]; then
-if [ ${model} == "hycom" ]; then
+if [ "${model}" = "hycom" ]; then
    cp $MODELDIR/mod_xc.F ./
    cp $MODELDIR/mod_za.F ./
    cp $MODELDIR/mod_ppsw.F ./
@@ -51,7 +51,7 @@ else
   echo "in lnkcommon.sh: model = $model"
 fi
 
-if [ ${model} == "hycom_nrl" ]; then
+if [ "${model}" = "hycom_nrl" ]; then
    echo "in lnkcommon.sh: model = $model: copy additional files"
    cp $MODELDIR/tools/test_io_subgrid.f90 .
    cp $MODELDIR/tools/test_read_bin.f90 .
