@@ -4,7 +4,6 @@ option(SOLO_BUILD "build ocean-letkf with local libs" OFF)
 if (SOLO_BUILD) # build ocean-letkf with local libs. Most users should use this 
 
     project(ocean-letkf LANGUAGES Fortran)
-    set(CMAKE_VERBOSE_MAKEFILE ON)
 
     message(STATUS "OCEAN-LETKF: SOLO_BUILD=${SOLO_BUILD}, search local libs: MPI, NetCDF")
 

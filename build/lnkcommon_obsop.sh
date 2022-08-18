@@ -33,7 +33,7 @@ cp $LETKFDIR/letkf_local.f90 ./
 cp $LETKFDIR/letkf_tools.f90 ./
 cp $LETKFDIR/vars_obs.f90 ./
 
-if [ ${model} == "hycom" ]; then
+if [ "${model}" = "hycom" ]; then
    cp $MODELDIR/mod_xc.F ./
    cp $MODELDIR/mod_za.F ./
    cp $MODELDIR/mod_ppsw.F ./
@@ -60,19 +60,19 @@ cp $OBSDIR/gsw_pot_to_insitu.f90 ./
 cp $OBSDIR/read_ice_txt.f90 ./
 cp $OBSDIR/obsop_icefrac.f90 ./
 
-if [ ${model} == "hycom" ]; then
+if [ "${model}" = "hycom" ]; then
    cp $OBSDIR/read_bufr_hycom.f90 ./
    cp $OBSDIR/obsop_bufr_tprof_hycom.f90 ./
    cp $OBSDIR/obsop_bufr_sprof_hycom.f90 ./
 fi
 
-if [ ${model} == "nemo" ]; then
+if [ "${model}" = "nemo" ]; then
    cp $OBSDIR/read_ecmwf_fdbk.f90 ./
    cp $OBSDIR/obsop_ecmwf_tprof.f90 ./
    cp $OBSDIR/obsop_ecmwf_sprof.f90 ./
 fi
 
-if [ ${model} == "hycom_nrl" ]; then
+if [ "${model}" = "hycom_nrl" ]; then
    cp $OBSDIR/read_ncoda_prep.f90 ./
    cp $OBSDIR/obsop_ncoda_3d.f90 ./
    cp $OBSDIR/obsop_ncoda_ssh.f90 ./
