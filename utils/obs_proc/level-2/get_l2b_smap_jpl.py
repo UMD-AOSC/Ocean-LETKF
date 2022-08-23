@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 
+"""
+Example:
+
+PYTHONPATH=../../pycommon ./get_l2b_smap_jpl.py --start_date 20220101 --end_date 20220102 --outdir ./ --topdir_name test_l2_sss --skip_remote_check --verbose --log
+"""
+
 import common
 import argparse
 import datetime as dt
 import subprocess as sp
 import os, sys
-
-"""
-Example:
-
-./get_l2_smap_jpl.py --start_date 20220104 --end_date 20220105 -outdir ./ 
-to download SMAP data from Jul 4 to Jul 5 in 2022 into directory ./ with its top
-directory name as <topdir_name>
-"""
 
 parser = argparse.ArgumentParser(description=("Script to download JPL L2B SMAP data"),
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -21,6 +19,7 @@ parser.add_argument("--end_date",  default=None, metavar="YYYYMMDDHH", required=
 parser.add_argument("--outdir", default="./", required=False, help=("output directory. downloaded data will be stored under outdir/topdir_name/YYYY/YYYYMM/YYYYMMDD"))
 
 parser.add_argument("--topdir_name", default="l2b_smap_jpl", required=False, help=("top directory name for saving all data"))
+parser.add_argument("--skip_remote_check", action="store_true",required=False, help=("skip file checks in the remote server"))
 parser.add_argument("--show", action="store_true", required=False, help=("display all the input arguments w/o running the scripts"))
 parser.add_argument("--verbose", action="store_true", required=False, help=("show more debug info"))
 parser.add_argument("--log", action="store_true", required=False, help=("generate a text log file"))
@@ -40,9 +39,9 @@ if args.show:
     sys.exit(0)
 
 if args.log:
-    logging = common.setupEasyLogging("get_l2_smap_jpl")
+    logging = common.setupEasyLogging("get_l2b_smap_jpl")
 else:
-    logging = common.setupEasyLogging("get_l2_smap_jpl",fileLog=False)
+    logging = common.setupEasyLogging("get_l2b_smap_jpl",fileLog=False)
 logging.info(" ".join(sys.argv))
 
 # check if wget available in the current system
@@ -61,16 +60,17 @@ while cdate <= args.end_date:
     julian_day = cdate.timetuple().tm_yday
 
 
-    # check if remote files exist. Raise error if remote files do not exist
-    cmd_inq = 'wget -c -r -l1 -np -nH --spider --cut-dirs 20 "https://opendap.jpl.nasa.gov/opendap/allData/smap/L2/JPL/V5.0/{:04d}/{:03d}/" -A "SMAP*.h5" -P ./ -e robots=off'.format(cdate.year, julian_day)
-    if args.verbose:
-        logging.debug(cmd_inq)
-    proc = sp.Popen(cmd_inq, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
-    out, err = proc.communicate()
-    if proc.returncode != 0:
-        errmsg = "remote files on this day do not exist"
-        logging.critical("{}\n\nSTDOUT: {}\nERR: {}\n".format(errmsg, out.decode(), err.decode()))
-        sys.exit(2)
+    if not args.skip_remote_check:
+        # check if remote files exist. Raise error if remote files do not exist
+        cmd_inq = 'wget -r -l1 -np -nH --spider --cut-dirs 20 "https://opendap.jpl.nasa.gov/opendap/allData/smap/L2/JPL/V5.0/{:04d}/{:03d}/" -A "SMAP*.h5" -P ./ -e robots=off'.format(cdate.year, julian_day)
+        if args.verbose:
+            logging.debug(cmd_inq)
+        proc = sp.Popen(cmd_inq, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+        out, err = proc.communicate()
+        if proc.returncode != 0:
+            errmsg = "remote files on this day do not exist"
+            logging.critical("{}\n\nSTDOUT: {}\nERR: {}\n".format(errmsg, out.decode(), err.decode()))
+            sys.exit(2)
        
     # create local dirs to store daily downloads 
     cdir = args.outdir + "/" + args.topdir_name + cdate.strftime("/%Y/%Y%m/%Y%m%d/")
@@ -81,7 +81,7 @@ while cdate <= args.end_date:
         os.makedirs(cdir)
 
     # start daily download
-    cmd_get = 'wget -c -r -l1 -np -nH --cut-dirs 20 "https://opendap.jpl.nasa.gov/opendap/allData/smap/L2/JPL/V5.0/{:04d}/{:03d}/" -A "SMAP*.h5" -P ./ -e robots=off'.format(cdate.year, julian_day)
+    cmd_get = 'wget -r -l1 -np -nH --cut-dirs 20 "https://opendap.jpl.nasa.gov/opendap/allData/smap/L2/JPL/V5.0/{:04d}/{:03d}/" -A "SMAP*.h5" -P ./ -e robots=off'.format(cdate.year, julian_day)
     if args.verbose:
         logging.debug(cmd_get)
     proc = sp.Popen(cmd_get, shell=True, cwd = cdir, stdout=sp.PIPE, stderr=sp.PIPE)

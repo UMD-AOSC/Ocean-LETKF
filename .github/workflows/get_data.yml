@@ -22,13 +22,23 @@ jobs:
       run: |
            wget --version
 
-    - name: "check: get_l2_smap_jpl.py"
+    - name: "check: get_l2b_smap_jpl.py"
       run: |
            cd ${{github.workspace}}/utils/obs_proc/level-2
            pwd
-           PYTHONPATH=../../pycommon ./get_l2_smap_jpl.py --start_date 20220101 --end_date 20220102 --outdir ./ --topdir_name test_l2_sss --verbose --log
+           PYTHONPATH=../../pycommon ./get_l2b_smap_jpl.py --start_date 20220101 --end_date 20220102 --outdir ./ --topdir_name test_l2_sss --skip_remote_check --verbose --log
            ls -al 
            ls -al ./test_l2_sss/2022/202201/20220101/
            rm -rf test_l2_sss
            ls -al
 
+    - name: "check: get_l2p_ghrsst_star.py"
+      run: |
+           cd ${{github.workspace}}/utils/obs_proc/level-2
+           pwd
+           PYTHONPATH=../../pycommon ./get_l2p_ghrsst_star.py --start_date 20220110 --end_date 20220111 --sis ABI_G17 --outdir ./ --topdir_name test_l2p_sst --skip_remote_check  --get_nav_file --verbose --log
+           ls -al 
+           ls -al ./test_l2p_sst/ABI_G17/2022/202201/20220111/
+           ls -al ./test_l2p_sst/ABI_G17/nav
+           rm -rf test_l2p_sst
+ 
