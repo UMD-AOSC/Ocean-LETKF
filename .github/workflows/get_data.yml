@@ -1,0 +1,34 @@
+name: get_data
+
+on:
+  push:
+  pull_request:
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  get_data:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: "install packages"
+      run: |
+           sudo apt install wget
+
+    - name: "check version and envs"
+      run: |
+           wget --version
+
+    - name: "check: get_l2_smap_jpl.py"
+      run: |
+           cd ${{github.workspace}}/utils/obs_proc/level-2
+           pwd
+           PYTHONPATH=../../pycommon ./get_l2_smap_jpl.py --start_date 20220101 --end_date 20220102 --outdir ./ --topdir_name test_l2_sss --verbose --log
+           ls -al 
+           ls -al ./test_l2_sss/2022/202201/20220101/
+           rm -rf test_l2_sss
+           ls -al
+
