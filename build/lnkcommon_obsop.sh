@@ -60,6 +60,11 @@ cp $OBSDIR/gsw_pot_to_insitu.f90 ./
 cp $OBSDIR/read_ice_txt.f90 ./
 cp $OBSDIR/obsop_icefrac.f90 ./
 
+if [ "${model}" = "mom6" ]; then
+   cp $OBSDIR/obsop_sst_podaac.f90 ./
+fi
+
+
 if [ "${model}" = "hycom" ]; then
    cp $OBSDIR/read_bufr_hycom.f90 ./
    cp $OBSDIR/obsop_bufr_tprof_hycom.f90 ./
