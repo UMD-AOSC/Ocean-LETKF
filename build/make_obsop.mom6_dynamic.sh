@@ -86,6 +86,8 @@ $F90 $OMP $F90_OPT obsop_sprof.f90 -o ${PGM}.sprof.x *.o $NETCDF_LIB
 $F90 $OMP $F90_OPT obsop_adt.f90   -o ${PGM}.adt.x   *.o $NETCDF_LIB
 $F90 $OMP $F90_OPT obsop_sst.f90   -o ${PGM}.sst.x   *.o $NETCDF_LIB
 
+$F90 $OMP $F90_OPT $F90_FPP obsop_sst_podaac.f90   -o ${PGM}.sst_podaac.x   *.o $NETCDF_LIB
+
 rm -f *.mod
 rm -f *.o
 #--

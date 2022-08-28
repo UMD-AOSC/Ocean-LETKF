@@ -113,6 +113,12 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(fcori(nlat))
   ALLOCATE(zb(nlev))
   ALLOCATE(dz(nlev))
+
+  ALLOCATE(fcori2d(nlon,nlat))
+  ALLOCATE(area_t(nlon,nlat))
+  ALLOCATE(height(nlon,nlat,nlev))
+  ALLOCATE(wet(nlon,nlat))
+  ALLOCATE(depth(nlon,nlat))
 #endif
 
   SSHclm_m = 0.0d0

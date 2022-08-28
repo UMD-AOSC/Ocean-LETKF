@@ -73,31 +73,31 @@ PUBLIC
 
   CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
 
-  CHARACTER(10) :: gridfile  = 'MOM.res.nc'
-  CHARACTER(12) :: gridfile1 = 'MOM.res_1.nc'
-  CHARACTER(14) :: gridfile2 = 'ocean_topog.nc'
-  CHARACTER(14) :: gridfile3 = 'ocean_hgrid.nc'
+  CHARACTER(256) :: gridfile  = 'MOM.res.nc'
+  CHARACTER(256) :: gridfile1 = 'MOM.res_1.nc'
+  CHARACTER(256) :: gridfile2 = 'ocean_topog.nc'
+  CHARACTER(256) :: gridfile3 = 'ocean_hgrid.nc'
 
   ! variable names in gridfile:
-  CHARACTER(8) :: grid_nlon_name = 'grid_x_T'      ! (MOM6) used for dynamic allocation of grid
-  CHARACTER(8) :: grid_nlat_name = 'grid_x_T'      ! (MOM6) 
-  CHARACTER(2) :: grid_nlev_name = 'zt'            ! (MOM6) 
-  CHARACTER(4) :: grid_lon_name = 'lonh'
-  CHARACTER(4) :: grid_lat_name = 'lath'
-  CHARACTER(5) :: grid_lev_name = 'Layer'
-  CHARACTER(4) :: grid_temp_name = 'Temp'
-  CHARACTER(4) :: grid_salt_name = 'Salt'
-  CHARACTER(1) :: grid_u_name = 'u'
-  CHARACTER(1) :: grid_v_name = 'v'
-  CHARACTER(1) :: grid_h_name = 'h'
+  CHARACTER(20) :: grid_nlon_name = 'grid_x_T'      ! (MOM6) used for dynamic allocation of grid
+  CHARACTER(20) :: grid_nlat_name = 'grid_x_T'      ! (MOM6) 
+  CHARACTER(20) :: grid_nlev_name = 'zt'            ! (MOM6) 
+  CHARACTER(20) :: grid_lon_name = 'lonh'
+  CHARACTER(20) :: grid_lat_name = 'lath'
+  CHARACTER(20) :: grid_lev_name = 'Layer'
+  CHARACTER(20) :: grid_temp_name = 'Temp'
+  CHARACTER(20) :: grid_salt_name = 'Salt'
+  CHARACTER(20) :: grid_u_name = 'u'
+  CHARACTER(20) :: grid_v_name = 'v'
+  CHARACTER(20) :: grid_h_name = 'h'
 
-  CHARACTER(1) :: grid_lon2d_name = 'x'
-  CHARACTER(1) :: grid_lat2d_name = 'y'
+  CHARACTER(20) :: grid_lon2d_name = 'x'
+  CHARACTER(20) :: grid_lat2d_name = 'y'
 
-  CHARACTER(3) :: grid_wet_name = 'wet'
-  CHARACTER(5) :: grid_depth_name = 'depth'
-  CHARACTER(10):: grid_height_name = 'col_height'
-
+  CHARACTER(20) :: grid_wet_name = 'wet'
+  CHARACTER(20) :: grid_depth_name = 'depth'
+  CHARACTER(20) :: grid_height_name = 'col_height'
+ 
   ! Diagnostic file filenames !STEVE: these aren't used, instead files are specified explicitly by obsop_xxx.f90 routine
   CHARACTER(11) :: diag_tsbase = 'MOM.diag.nc'   !(and u, and h)
   CHARACTER(11) :: diag_uvbase = 'MOM.diag.nc'  !(v and ave_ssh/sfc)
