@@ -39,7 +39,7 @@ SUBROUTINE set_common_oceanmodel
   USE params_model, ONLY: grid_lon2d_name, grid_lat2d_name
   USE params_model, ONLY: grid_wet_name, grid_depth_name, grid_height_name
   USE params_model, ONLY: grid_h_name
-  USE params_model, ONLY: gridfile, gridfile1, gridfile2, gridfile3
+  USE params_model, ONLY: gridfile, gridfile2, gridfile3
   USE params_model, ONLY: grid_nlon_name, grid_nlat_name, grid_nlev_name
 
   INTEGER :: i,j,k
@@ -57,29 +57,29 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
   INQUIRE(FILE=trim(gridfile),EXIST=ex)
   IF(.not. ex) THEN
-    WRITE(6,*) "The file does not exist: ", gridfile 
+    WRITE(6,*) "The file does not exist: ", trim(gridfile)
     WRITE(6,*) "Exiting common_mom6.f90..."
     STOP (2)
   ENDIF
-  WRITE(6,'(A)') '  >> accessing file: ', gridfile
-  call check( NF90_OPEN(gridfile,NF90_NOWRITE,ncid) )
+  WRITE(6,'(A)') '  >> accessing file: ', trim(gridfile)
+  call check( NF90_OPEN(trim(gridfile),NF90_NOWRITE,ncid) )
 
   !-----------------------------------------------------------------------------
   ! Read grid dimensions
   !-----------------------------------------------------------------------------
 #ifdef DYNAMIC
   WRITE(6,*) "Reading x dimension (lon)..."
-  call check( NF90_INQ_DIMID(ncid,grid_nlon_name,dimid) )   ! Longitude for T-cell
+  call check( NF90_INQ_DIMID(ncid,trim(grid_nlon_name),dimid) )   ! Longitude for T-cell
   call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlon) )
   WRITE(6,*) "nlon = ", nlon
 
   WRITE(6,*) "Reading y dimension (lat)..."
-  call check( NF90_INQ_DIMID(ncid,grid_nlat_name,dimid) )   ! Latitude for T-cell
+  call check( NF90_INQ_DIMID(ncid,trim(grid_nlat_name),dimid) )   ! Latitude for T-cell
   call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlat) )
   WRITE(6,*) "nlat = ", nlat
 
   WRITE(6,*) "Reading z dimension (lev)..."
-  call check( NF90_INQ_DIMID(ncid,grid_nlev_name,dimid) )   ! Level for T-cell
+  call check( NF90_INQ_DIMID(ncid,trim(grid_nlev_name),dimid) )   ! Level for T-cell
   call check( NF90_INQUIRE_DIMENSION(ncid,dimid,len=nlev) )
   WRITE(6,*) "nlev = ", nlev
 #endif
@@ -93,15 +93,15 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
   ! Get grid variables
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid,grid_lon_name,varid) )   ! Longitude for T-cell
+  call check( NF90_INQ_VARID(ncid,trim(grid_lon_name),varid) )   ! Longitude for T-cell
   call check( NF90_GET_VAR(ncid,varid,lon) )
   WRITE(6,*) "lon(1) = ", lon(1)
   WRITE(6,*) "lon(nlon) = ", lon(nlon)
-  call check( NF90_INQ_VARID(ncid,grid_lat_name,varid) )   ! Latitude for T-cell
+  call check( NF90_INQ_VARID(ncid,trim(grid_lat_name),varid) )   ! Latitude for T-cell
   call check( NF90_GET_VAR(ncid,varid,lat) )
   WRITE(6,*) "lat(1) = ", lat(1)
   WRITE(6,*) "lat(nlat) = ", lat(nlat)
-  call check( NF90_INQ_VARID(ncid,grid_lev_name,varid) )      ! depth of T-cell
+  call check( NF90_INQ_VARID(ncid,trim(grid_lev_name),varid) )      ! depth of T-cell
   call check( NF90_GET_VAR(ncid,varid,lev) )
   WRITE(6,*) "lev(1) = ", lev(1)
   WRITE(6,*) "lev(nlev) = ", lev(nlev)
@@ -112,29 +112,33 @@ SUBROUTINE set_common_oceanmodel
 !!STEVE:MOM6: open new gridfile (ocean_hgrid.nc, gridfile3)
   INQUIRE(FILE=trim(gridfile3),EXIST=ex)
   if (.not. ex) then
-    WRITE(6,*) "The file does not exist: ", gridfile3
+    WRITE(6,*) "The file does not exist: ", trim(gridfile3)
     WRITE(6,*) "Exiting common_mom6.f90..."
     STOP (2)
   endif
-  WRITE(6,'(A)') '  >> accessing file: ', gridfile3
-  call check( NF90_OPEN(gridfile3,NF90_NOWRITE,ncid3) )
+  WRITE(6,'(A)') '  >> accessing file: ', trim(gridfile3)
+  call check( NF90_OPEN(trim(gridfile3),NF90_NOWRITE,ncid3) )
 
   !STEVE: temporary until I figure out how to use ocean_hgrid 'supergrid' appropriately:
   ALLOCATE(work2d(nlon2d,nlat2d))
 
   WRITE(6,*) "Reading x coordinate (lon)..."
-  call check( NF90_INQ_VARID(ncid3,grid_lon2d_name,varid) )   ! Longitude for T-cell
+  call check( NF90_INQ_VARID(ncid3,trim(grid_lon2d_name),varid) )   ! Longitude for T-cell
 ! call check( NF90_GET_VAR(ncid3,varid,lon2d) )
   call check( NF90_GET_VAR(ncid3,varid,work2d) )    !STEVE: (ISSUE) ask GFDL for clarification
-  lon2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
+  !lon2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
+  lon2d = work2d(2:nlon2d:2,2:nlat2d:2)  !CDA: geolon (lon of T-Cell) calculated from supergrid x
+
   WRITE(6,*) "lon2d(1,1) = ", lon2d(1,1)
   WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
 
   WRITE(6,*) "Reading y coordinate (lat)..."
-  call check( NF90_INQ_VARID(ncid3,grid_lat2d_name,varid) )   ! Latitude for T-cell
+  call check( NF90_INQ_VARID(ncid3,trim(grid_lat2d_name),varid) )   ! Latitude for T-cell
 ! call check( NF90_GET_VAR(ncid3,varid,lat2d) )
   call check( NF90_GET_VAR(ncid3,varid,work2d) )    !STEVE: (ISSUE) ask GFDL for clarification
-  lat2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
+  !lat2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
+  lat2d = work2d(2:nlon2d:2,2:nlat2d:2)    !CDA: geolat (lat of T-Cell) calculated from supergrid y
+
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
   WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
 
@@ -153,7 +157,7 @@ SUBROUTINE set_common_oceanmodel
  
       do i=2,nlon-1
         dlon = (lon(i+1) - lon(i-1))/2.0
-        d2 = cos(lat(i-1)) * cos(lat(i+1)) * (sin(dlon/2.0))**2
+        d2 = cos(lat(j-1)) * cos(lat(j+1)) * (sin(dlon/2.0))**2
         d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) ) 
         dx(i,j) = re * d3
         area_t(i,j) = dx(i,j)*dy(i,j)
@@ -171,21 +175,21 @@ SUBROUTINE set_common_oceanmodel
   ! kmt data
   !-----------------------------------------------------------------------------
   !STEVE:MOM6: sum(h>0) (from MOM.res.nc) to find ocean layer <reference> depth, where depth > 0 (from ocean_togog.nc)
-  call check( NF90_INQ_VARID(ncid,grid_h_name,varid) ) ! number of vertical T-cells
+  call check( NF90_INQ_VARID(ncid,trim(grid_h_name),varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid,varid,height) )
   WRITE(6,*) "h(1,1,1) = ", height(1,1,1)
   WRITE(6,*) "h(nlon,nlat,nlev) = ", height(nlon,nlat,nlev)
 
   INQUIRE(FILE=trim(gridfile2),EXIST=ex)
   IF(.not. ex) THEN
-    WRITE(6,*) "The file does not exist: ", gridfile2
+    WRITE(6,*) "The file does not exist: ", trim(gridfile2)
     WRITE(6,*) "Exiting common_mom6.f90..."
     STOP (2)
   ENDIF
-  WRITE(6,'(A)') '  >> accessing file: ', gridfile2
+  WRITE(6,'(A)') '  >> accessing file: ', trim(gridfile2)
   call check( NF90_OPEN(trim(gridfile2),NF90_NOWRITE,ncid2) )
 
-  call check( NF90_INQ_VARID(ncid2,grid_depth_name,varid) ) ! number of vertical T-cells
+  call check( NF90_INQ_VARID(ncid2,trim(grid_depth_name),varid) ) ! number of vertical T-cells
   call check( NF90_GET_VAR(ncid2,varid,depth) )
   WRITE(6,*) "depth(1,1) = ", depth(1,1)
   WRITE(6,*) "depth(nlon,nlat) = ", depth(nlon,nlat)
@@ -193,7 +197,7 @@ SUBROUTINE set_common_oceanmodel
   !-----------------------------------------------------------------------------
 ! !STEVE:MOM6: from ocean_topog.nc:
   !-----------------------------------------------------------------------------
-  call check( NF90_INQ_VARID(ncid2,grid_wet_name,varid) )        ! land/sea flag (0=land) for T-cell
+  call check( NF90_INQ_VARID(ncid2,trim(grid_wet_name),varid) )        ! land/sea flag (0=land) for T-cell
   call check( NF90_GET_VAR(ncid2,varid,wet) )
   WRITE(6,*) "wet(1,1) = ", wet(1,1)
   WRITE(6,*) "wet(nlon,nlat) = ", wet(nlon,nlat)

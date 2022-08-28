@@ -6,7 +6,7 @@ F90s="gfortran"   #used to compile BUFRLIBS
 #STEVE: -mcmodel=medium needed for large model grid sizes (e.g. higher than 1 degree resolution of om3_core3)
 # explanation of -mcmodel=medium and -shared-intel: http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
 #F90_OPT='-O2 -ffree-line-length-none -frecord-marker=4 -finit-local-zero' #CDA: for gfortran version < 10
-F90_OPT='-O2 -ffree-line-length-none -frecord-marker=4 -finit-local-zero -fbacktrace -fcheck=bounds' #CDA: for gfortran version < 10
+F90_OPT='-O2 -ffree-line-length-none -frecord-marker=4 -finit-local-zero -fbacktrace -fcheck=mem,pointer,bounds -fno-realloc-lhs' #CDA: for gfortran version < 10
 F90_OPT="$F90_OPT -fallow-argument-mismatch" #CDA: for gfortran version >= 10
 F90_INLINE=
 F90_DEBUG=
