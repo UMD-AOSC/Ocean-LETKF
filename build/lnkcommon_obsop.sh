@@ -60,8 +60,13 @@ cp $OBSDIR/gsw_pot_to_insitu.f90 ./
 cp $OBSDIR/read_ice_txt.f90 ./
 cp $OBSDIR/obsop_icefrac.f90 ./
 
+IODIR=$root/support/io
 if [ "${model}" = "mom6" ]; then
-   cp $OBSDIR/obsop_sst_podaac.f90 ./
+   cp $OBSDIR/read_abi_acspo.f90 ./
+   cp $OBSDIR/obsop_sst_acspo.f90 ./
+   cp $OBSDIR/w3movdat_full.f ./
+   cp $IODIR/m_ncio.f90 ./
+   cp $IODIR/*.f90.inc ./
 fi
 
 

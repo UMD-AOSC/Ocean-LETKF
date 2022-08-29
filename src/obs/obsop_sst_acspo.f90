@@ -1,36 +1,4 @@
-PROGRAM obsop_sst_podaac
-!===============================================================================
-! PROGRAM: obsop_sst
-! 
-! USES:
-!  use common
-!  use params_model
-!  use vars_model
-!  use common_oceanmodel
-!  use params_obs
-!  use vars_obs
-!  use common_obs_oceanmodel
-!
-!
-! DESCRIPTION: 
-!   This program acts as the observation operator. It inputs observations (yo)
-!   and a single forecast (xf) and computes the innovations (yo-H(xf))
-!   associated with that member.
-!
-! USAGE:
-! A separate instance is run independently for each member and timeslot
-! All observations are typically preprocessed to the letkf obs format, then
-! here they are read in and converted to the letkf obs2 format w/ H(x) data 
-! for each member added in a new column.
-! 
-! !REVISION HISTORY:
-!   04/03/2014 Steve Penny modified for use with OCEAN at NCEP.
-!   04/03/2013 Takemasa Miyoshi created for SPEEDY atmospheric model.
-! 
-!-------------------------------------------------------------------------------
-! $Author: Steve Penny, Takemasa Miyoshi $
-!===============================================================================
-
+PROGRAM obsop_sst_acspo
   USE common
   USE params_model
   USE vars_model
@@ -39,7 +7,7 @@ PROGRAM obsop_sst_podaac
   USE params_obs,                ONLY: DO_REMOVE_65N
   USE vars_obs
   USE common_obs_oceanmodel
-  USE read_avhrr_pathfinder,     ONLY: read_avhrr_pathfinder_nc, obs_data
+  USE read_abi_acspo,     ONLY: read_abi_acspo_nc, abi_acspo_data
 #ifdef DYNAMIC
   USE input_nml_oceanmodel,      ONLY: read_input_namelist
 #endif
@@ -49,6 +17,7 @@ PROGRAM obsop_sst_podaac
   !-----------------------------------------------------------------------------
   ! Command line inputs:
   !-----------------------------------------------------------------------------
+  CHARACTER(slen) :: navinfile='navin.nc' !IN (default)
   CHARACTER(slen) :: obsinfile='obsin.nc'     !IN (default)
   CHARACTER(slen) :: guesfile='gues'          !IN (default) i.e. prefix to '.ocean_temp_salt.res.nc'
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
@@ -58,6 +27,8 @@ PROGRAM obsop_sst_podaac
   !-----------------------------------------------------------------------------
   ! Obs data arrays
   !-----------------------------------------------------------------------------
+  TYPE(abi_acspo_data), ALLOCATABLE :: obs_data(:)
+
   REAL(r_size), ALLOCATABLE :: elem(:)
   REAL(r_size), ALLOCATABLE :: rlon(:)
   REAL(r_size), ALLOCATABLE :: rlat(:)
@@ -109,7 +80,7 @@ PROGRAM obsop_sst_podaac
   !-----------------------------------------------------------------------------
   ! Instantiations specific to this observation type:
   !-----------------------------------------------------------------------------
-  INTEGER :: min_quality_level=4  !STEVE: (default) for AVHRR
+  INTEGER :: min_quality_level=3  ! CDA
   INTEGER :: typ = id_sst_obs
   LOGICAL :: DO_SUPEROBS = .false.
   REAL(r_size), DIMENSION(:,:), ALLOCATABLE :: superobs, delta, M2 ! for online computation of the mean and variance
@@ -132,7 +103,10 @@ PROGRAM obsop_sst_podaac
   !-----------------------------------------------------------------------------
   ! Read observations from file
   !-----------------------------------------------------------------------------
-  CALL read_avhrr_pathfinder_nc(obsinfile,typ,min_quality_level,obs_data,nobs)
+  CALL read_abi_acspo_nc(trim(obsinfile), trim(navinfile), min_quality_level, obs_data, nobs)
+
+  STOP "cda: finish reading"
+
   ALLOCATE( elem(nobs) )
   ALLOCATE( rlon(nobs) )
   ALLOCATE( rlat(nobs) )
@@ -393,7 +367,7 @@ PROGRAM obsop_sst_podaac
   !-----------------------------------------------------------------------------
   ! Print out the counts of observations removed for various reasons
   !-----------------------------------------------------------------------------
-  WRITE(6,*) "In obsop_sst.f90::"
+  WRITE(6,*) "In obsop_sst_acspo.f90::"
   WRITE(6,*) "observations at start = ", nobs
   WRITE(6,*) "== observations removed for: =="
   WRITE(6,*) "cnt_obs_thinning = ", cnt_obs_thinning
@@ -432,26 +406,18 @@ INTEGER, DIMENSION(3) :: values
 ! inputs are in the format "-x xxx"
 do i=1,COMMAND_ARGUMENT_COUNT(),2
   CALL GET_COMMAND_ARGUMENT(i,arg1)
-  PRINT *, "In obsop_sst.f90::"
+  PRINT *, "In obsop_sst_podaac.f90::"
   PRINT *, "Argument ", i, " = ",TRIM(arg1)
 
   select case (arg1)
-!   case('-nlon')
-!     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-!     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-!     read (arg2,*) nlon
-!   case('-nlat')
-!     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-!     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-!     read (arg2,*) nlat
-!   case('-nlev')
-!     CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-!     PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-!     read (arg2,*) nlev
     case('-obsin')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       obsinfile = arg2
+    case('-navin')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      navinfile = arg2
     case('-gues')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
@@ -497,4 +463,4 @@ enddo
 
 END SUBROUTINE process_command_line
 
-END PROGRAM obsop_sst_podaac
+END PROGRAM obsop_sst_acspo
