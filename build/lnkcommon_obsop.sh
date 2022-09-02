@@ -62,8 +62,8 @@ cp $OBSDIR/obsop_icefrac.f90 ./
 
 IODIR=$root/support/io
 if [ "${model}" = "mom6" ]; then
-   cp $OBSDIR/read_abi_acspo.f90 ./
-   cp $OBSDIR/obsop_sst_acspo.f90 ./
+   cp $OBSDIR/read_geostationary.f90 ./
+   cp $OBSDIR/obsop_sst_geostationary.f90 ./
    cp $OBSDIR/w3movdat_full.f ./
    cp $IODIR/m_ncio.f90 ./
    cp $IODIR/*.f90.inc ./

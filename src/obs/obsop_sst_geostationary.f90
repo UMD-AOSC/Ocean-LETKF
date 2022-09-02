@@ -7,7 +7,7 @@ PROGRAM obsop_sst_acspo
   USE params_obs,                ONLY: DO_REMOVE_65N
   USE vars_obs
   USE common_obs_oceanmodel
-  USE read_abi_acspo,     ONLY: read_abi_acspo_nc, abi_acspo_data
+  USE read_geostationary,     ONLY: read_geostationary_nc, sst_geostationary_data
 #ifdef DYNAMIC
   USE input_nml_oceanmodel,      ONLY: read_input_namelist
 #endif
@@ -27,7 +27,7 @@ PROGRAM obsop_sst_acspo
   !-----------------------------------------------------------------------------
   ! Obs data arrays
   !-----------------------------------------------------------------------------
-  TYPE(abi_acspo_data), ALLOCATABLE :: obs_data(:)
+  TYPE(sst_geostationary_data), ALLOCATABLE :: obs_data(:)
 
   REAL(r_size), ALLOCATABLE :: elem(:)
   REAL(r_size), ALLOCATABLE :: rlon(:)
@@ -103,7 +103,7 @@ PROGRAM obsop_sst_acspo
   !-----------------------------------------------------------------------------
   ! Read observations from file
   !-----------------------------------------------------------------------------
-  CALL read_abi_acspo_nc(trim(obsinfile), trim(navinfile), min_quality_level, obs_data, nobs)
+  CALL read_geostationary_nc(trim(obsinfile), trim(navinfile), min_quality_level, obs_data, nobs)
 
   STOP "cda: finish reading"
 

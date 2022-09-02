@@ -31,6 +31,9 @@ MODULE m_ncio
 ! Get dimension
   PUBLIC :: nc_rddim
 
+! Check if var/dim in a file
+  PUBLIC :: nc_fndvar, nc_fnddim
+
 ! read ND vars
   PUBLIC :: nc_rdvar1d, nc_rdvar2d, nc_rdvar3d, nc_rdvar4d
 
@@ -403,6 +406,52 @@ SUBROUTINE nc_rddim(fid, dimname, dimval)
   end if
 
 END SUBROUTINE
+
+!--------------------------------------------------------------------------------
+! find if dim exist in a nc file by file id
+!--------------------------------------------------------------------------------
+FUNCTION nc_fnddim(fid, dimname, dimid) result (found)
+  IMPLICIT NONE
+
+  INTEGER(i4), INTENT(IN) :: fid
+  CHARACTER(*),INTENT(IN) :: dimname
+  INTEGER(i4), INTENT(OUT),OPTIONAL :: dimid
+  LOGICAL :: found
+
+  INTEGER(i4) :: istat, dimid_
+
+  istat = NF90_INQ_DIMID(fid,trim(dimname),dimid_)
+  if (istat /= NF90_NOERR) then
+     found = .FALSE.
+  else 
+     found = .TRUE.
+  end if
+  if (PRESENT(dimid)) dimid = dimid_
+
+END FUNCTION
+
+!--------------------------------------------------------------------------------
+! find if var exist in a nc file by file id
+!--------------------------------------------------------------------------------
+FUNCTION nc_fndvar(fid, varname, varid) result (found)
+  IMPLICIT NONE
+
+  INTEGER(i4), INTENT(IN) :: fid
+  CHARACTER(*),INTENT(IN) :: varname
+  INTEGER(i4), INTENT(OUT),OPTIONAL :: varid
+  LOGICAL :: found
+
+  INTEGER(i4) :: istat, varid_
+
+  istat = NF90_INQ_VARID(fid,trim(varname),varid_)
+  if (istat /= NF90_NOERR) then
+     found = .FALSE.
+  else 
+     found = .TRUE.
+  end if
+  if (PRESENT(varid)) varid = varid_
+
+END FUNCTION
 
 
 ENDMODULE m_ncio

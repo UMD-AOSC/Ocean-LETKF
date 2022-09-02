@@ -1,15 +1,15 @@
-MODULE read_abi_acspo
-  USE common,       ONLY: r_sngl, r_dble, r_size
+MODULE read_geostationary
+  USE common,       ONLY: r_sngl, r_dble, r_size, slen
   USE params_obs,   ONLY: id_sst_obs
   IMPLICIT NONE
 
   PRIVATE
 
-  PUBLIC :: abi_acspo_data
-  PUBLIC :: read_abi_acspo_nc
+  PUBLIC :: sst_geostationary_data
+  PUBLIC :: read_geostationary_nc
   PRIVATE :: inspect_obs_data
 
-  TYPE abi_acspo_data
+  TYPE sst_geostationary_data
     REAL(r_size) :: x_grd(2)  ! longitude, latitude
     REAL(r_size) :: value     ! actual physical value of the parameter measured at this grid point
     REAL(r_size) :: oerr      ! observation standard error
@@ -17,23 +17,24 @@ MODULE read_abi_acspo
     INTEGER :: qkey           ! Quality key
     INTEGER :: typ            ! type of observation (elem)
     LOGICAL :: kept           ! tells letkf whether this obs is kept for assimilation
-  END TYPE abi_acspo_data
+  END TYPE sst_geostationary_data
 
 CONTAINS
 
-SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, nobs)
+SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_data, nobs)
   USE m_ncio,     ONLY: nc_get_fid, nc_close_fid, nc_rddim, nc_rdvar2d, nc_rdvar1d, &
-                        nc_rdatt
+                        nc_rdatt, nc_fndvar
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: obsinfile               
   CHARACTER(*),INTENT(IN) :: navinfile
   INTEGER,     INTENT(IN) :: min_quality_level
-  TYPE(abi_acspo_data),ALLOCATABLE,INTENT(INOUT) :: obs_data(:)
+  TYPE(sst_geostationary_data),ALLOCATABLE,INTENT(INOUT) :: obs_data(:)
   INTEGER,     INTENT(OUT) :: nobs
 
   INTEGER :: fid, ni, nj, i, j, n, qlev
 
+  CHARACTER(slen) :: geoinfile
   REAL(r_size),ALLOCATABLE :: alon2d(:,:), alat2d(:,:)
   REAL(r_size),ALLOCATABLE :: sea_surface_temperature(:,:), stde(:,:), sst_dtime(:,:)
   INTEGER(4),  ALLOCATABLE :: quality_level(:,:)
@@ -48,9 +49,21 @@ SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, 
   INTEGER :: time(1)
 
 !-------------------------------------------------------------------------------
-! Read dimension & geo info from navigation file (navinfile)
+! Read dimension & geo info:
+! First try if can get lat & lon info from obsinfile. [for GOES13-15/MSG]
+! If not, then read them from navigation file (navinfile) [for ABI/AHI]
 !-------------------------------------------------------------------------------
-  CALL nc_get_fid(trim(navinfile),fid)
+  CALL nc_get_fid(trim(obsinfile),fid)
+  if ( nc_fndvar(fid,"lat") ) then
+     geoinfile = obsinfile
+     WRITE(6,*) "[msg] read_geostationary_nc::read geo from obsinfile=",trim(geoinfile)
+  else
+     geoinfile = navinfile
+     WRITE(6,*) "[msg] read_geostationary_nc::read geo from navinfile=",trim(geoinfile)
+  end if
+  CALL nc_close_fid(fid)
+
+  CALL nc_get_fid(trim(geoinfile),fid)
   CALL nc_rddim(fid,"ni", ni)
   print *, "**************************"
   print *, "ni dimension is = ", ni
@@ -64,23 +77,24 @@ SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, 
   ALLOCATE(alon2d(ni,nj),alat2d(ni,nj))
   ALLOCATE(valid(ni,nj))
   valid = .TRUE.
+
   CALL nc_rdvar2d(fid,"lon",alon2d)
-  WRITE(6,*) "[msg] read_abi_acspo_nc::alon2d: min, max=", &
+  WRITE(6,*) "[msg] read_geostationary_nc::alon2d: min, max=", &
              minval(alon2d),maxval(alon2d)
   CALL nc_rdvar2d(fid,"lat",alat2d)
-  WRITE(6,*) "[msg] read_abi_acspo_nc::alat2d: min, max=", &
+  WRITE(6,*) "[msg] read_geostationary_nc::alat2d: min, max=", &
              minval(alat2d),maxval(alat2d)
   CALL nc_close_fid(fid)
 
 !-------------------------------------------------------------------------------
-! Read retrieved SST and other info from obs file (obsinfile)
+! Read the observed SST data from obs file (obsinfile)
 !-------------------------------------------------------------------------------
   CALL nc_get_fid(trim(obsinfile),fid)
 
   ALLOCATE(i1buf2d(ni,nj))
   ALLOCATE(i2buf2d(ni,nj))
 
-! SST
+
   CALL nc_rdvar2d(fid, "sea_surface_temperature", i2buf2d)
   CALL nc_rdatt(fid, "sea_surface_temperature","scale_factor", scale_factor)
   CALL nc_rdatt(fid, "sea_surface_temperature","add_offset", offset)
@@ -92,7 +106,7 @@ SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, 
   end where
   ALLOCATE(sea_surface_temperature(ni,nj))
   sea_surface_temperature = REAL(i2buf2d,r_size)*scale_factor + offset
-  WRITE(6,*) "[msg] read_abi_acspo_nc::sst: min, max=", &
+  WRITE(6,*) "[msg] read_geostationary_nc::sst: min, max=", &
              minval(sea_surface_temperature), maxval(sea_surface_temperature), &
              minval(sea_surface_temperature, mask=valid),&
              maxval(sea_surface_temperature, mask=valid)
@@ -109,17 +123,19 @@ SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, 
   end where
   ALLOCATE(stde(ni,nj))
   stde = REAL(i1buf2d,r_size)*scale_factor + offset
-  WRITE(6,*) "[msg] read_abi_acspo_nc::stde: min, max=", &
+  WRITE(6,*) "[msg] read_geostationary_nc::stde: min, max=", &
              minval(stde), maxval(stde), &
              minval(stde, mask=valid),maxval(stde, mask=valid)
 
-! sst_time
+!-------------------------------------------------------------------------------
+! Read the base time and time offset
+!-------------------------------------------------------------------------------
   CALL nc_rdvar1d(fid, "time", time)
-  WRITE(6,*) "[msg] read_abi_acspo_nc::time=",time(1)
+  WRITE(6,*) "[msg] read_geostationary_nc::time=",time(1)
   sdate = [1981, 1, 1, 0, 0, 0, 0, 0] ! YYYY/MON/DAY/TZONE/HR/MIN/SEC/MSEC
   tdelta = [0.0,0.0,0.0,REAL(time(1)),0.0] ! DAY/HR/MIN/SEC/MSEC
   CALL w3movdat(tdelta, sdate, obsdate)
-  WRITE(6,*) "[msg] read_abi_acspo_nc::obstime=", obsdate(1:3),obsdate(5:7)
+  WRITE(6,*) "[msg] read_geostationary_nc::obstime=", obsdate(1:3),obsdate(5:7)
 
 ! sst_dtime
   CALL nc_rdvar2d(fid, "sst_dtime", i2buf2d)
@@ -133,11 +149,17 @@ SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, 
   end where
   ALLOCATE(sst_dtime(ni,nj))
   sst_dtime = REAL(i2buf2d,r_size)*scale_factor + offset
-  WRITE(6,*) "[msg] read_abi_acspo_nc::sst_dtime: min, max=", &
+  WRITE(6,*) "[msg] read_geostationary_nc::sst_dtime: min, max=", &
              minval(sst_dtime), maxval(sst_dtime), &
              minval(sst_dtime, mask=valid),maxval(sst_dtime, mask=valid)
 
-! Quality key (5-best, 4, 3, 2, 1, 0-worst)
+!-------------------------------------------------------------------------------
+! Read the Quality Key (5 is best quality; 0 missing data)
+! 5    == best_quality
+! 4-2  == not used
+! 1    == bad data
+! 0    == missing data
+!-------------------------------------------------------------------------------
   ALLOCATE(quality_level(ni,nj))
   CALL nc_rdvar2d(fid, "quality_level", quality_level)
   CALL nc_rdatt(fid, "quality_level", "_FillValue", FillValue)
@@ -155,16 +177,18 @@ SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, 
             i1buf2d = 1
         end where
         n = sum(int(i1buf2d,4))
-        WRITE(6,*) "[msg] read_abi_acspo_nc::quality_level, # of obs, %=", i, n, n*100.0/(ni*nj)
+        WRITE(6,*) "[msg] read_geostationary_nc::quality_level, # of obs, %=", i, n, n*100.0/(ni*nj)
      end do
   end if
   where (quality_level == FillValue)
       valid = .FALSE.
   end where
-  !WRITE(6,*) "[msg] read_abi_acspo_nc::quality_level: min, max=", &
+  !WRITE(6,*) "[msg] read_geostationary_nc::quality_level: min, max=", &
   !           minval(quality_level, mask=valid), maxval(quality_level, mask=valid)
-  
-! Close file
+ 
+!-------------------------------------------------------------------------------
+! Close the netcdf file
+!-------------------------------------------------------------------------------
   CALL nc_close_fid(fid)
 
 !-------------------------------------------------------------------------------
@@ -173,14 +197,14 @@ SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, 
   WRITE(6,*) "Finished reading netCDF file, formatting data..."
 
 ! determine num of valid obs
-  WRITE(6,*) "[msg] read_abi_acspo_nc::use obs with min_quality_level=", min_quality_level
+  WRITE(6,*) "[msg] read_geostationary_nc::use obs with min_quality_level=", min_quality_level
   nobs = 0
   do j = 1, nj; do i = 1, ni
     if (quality_level(i,j) >= min_quality_level.and.valid(i,j)) then
        nobs = nobs + 1
     end if
   end do; end do
-  WRITE(6,*) "[msg] read_abi_acspo_nc::nobs_retained, %=", nobs, nobs*100.0/(ni*nj)
+  WRITE(6,*) "[msg] read_geostationary_nc::nobs_retained, %=", nobs, nobs*100.0/(ni*nj)
      
 ! fill into data struct
   ALLOCATE(obs_data(nobs))
@@ -201,17 +225,17 @@ SUBROUTINE read_abi_acspo_nc(obsinfile, navinfile, min_quality_level, obs_data, 
   end do
   CALL inspect_obs_data(obs_data)
   if (n/=nobs) then
-     WRITE(6,*) "[err] read_abi_acspo_nc::n/=nobs: n, nobs=", n, nobs
+     WRITE(6,*) "[err] read_geostationary_nc::n/=nobs: n, nobs=", n, nobs
      STOP (26)
   end if
 
-END SUBROUTINE read_abi_acspo_nc
+END SUBROUTINE read_geostationary_nc
 
 SUBROUTINE inspect_obs_data(obs_data)
   IMPLICIT NONE
-  TYPE(abi_acspo_data),INTENT(IN) :: obs_data(:)
+  TYPE(sst_geostationary_data),INTENT(IN) :: obs_data(:)
 
-  WRITE(6,*) "[msg] read_abi_acspo_nc::info"
+  WRITE(6,*) "[msg] read_geostationary_nc::info"
   WRITE(6,*) "                nobs=", size(obs_data)
   WRITE(6,*) "  x_grd(1): min, max=", minval(obs_data(:)%x_grd(1)), maxval(obs_data(:)%x_grd(1))
   WRITE(6,*) "  x_grd(2): min, max=", minval(obs_data(:)%x_grd(2)), maxval(obs_data(:)%x_grd(2))
@@ -222,4 +246,4 @@ SUBROUTINE inspect_obs_data(obs_data)
 
 END SUBROUTINE
 
-END MODULE read_abi_acspo
+END MODULE read_geostationary
