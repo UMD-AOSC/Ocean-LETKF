@@ -26,6 +26,10 @@ set (SRCS
   common_all/kdtree.f90
   common_all/netlib.f
   common_all/netlibblas.f
+# from ../support/io/
+  ../support/io/m_ncio.f90
+  ../support/io/nc_rdatt.f90.inc
+  ../support/io/nc_rdvar.f90.inc
 #--
 # from letkf/
   letkf/params_letkf.f90
@@ -45,10 +49,12 @@ set (SRCS
   model_specific/${MODEL}/common_debug_${MODEL}.f90
 #--
 # from obs/
+  obs/w3movdat_full.f
   obs/params_obs.f90
   obs/compute_profile_error.f90
   obs/read_argo.f90
   obs/read_avhrr_pathfinder.f90
+  obs/read_geostationary.f90
   obs/read_aviso_adt.f90
   obs/read_ice_txt.f90
   obs/gsw_pot_to_insitu.f90
@@ -78,12 +84,15 @@ install(TARGETS OCN.letkf_${MODEL}.x)
 set(operators
   adt
   sst
+  sst_geostationary
   tprof
   sprof
   icefrac
   )
 foreach(operator ${operators})
   add_executable(OCN.obsOp_${MODEL}.${operator}.x obs/obsop_${operator}.f90)
-  target_link_libraries(OCN.obsOp_${MODEL}.${operator}.x PRIVATE OCN.letkf)
+  target_link_libraries(OCN.obsOp_${MODEL}.${operator}.x PRIVATE OCN.letkf NetCDF::NetCDF_Fortran)
+  set_target_properties (OCN.obsOp_${MODEL}.${operator}.x  PROPERTIES Fortran_PREPROCESS ON) 
+  target_compile_definitions(OCN.obsOp_${MODEL}.${operator}.x PRIVATE DYNAMIC)
   install(TARGETS OCN.obsOp_${MODEL}.${operator}.x)
 endforeach()
