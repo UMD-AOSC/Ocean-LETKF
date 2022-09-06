@@ -21,6 +21,9 @@ PRIVATE
                               gridfile1,&  !
                               gridfile2,&  !
                               gridfile3,&  !
+                              grid_nlon_name, & !
+                              grid_nlat_name, & !
+                              grid_nlev_name, & !
                               tsbase,& !
                               uvbase,& !
                               grid_lon_name,& !
@@ -112,6 +115,9 @@ SUBROUTINE read_input_namelist
   WRITE(6,*) "================================================================="
   WRITE(6,*) "Namelist inputs:"
   WRITE(6,*) "================================================================="
+#ifdef DYNAMIC
+  WRITE(6,grid_dimensions_nml)
+#endif
   WRITE(6,params_model_nml)
   WRITE(6,params_obs_nml)
   WRITE(6,params_letkf_nml)

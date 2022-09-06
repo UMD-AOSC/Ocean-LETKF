@@ -31,6 +31,7 @@ MODULE common
   INTEGER,PARAMETER :: r_dble=kind(0.0d0)
   INTEGER,PARAMETER :: r_sngl=kind(0.0e0)
   INTEGER,PARAMETER :: slen=512
+  INTEGER,PARAMETER :: slen_short=64  ! for variable names
 
 !-----------------------------------------------------------------------
 ! Constants
