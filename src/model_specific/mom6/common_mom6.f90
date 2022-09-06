@@ -48,6 +48,7 @@ SUBROUTINE set_common_oceanmodel
   LOGICAL :: ex
   REAL(r_size) :: dlat, dlon, d2, d3
   REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: work2d
+  REAL(r_size),PARAMETER :: min_layer_thickness = 1.0d-3 
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
   CALL initialize_params_model ! (checks to make sure it is initialized)
@@ -209,7 +210,7 @@ SUBROUTINE set_common_oceanmodel
   do k=nlev,1,-1
     do j=1,nlat
       do i=1,nlon
-        if (height(i,j,k) > 0 .and. wet(i,j) > 0 .and. kmt(i,j) == 0 ) then
+        if (height(i,j,k) > min_layer_thickness .and. wet(i,j) > 0 .and. kmt(i,j) == 0 ) then
           phi0(i,j) = sum(height(i,j,1:k))
           kmt(i,j) = k
         endif
@@ -294,12 +295,14 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   USE vars_model,   ONLY: SSHclm_m
   USE params_model, ONLY: nlon, nlat, nlev
   USE params_model, ONLY: nv3d, nv2d
-  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_ssh
+  USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s
+  USE params_model, ONLY: iv2d_sst, iv2d_sss, iv2d_ssh
   USE params_model, ONLY: diag_lon_name, diag_lat_name, diag_lev_name
   USE params_model, ONLY: diag_temp_name, diag_salt_name
   USE params_model, ONLY: diag_u_name, diag_v_name, diag_h_name
-  USE params_model, ONLY: diag_ssh_name, diag_height_name
-  USE params_model, ONLY: diag_DO_temp, diag_DO_salt, diag_DO_u, diag_DO_v, diag_DO_ssh
+  USE params_model, ONLY: diag_ssh_name, diag_sst_name, diag_sss_name
+  USE params_model, ONLY: diag_height_name
+  USE params_model, ONLY: diag_DO_temp, diag_DO_salt, diag_DO_u, diag_DO_v, diag_DO_ssh, diag_DO_sst, diag_DO_sss
   
   CHARACTER(*), INTENT(IN) :: infile
   REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,nv3d)
@@ -311,7 +314,10 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   INTEGER :: i,j,k
   INTEGER :: ncid,varid
   INTEGER :: iunit,iolen,n,irec
-  LOGICAL, PARAMETER :: dodebug = .false.
+  !LOGICAL, PARAMETER :: dodebug = .false.
+  LOGICAL, PARAMETER :: dodebug = .true.
+  LOGICAL, ALLOCATABLE :: valid2d(:,:) !(nlon,nlat,nlev)
+  REAL(r_size) :: missing_value = 1.0d20  ! default 
   CHARACTER(slen) :: varname
   INTEGER :: ivid
 
@@ -420,13 +426,18 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
       ALLOCATE(buf8(nlon,nlat,nlev))
   end select
 
+  if (dodebug) then
+     ALLOCATE(valid2d(nlon,nlat))
+  end if
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open the T/S netcdf restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (diag_DO_temp .or. diag_DO_salt) then
-    WRITE(6,*) "read_diag:: opening file: ",infile
-    call check( NF90_OPEN(infile,NF90_NOWRITE,ncid) )
-    WRITE(6,*) "read_diag :: just opened file ", infile
+  if (diag_DO_temp .or. diag_DO_salt .or. diag_DO_u .or. diag_DO_v .or. &
+      diag_DO_ssh  .or. diag_DO_sst  .or. diag_DO_sss ) then
+    WRITE(6,*) "read_diag:: opening file: ",trim(infile)
+    call check( NF90_OPEN(trim(infile),NF90_NOWRITE,ncid) )
+    WRITE(6,*) "read_diag :: just opened file ", trim(infile)
   endif
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -457,10 +468,17 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   
     ! !STEVE: debug
     if (dodebug) then
+      call check( NF90_GET_ATT(ncid,varid,"missing_value",missing_value) )
       WRITE(6,*) "POST-TEMP"
-      WRITE(6,*) "read_diag:: infile = ", infile
+      WRITE(6,*) "read_diag:: infile = ", trim(infile)
       do k=1,nlev
-        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_t) = ",MAXVAL(v3d(:,:,k,iv3d_t))
+         where (abs(v3d(:,:,k,ivid)-missing_value)<epsilon(v3d))
+            valid2d = .false.
+         elsewhere
+            valid2d = .true.
+         end where
+        WRITE(6,*) "min, max val for level v3d(:,:,", k, ",iv3d_t) = ",MINVAL(v3d(:,:,k,iv3d_t),mask=valid2d), &
+                                                                       MAXVAL(v3d(:,:,k,iv3d_t),mask=valid2d)
       enddo
     endif
     ! !STEVE: end
@@ -487,11 +505,19 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   
     ! !STEVE: debug
     if (dodebug) then
+      call check( NF90_GET_ATT(ncid,varid,"missing_value",missing_value) )
       WRITE(6,*) "POST-SALT"
-      WRITE(6,*) "read_diag:: infile = ", infile
+      WRITE(6,*) "read_diag:: infile = ", trim(infile)
       do k=1,nlev
-        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_s) = ",MAXVAL(v3d(:,:,k,iv3d_s))
+         where (abs(v3d(:,:,k,ivid)-missing_value)<epsilon(v3d))
+            valid2d = .false.
+         elsewhere
+            valid2d = .true.
+         end where
+        WRITE(6,*) "min, max val for level v3d(:,:,", k, ",iv3d_s) = ",MINVAL(v3d(:,:,k,iv3d_s),mask=valid2d), &
+                                                                       MAXVAL(v3d(:,:,k,iv3d_s),mask=valid2d)
       enddo
+
     endif
     ! !STEVE: end
   endif
@@ -517,10 +543,17 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   
     ! !STEVE: debug
     if (dodebug) then
+      call check( NF90_GET_ATT(ncid,varid,"missing_value",missing_value) )
       WRITE(6,*) "POST-U"
-      WRITE(6,*) "read_diag:: infile = ", infile
+      WRITE(6,*) "read_diag:: infile = ", trim(infile)
       do k=1,nlev
-        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_u) = ",MAXVAL(v3d(:,:,k,iv3d_u))
+        where (abs(v3d(:,:,k,ivid)-missing_value)<epsilon(v3d))
+            valid2d = .false.
+        elsewhere
+            valid2d = .true.
+        end where
+        WRITE(6,*) "min, max val for level v3d(:,:,", k, ",iv3d_u) = ",MINVAL(v3d(:,:,k,iv3d_u),mask=valid2d), &
+                                                                       MAXVAL(v3d(:,:,k,iv3d_u),mask=valid2d)
       enddo
     endif
     ! !STEVE: end
@@ -547,10 +580,17 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
 
     ! !STEVE: debug
     if (dodebug) then
+      call check( NF90_GET_ATT(ncid,varid,"missing_value",missing_value) )
       WRITE(6,*) "POST-V"
-      WRITE(6,*) "read_diag:: infile = ", infile
+      WRITE(6,*) "read_diag:: infile = ", trim(infile)
       do k=1,nlev
-        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_v) = ",MAXVAL(v3d(:,:,k,iv3d_v))
+        where (abs(v3d(:,:,k,ivid)-missing_value)<epsilon(v3d))
+            valid2d = .false.
+        elsewhere
+            valid2d = .true.
+        end where
+        WRITE(6,*) "max val for level v3d(:,:,", k, ",iv3d_v) = ",MINVAL(v3d(:,:,k,iv3d_v),mask=valid2d), &
+                                                                  MAXVAL(v3d(:,:,k,iv3d_v),mask=valid2d)
       enddo
     endif
     ! !STEVE: end
@@ -566,7 +606,7 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
     ivid=iv2d_ssh
 
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
-    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable :: ",trim(varname)
+    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable, ivid :: ",trim(varname), ivid
     select case (prec)
       case(1)
         buf4=0.0
@@ -588,8 +628,93 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
     end select
     if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
 
+    if (dodebug) then
+      call check( NF90_GET_ATT(ncid,varid,"missing_value",missing_value) )
+      WRITE(6,*) "POST-SSH"
+      WRITE(6,*) "read_diag:: infile = ", trim(infile)
+      where (abs(v2d(:,:,ivid)-missing_value)<epsilon(v3d))
+          valid2d = .false.
+      elsewhere
+          valid2d = .true.
+      end where
+      WRITE(6,*) "min, max val for level v2d(:,:,iv2d_ssh) = ",MINVAL(v2d(:,:,iv2d_ssh),mask=valid2d), &
+                                                             MAXVAL(v2d(:,:,iv2d_ssh),mask=valid2d)
+    endif
+ 
   endif
 
+  !!! sst
+  if (diag_DO_sst) then
+    varname=diag_sst_name
+    ivid=iv2d_sst
+
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable, ivid :: ",trim(varname), ivid
+    select case (prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
+        v2d(:,:,ivid) = buf4(:,:,1) !REAL(buf4(:,:,1),r_size)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
+        v2d(:,:,ivid) = buf8(:,:,1)
+    end select
+    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
+
+    if (dodebug) then
+      call check( NF90_GET_ATT(ncid,varid,"missing_value",missing_value) )
+      WRITE(6,*) "POST-SST"
+      WRITE(6,*) "read_diag:: infile = ", trim(infile)
+      where (abs(v2d(:,:,ivid)-missing_value)<epsilon(v3d))
+          valid2d = .false.
+      elsewhere
+          valid2d = .true.
+      end where
+      WRITE(6,*) "min, max val for level v2d(:,:,iv2d_sst) = ",MINVAL(v2d(:,:,iv2d_sst),mask=valid2d), &
+                                                             MAXVAL(v2d(:,:,iv2d_sst),mask=valid2d)
+    endif
+ 
+  endif
+
+  !!! sss
+  if (diag_DO_sss) then
+    varname=diag_sss_name
+    ivid=iv2d_sss
+
+    call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
+    if (dodebug) WRITE(6,*) "read_diag:: just got data for variable, ivid :: ",trim(varname), ivid
+    select case (prec)
+      case(1)
+        buf4=0.0
+        call check( NF90_GET_VAR(ncid,varid,buf4(:,:,1)) )
+        v2d(:,:,ivid) = buf4(:,:,1) !REAL(buf4(:,:,1),r_size)
+      case(2)
+        buf8=0.0d0
+        call check( NF90_GET_VAR(ncid,varid,buf8(:,:,1)) )
+        v2d(:,:,ivid) = buf8(:,:,1)
+    end select
+    if (dodebug) WRITE(6,*) "read_diag:: finished processing data for variable :: ",trim(varname)
+
+    if (dodebug) then
+      call check( NF90_GET_ATT(ncid,varid,"missing_value",missing_value) )
+      WRITE(6,*) "POST-SSS"
+      WRITE(6,*) "read_diag:: infile = ", trim(infile)
+      where (abs(v2d(:,:,ivid)-missing_value)<epsilon(v3d))
+          valid2d = .false.
+      elsewhere
+          valid2d = .true.
+      end where
+      WRITE(6,*) "min, max val for level v2d(:,:,iv2d_sss) = ",MINVAL(v2d(:,:,iv2d_sss),mask=valid2d), &
+                                                             MAXVAL(v2d(:,:,iv2d_sss),mask=valid2d)
+    endif
+ 
+  endif
+
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Close the nc file
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !STEVE: assuming all variables were in a single diagnostic file
   call check( NF90_CLOSE(ncid) )
   

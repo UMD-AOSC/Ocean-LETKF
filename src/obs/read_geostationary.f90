@@ -40,10 +40,10 @@ SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_da
   INTEGER(4),  ALLOCATABLE :: quality_level(:,:)
   INTEGER(1),  ALLOCATABLE :: i1buf2d(:,:)
   INTEGER(2),  ALLOCATABLE :: i2buf2d(:,:)
-  LOGICAL,     ALLOCATABLE :: valid(:,:) ! .TRUE. if no missing info at this grid by checking different FillValues in nc file
+  LOGICAL,     ALLOCATABLE :: valid(:,:) ! .true. if no missing info at this grid by checking different FillValues in nc file
   INTEGER :: FillValue ! missing value indicated by vars in nc file
   REAL(r_size) :: offset, scale_factor
-  LOGICAL :: dodebug = .TRUE.
+  LOGICAL :: dodebug = .true.
   INTEGER :: obsdate(8), sdate(8)
   REAL :: tdelta(5)
   INTEGER :: time(1)
@@ -76,7 +76,7 @@ SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_da
 
   ALLOCATE(alon2d(ni,nj),alat2d(ni,nj))
   ALLOCATE(valid(ni,nj))
-  valid = .TRUE.
+  valid = .true.
 
   CALL nc_rdvar2d(fid,"lon",alon2d)
   WRITE(6,*) "[msg] read_geostationary_nc::alon2d: min, max=", &
@@ -87,7 +87,10 @@ SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_da
   CALL nc_close_fid(fid)
 
 !-------------------------------------------------------------------------------
-! Read the observed SST data from obs file (obsinfile)
+! Read the observed SST data & other info from obs file (obsinfile)
+! [NOTE]:
+! The SST data from file uses K as its units, while MOM6 uses degC
+! We convert SST from K to degC here.
 !-------------------------------------------------------------------------------
   CALL nc_get_fid(trim(obsinfile),fid)
 
@@ -102,10 +105,19 @@ SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_da
   if (dodebug) WRITE(6,*) "_FillValue, scale_factor, add_offset=", &
                FillValue, scale_factor, offset
   where (i2buf2d == FillValue)
-      valid = .FALSE.
+      valid = .false.
   end where
   ALLOCATE(sea_surface_temperature(ni,nj))
   sea_surface_temperature = REAL(i2buf2d,r_size)*scale_factor + offset
+  WRITE(6,*) "[msg] read_geostationary_nc::sst: min, max=", &
+             minval(sea_surface_temperature), maxval(sea_surface_temperature), &
+             minval(sea_surface_temperature, mask=valid),&
+             maxval(sea_surface_temperature, mask=valid)
+
+  where (valid)
+      sea_surface_temperature = cvt_temp_K2C(sea_surface_temperature)
+  end where
+  WRITE(6,*) "[msg] read_geostationary_nc::sst: Converting from K to degC"
   WRITE(6,*) "[msg] read_geostationary_nc::sst: min, max=", &
              minval(sea_surface_temperature), maxval(sea_surface_temperature), &
              minval(sea_surface_temperature, mask=valid),&
@@ -119,7 +131,7 @@ SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_da
   if (dodebug) WRITE(6,*) "_FillValue, scale_factor, add_offset=", &
                FillValue, scale_factor, offset
   where (i1buf2d == FillValue)
-     valid = .FALSE.
+     valid = .false.
   end where
   ALLOCATE(stde(ni,nj))
   stde = REAL(i1buf2d,r_size)*scale_factor + offset
@@ -145,7 +157,7 @@ SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_da
   if (dodebug) WRITE(6,*) "_FillValue, scale_factor, add_offset=", &
                FillValue, scale_factor, offset
   where (i2buf2d == FillValue)
-     valid = .FALSE.
+     valid = .false.
   end where
   ALLOCATE(sst_dtime(ni,nj))
   sst_dtime = REAL(i2buf2d,r_size)*scale_factor + offset
@@ -181,7 +193,7 @@ SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_da
      end do
   end if
   where (quality_level == FillValue)
-      valid = .FALSE.
+      valid = .false.
   end where
   !WRITE(6,*) "[msg] read_geostationary_nc::quality_level: min, max=", &
   !           minval(quality_level, mask=valid), maxval(quality_level, mask=valid)
@@ -211,7 +223,7 @@ SUBROUTINE read_geostationary_nc(obsinfile, navinfile, min_quality_level, obs_da
   n = 0
   do j = 1, nj
      do i = 1, ni
-        if (quality_level(i,j) >= min_quality_level) then
+        if (quality_level(i,j) >= min_quality_level .and. valid(i,j)) then
            n = n + 1
            obs_data(n)%typ      = id_sst_obs
            obs_data(n)%x_grd(1) = alon2d(i,j)
@@ -245,5 +257,18 @@ SUBROUTINE inspect_obs_data(obs_data)
   WRITE(6,*) "      qkey: min, max=", minval(obs_data(:)%qkey), maxval(obs_data(:)%qkey)
 
 END SUBROUTINE
+
+
+ELEMENTAL FUNCTION cvt_temp_K2C(tf) RESULT (tc)
+  IMPLICIT NONE
+
+  REAL(r_size),INTENT(IN) :: tf   ! temperature in Kelvin
+  REAL(r_size)            :: tc   ! temperature in degree Celsius
+
+  REAL(r_size),PARAMETER :: ADD_OFFSET_K2C = -273.15_r_size
+
+  tc = tf + ADD_OFFSET_K2C
+
+END FUNCTION
 
 END MODULE read_geostationary

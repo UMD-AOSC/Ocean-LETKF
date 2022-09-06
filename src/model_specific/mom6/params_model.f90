@@ -99,20 +99,22 @@ PUBLIC
   CHARACTER(slen_short) :: grid_height_name = 'col_height'
  
   ! Diagnostic file filenames !STEVE: these aren't used, instead files are specified explicitly by obsop_xxx.f90 routine
-  CHARACTER(11) :: diag_tsbase = 'MOM.diag.nc'   !(and u, and h)
-  CHARACTER(11) :: diag_uvbase = 'MOM.diag.nc'  !(v and ave_ssh/sfc)
+  CHARACTER(slen) :: diag_tsbase = 'MOM.diag.nc'   !(and u, and h)
+  CHARACTER(slen) :: diag_uvbase = 'MOM.diag.nc'  !(v and ave_ssh/sfc)
   CHARACTER(slen) :: diag_hbase
   ! variable names in diag file:
-  CHARACTER(2) :: diag_lon_name = 'xh'
-  CHARACTER(2) :: diag_lat_name = 'yh'
-  CHARACTER(2) :: diag_lev_name = 'zl'
-  CHARACTER(4) :: diag_temp_name = 'temp'
-  CHARACTER(4) :: diag_salt_name = 'salt'
-  CHARACTER(1) :: diag_u_name = 'u'
-  CHARACTER(1) :: diag_v_name = 'v'
-  CHARACTER(1) :: diag_h_name = 'h'
-  CHARACTER(3) :: diag_ssh_name = 'ssh'
-  CHARACTER(10):: diag_height_name = 'col_height'
+  CHARACTER(slen_short) :: diag_lon_name = 'xh'
+  CHARACTER(slen_short) :: diag_lat_name = 'yh'
+  CHARACTER(slen_short) :: diag_lev_name = 'zl'
+  CHARACTER(slen_short) :: diag_temp_name = 'temp'
+  CHARACTER(slen_short) :: diag_salt_name = 'salt'
+  CHARACTER(slen_short) :: diag_u_name = 'u'
+  CHARACTER(slen_short) :: diag_v_name = 'v'
+  CHARACTER(slen_short) :: diag_h_name = 'h'
+  CHARACTER(slen_short) :: diag_ssh_name = 'ssh'
+  CHARACTER(slen_short) :: diag_sst_name = 'sst'
+  CHARACTER(slen_short) :: diag_sss_name = 'sss'
+  CHARACTER(slen_short) :: diag_height_name = 'col_height'
 
   !STEVE: flags to specify whether to read in each variable
   !       only the observed variables are needed from the diag file
@@ -121,6 +123,8 @@ PUBLIC
   LOGICAL :: diag_DO_u    = .false.
   LOGICAL :: diag_DO_v    = .false.
   LOGICAL :: diag_DO_ssh  = .true.
+  LOGICAL :: diag_DO_sst  = .true.
+  LOGICAL :: diag_DO_sss  = .true.
 
   ! Restart filenames
   CHARACTER(10) :: rsrt_tsbase = 'MOM.res.nc'   !(and u, and h)

@@ -105,8 +105,6 @@ PROGRAM obsop_sst_acspo
   !-----------------------------------------------------------------------------
   CALL read_geostationary_nc(trim(obsinfile), trim(navinfile), min_quality_level, obs_data, nobs)
 
-  STOP "cda: finish reading"
-
   ALLOCATE( elem(nobs) )
   ALLOCATE( rlon(nobs) )
   ALLOCATE( rlat(nobs) )
