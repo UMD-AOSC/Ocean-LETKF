@@ -48,7 +48,16 @@ PRIVATE
                               diag_v_name,& !
                               diag_h_name,& !
                               diag_ssh_name,& !
+                              diag_sst_name,& !
+                              diag_sss_name,& !
                               diag_height_name,& !
+                              diag_DO_temp, & !
+                              diag_DO_salt, & !
+                              diag_DO_u, & !
+                              diag_DO_v, & !
+                              diag_DO_ssh, & !
+                              diag_DO_sst, & !
+                              diag_DO_sss, & !
                               rsrt_lon_name,& !
                               rsrt_lat_name,& !
                               rsrt_lev_name,& !

@@ -28,8 +28,8 @@ if (SOLO_BUILD) # build ocean-letkf with local libs. Most users should use this
 
     # compiler-dependent flags   
     if (CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
-        set(CMAKE_Fortran_FLAGS "-O2 -ffree-line-length-none -frecord-marker=4 -finit-local-zero -fbacktrace -g")
-        set(CMAKE_Fortran_FLAGS_DEBUG "-O0 -ffree-line-length-none -frecord-marker=4 -finit-local-zero -fbacktrace -fcheck=bounds")
+        set(CMAKE_Fortran_FLAGS "-O2 -ffree-line-length-none -frecord-marker=4 -finit-local-zero -fbacktrace")
+        set(CMAKE_Fortran_FLAGS_DEBUG "-O0 -ffree-line-length-none -frecord-marker=4 -finit-local-zero -fbacktrace -fcheck=mem,pointer,bounds -fno-realloc-lhs")
         set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -ffree-line-length-none -frecord-marker=4 -finit-local-zero")
         ## additional flags for gfortran version >= 10.0
         if (${CMAKE_Fortran_COMPILER_VERSION} VERSION_GREATER_EQUAL 10) 

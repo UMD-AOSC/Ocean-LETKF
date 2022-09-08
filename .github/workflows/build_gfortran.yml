@@ -20,6 +20,7 @@ jobs:
 
     - name: "install MPI & NetCDF"
       run: |
+           sudo apt-get update
            sudo apt install mpich   
            sudo apt install libnetcdf-dev libnetcdff-dev netcdf-bin
 
@@ -54,6 +55,7 @@ jobs:
 
     - name: "install MPI & NetCDF"
       run: |
+           sudo apt-get update
            sudo apt install mpich   
            sudo apt install libnetcdf-dev libnetcdff-dev netcdf-bin
 

@@ -5,6 +5,9 @@ Example:
 
 PYTHONPATH=../../pycommon ./get_l2p_ghrsst_star.py --start_date 20220110 --end_date 20220111 --sis ABI_G17 --outdir ./ --topdir_name test_l2p_sst --skip_remote_check  --get_nav_file --verbose --log
 
+PYTHONPATH=../../pycommon ./get_l2p_ghrsst_star.py --start_date 20220110 --end_date 20220111 --sis SEVIRI_MSG01 --outdir ./ --topdir_name test_l2p_sst --skip_remote_check  --get_nav_file --verbose --log
+
+PYTHONPATH=../../pycommon ./get_l2p_ghrsst_star.py --start_date 20200110 --end_date 20200111 --sis IMGR_G15 --outdir ./ --topdir_name test_l2p_sst --skip_remote_check  --get_nav_file --verbose --log
 """
 
 import common
@@ -14,9 +17,15 @@ import subprocess as sp
 import os, sys
 
 def get_sis_info(sis):
-    sis_dict={"ABI_G16":{"sat":"GOES16", "ver":"v2.70", "geodir":"docs", "geofile":"G16_075_0_W.nc"}, 
-              "ABI_G17":{"sat":"GOES17", "ver":"v2.71", "geodir":"nav", "geofile":"G17_137_0_W.nc"},
-              "H8":     {}
+    sis_dict={"ABI_G16":     {"sat":"GOES16", "algo":"STAR", "ver":"v2.70", "geodir":"docs", "geofile":"G16_075_0_W.nc"}, 
+              "ABI_G17":     {"sat":"GOES17", "algo":"STAR", "ver":"v2.71", "geodir":"nav",  "geofile":"G17_137_0_W.nc"},
+              "AHI_H08":     {"sat":"H08",    "algo":"STAR", "ver":"v2.70", "geodir":"nav",  "geofile":"H08_140_7_E.nc"},
+              "IMGR_G13":    {"sat":"GOES13", "algo":"OSPO", "ver":"v1",    "geodir":None,   "geofile":None            },
+              "IMGR_G15":    {"sat":"GOES15", "algo":"OSPO", "ver":"v1",    "geodir":None,   "geofile":None            },
+              "SEVIRI_MSG01":{"sat":"MSG01",  "algo":"OSPO", "ver":"v1",    "geodir":None,   "geofile":None            },
+              "SEVIRI_MSG02":{"sat":"MSG02",  "algo":"OSPO", "ver":"v1",    "geodir":None,   "geofile":None            },
+              "SEVIRI_MSG03":{"sat":"MSG03",  "algo":"OSPO", "ver":"v1",    "geodir":None,   "geofile":None            },
+              "SEVIRI_MSG04":{"sat":"MSG04",  "algo":"OSPO", "ver":"v1",    "geodir":None,   "geofile":None            }
     }
     if sis in sis_dict.keys():
         info = sis_dict[sis]
@@ -79,7 +88,7 @@ if proc.returncode != 0:
     logging.critical("{}\n\nSTDOUT: {}\nERR: {}\n".format(errmsg, out.decode(), err.decode()))
     sys.exit(1)
 
-if args.get_nav_file:
+if args.get_nav_file and sis_info['geofile'] is not None:
     navdir = args.outdir + "/" + args.topdir_name + "/" + args.sis + "/nav"
     if args.verbose:
         logging.debug(navdir)
@@ -106,7 +115,7 @@ while cdate <= args.end_date:
 
     if not args.skip_remote_check:
         # check if remote files exist. Raise error if remote files do not exist
-        cmd_inq = 'wget -r -l1 -np -nH --spider --cut-dirs 20 "https://opendap.jpl.nasa.gov/opendap/hyrax/allData/ghrsst/data/GDS2/L2P/{}/STAR/{}/{:04d}/{:03d}/" -A "{:04d}*.nc" -P ./ -e robots=off'.format(sis_info["sat"], sis_info["ver"], cdate.year, julian_day, cdate.year)
+        cmd_inq = 'wget -r -l1 -np -nH --spider --cut-dirs 20 "https://opendap.jpl.nasa.gov/opendap/hyrax/allData/ghrsst/data/GDS2/L2P/{}/{}/{}/{:04d}/{:03d}/" -A "{:04d}*.nc" -P ./ -e robots=off'.format(sis_info["sat"], sis_info['algo'], sis_info["ver"], cdate.year, julian_day, cdate.year)
 
         if args.verbose:
             logging.debug(cmd_inq)
@@ -126,7 +135,7 @@ while cdate <= args.end_date:
         os.makedirs(cdir)
 
     # start daily download
-    cmd_get = 'wget -r -l1 -np -nH --cut-dirs 20 "https://opendap.jpl.nasa.gov/opendap/hyrax/allData/ghrsst/data/GDS2/L2P/{}/STAR/{}/{:04d}/{:03d}/" -A "{:04d}*.nc" -P ./ -e robots=off'.format(sis_info["sat"], sis_info["ver"], cdate.year, julian_day, cdate.year)
+    cmd_get = 'wget -r -l1 -np -nH --cut-dirs 20 "https://opendap.jpl.nasa.gov/opendap/hyrax/allData/ghrsst/data/GDS2/L2P/{}/{}/{}/{:04d}/{:03d}/" -A "{:04d}*.nc" -P ./ -e robots=off'.format(sis_info["sat"], sis_info['algo'], sis_info["ver"], cdate.year, julian_day, cdate.year)
     if args.verbose:
         logging.debug(cmd_get)
     proc = sp.Popen(cmd_get, shell=True, cwd = cdir, stdout=sp.PIPE, stderr=sp.PIPE)
