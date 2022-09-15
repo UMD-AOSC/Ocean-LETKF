@@ -64,6 +64,8 @@ IODIR=$root/support/io
 if [ "${model}" = "mom6" ]; then
    cp $OBSDIR/read_geostationary.f90 ./
    cp $OBSDIR/obsop_sst_geostationary.f90 ./
+   cp $OBSDIR/read_sss.f90 ./
+   cp $OBSDIR/obsop_sss.f90 ./
    cp $OBSDIR/w3movdat_full.f ./
    cp $IODIR/m_ncio.f90 ./
    cp $IODIR/*.f90.inc ./

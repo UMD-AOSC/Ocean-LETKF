@@ -85,6 +85,7 @@ $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_avhrr_pathfinder.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_aviso_adt.f90
 
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_geostationary.f90
+$F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_sss.f90
 
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG input_nml_${model}.f90
 
@@ -98,7 +99,7 @@ $F90 $OMP $F90_OPT obsop_sprof.f90 -o ${PGM}.sprof.x *.o $NETCDF_LIB
 $F90 $OMP $F90_OPT obsop_adt.f90   -o ${PGM}.adt.x   *.o $NETCDF_LIB
 $F90 $OMP $F90_OPT obsop_sst.f90   -o ${PGM}.sst.x   *.o $NETCDF_LIB
 
-$F90 $OMP $F90_OPT $F90_FPP obsop_sst_geostationary.f90   -o ${PGM}.sst_geostationary.x   *.o $NETCDF_LIB
+$F90 $OMP $F90_OPT $F90_FPP obsop_sss.f90   -o ${PGM}.sss.x   *.o $NETCDF_LIB
 
 rm -f *.mod
 rm -f *.o
