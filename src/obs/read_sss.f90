@@ -6,7 +6,7 @@ MODULE read_sss
   PRIVATE
 
   PUBLIC :: sss_data
-  PUBLIC :: read_jpl_smap_sss_nc
+  PUBLIC :: read_jpl_smap_sss_h5
   PRIVATE :: inspect_obs_data
 
   TYPE sss_data
@@ -21,14 +21,27 @@ MODULE read_sss
 
 CONTAINS
 
-SUBROUTINE read_jpl_smap_sss_nc(obsinfile,min_quality_level,obs_data,nobs)
+SUBROUTINE read_jpl_smap_sss_h5(obsinfile,min_quality_level,obs_data,nobs)
+  USE m_h5io,    ONLY: h5_get_fid, h5_close_fid, h5_rdvarshp, h5_rdvar2d, &
+                       h5_rdvar1d, h5_rdatt, &
+                       HID_T, HSIZE_T
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: obsinfile
   INTEGER,     INTENT(IN) :: min_quality_level
   TYPE(sss_data),ALLOCATABLE,INTENT(INOUT) :: obs_data(:)
   INTEGER,       INTENT(OUT)   :: nobs
+  
+  INTEGER(HID_T) :: fid
+  INTEGER :: istat
 
-  write(6,*) "[msg] read_jpl_smap_sss_nc :: obsinfile=",trim(obsinfile)
+!-------------------------------------------------------------------------------
+! Open the hdf5 file 
+!-------------------------------------------------------------------------------
+  write(6,*) "[msg] read_jpl_smap_sss_h5 :: obsinfile=",trim(obsinfile)
+
+  call h5_get_fid(trim(obsinfile), fid)
+  print*, "fid=", fid
+  call h5_close_fid(fid)
 
   nobs = 1
 

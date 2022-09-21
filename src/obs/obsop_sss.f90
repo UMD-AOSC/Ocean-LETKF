@@ -7,7 +7,7 @@ PROGRAM obsop_sss
   USE params_obs,                ONLY: DO_REMOVE_65N
   USE vars_obs
   USE common_obs_oceanmodel
-  USE read_sss,     ONLY: sss_data, read_jpl_smap_sss_nc
+  USE read_sss,     ONLY: sss_data, read_jpl_smap_sss_h5
 #ifdef DYNAMIC
   USE input_nml_oceanmodel,      ONLY: read_input_namelist
 #endif
@@ -103,9 +103,9 @@ PROGRAM obsop_sss
   !-----------------------------------------------------------------------------
   ! Read observations from file
   !-----------------------------------------------------------------------------
-  CALL read_jpl_smap_sss_nc(trim(obsinfile), min_quality_level, obs_data, nobs)
+  CALL read_jpl_smap_sss_h5(trim(obsinfile), min_quality_level, obs_data, nobs)
 
-  stop "cda_sss: read_jpl_smap_sss_nc"
+  stop "cda_sss: read_jpl_smap_sss_h5"
 
   ALLOCATE( elem(nobs) )
   ALLOCATE( rlon(nobs) )

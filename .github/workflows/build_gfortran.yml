@@ -18,20 +18,23 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: "install MPI & NetCDF"
+    - name: "install mpi, netcdf, hdf5"
       run: |
            sudo apt-get update
            sudo apt install mpich   
            sudo apt install libnetcdf-dev libnetcdff-dev netcdf-bin
+           sudo apt install hdf5-tools libhdf5-dev
 
     - name: "check version and envs"
       run: |
-           nf-config --all
-           nc-config --all
-           gcc -v
-           gfortran -v
-           mpif90 -v
-           pwd
+           echo "===============================" && nf-config --all
+           echo "===============================" && nc-config --all
+           echo "===============================" && h5fc -showconfig && h5fc -show test.f90
+           echo "===============================" && gcc -v
+           echo "===============================" && gfortran -v
+           echo "===============================" && mpif90 -v
+           echo "===============================" && ulimit -a
+           echo "===============================" && pwd
 
     - name: "cmake build for each model"
       run: |
@@ -53,19 +56,23 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: "install MPI & NetCDF"
+    - name: "install mpi, netcdf, hdf5"
       run: |
            sudo apt-get update
            sudo apt install mpich   
            sudo apt install libnetcdf-dev libnetcdff-dev netcdf-bin
+           sudo apt install hdf5-tools libhdf5-dev
 
     - name: "check version and envs"
       run: |
-           nf-config --all
-           nc-config --all
-           gfortran -v
-           mpif90 -v
-           pwd
+           echo "===============================" && nf-config --all
+           echo "===============================" && nc-config --all
+           echo "===============================" && h5fc -showconfig && h5fc -show test.f90
+           echo "===============================" && gcc -v
+           echo "===============================" && gfortran -v
+           echo "===============================" && mpif90 -v
+           echo "===============================" && ulimit -a
+           echo "===============================" && pwd
 
     - name: "build/make_*.sh for model"
       run: |

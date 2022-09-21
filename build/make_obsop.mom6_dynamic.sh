@@ -33,9 +33,16 @@ CDIR=`pwd`
 #MACHINE="GAEA3"
 CONFIGDIR=../config
 source $CONFIGDIR/machine.sh
-source $CONFIGDIR/$MACHINE.fortran.sh
-source $CONFIGDIR/$MACHINE.netcdf.sh
-source $CONFIGDIR/$MACHINE.modules_ldtn.sh
+
+
+source $CONFIGDIR/${MACHINE}.fortran.sh
+source $CONFIGDIR/${MACHINE}.netcdf.sh
+source $CONFIGDIR/${MACHINE}.hdf5.sh
+source $CONFIGDIR/${MACHINE}.modules_ldtn.sh
+
+echo $MACHINE
+echo $H5_INC
+echo $H5_LIB
 
 # Model name:
 model=mom6
@@ -64,7 +71,8 @@ sh $CDIR/lnkcommon_obsop.sh $model $CDIR/../
 # F90GIO lib
 #--
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $NETCDF_INC m_ncio.f90
-$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $NETCDF_INC w3movdat_full.f
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $H5_INC     m_h5io.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG  w3movdat_full.f
 
 
 
@@ -85,7 +93,7 @@ $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_avhrr_pathfinder.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_aviso_adt.f90
 
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_geostationary.f90
-$F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_sss.f90
+$F90 $OMP $F90_OPT $F90_OBJECT_FLAG $H5_INC read_sss.f90
 
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG input_nml_${model}.f90
 
@@ -94,12 +102,13 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG input_nml_${model}.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_oceanographic_toolbox.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_pot_to_insitu.f90
 #--
-$F90 $OMP $F90_OPT obsop_tprof.f90 -o ${PGM}.tprof.x *.o $NETCDF_LIB
-$F90 $OMP $F90_OPT obsop_sprof.f90 -o ${PGM}.sprof.x *.o $NETCDF_LIB
-$F90 $OMP $F90_OPT obsop_adt.f90   -o ${PGM}.adt.x   *.o $NETCDF_LIB
-$F90 $OMP $F90_OPT obsop_sst.f90   -o ${PGM}.sst.x   *.o $NETCDF_LIB
+$F90 $OMP $F90_OPT obsop_tprof.f90 -o ${PGM}.tprof.x *.o $NETCDF_LIB  $H5_LIB
+$F90 $OMP $F90_OPT obsop_sprof.f90 -o ${PGM}.sprof.x *.o $NETCDF_LIB  $H5_LIB
+$F90 $OMP $F90_OPT obsop_adt.f90   -o ${PGM}.adt.x   *.o $NETCDF_LIB  $H5_LIB
+$F90 $OMP $F90_OPT obsop_sst.f90   -o ${PGM}.sst.x   *.o $NETCDF_LIB  $H5_LIB
 
-$F90 $OMP $F90_OPT $F90_FPP obsop_sss.f90   -o ${PGM}.sss.x   *.o $NETCDF_LIB
+$F90 $OMP $F90_OPT $F90_FPP obsop_sst_geostationary.f90   -o ${PGM}.sst_geostationary.x   *.o $NETCDF_LIB $H5_LIB
+$F90 $OMP $F90_OPT $F90_FPP obsop_sss.f90   -o ${PGM}.sss.x   *.o $NETCDF_LIB $H5_LIB
 
 rm -f *.mod
 rm -f *.o

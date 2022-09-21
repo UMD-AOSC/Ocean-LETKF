@@ -14,12 +14,16 @@ MODULE m_h5io
 ! read var shape
   PUBLIC :: h5_rdvarshp
 
-! read att
-  PUBLIC :: h5_rdatt_i1, h5_rdatt_i2, h5_rdatt_i4, &
-            h5_rdatt_r4, h5_rdatt_r8
+! read att values
+  PUBLIC :: h5_rdatt
 
 ! read var values
   PUBLIC :: h5_rdvar1d, h5_rdvar2d, h5_rdvar3d, h5_rdvar4d
+
+! low-level read att
+  PUBLIC :: h5_rdatt_i1, h5_rdatt_i2, h5_rdatt_i4, &
+            h5_rdatt_r4, h5_rdatt_r8
+
 
 ! low-level Read 1d
   PUBLIC :: h5_rdvar1d_i1, h5_rdvar1d_i2, h5_rdvar1d_i4, &
@@ -39,7 +43,7 @@ MODULE m_h5io
 
 !-------------------------------------------------------------------------------
 ! Internal vars & subs
-  INTERFACE h5_rdatt1d
+  INTERFACE h5_rdatt
     MODULE PROCEDURE h5_rdatt_i1, h5_rdatt_i2, h5_rdatt_i4, &
                      h5_rdatt_r4, h5_rdatt_r8
   END INTERFACE
