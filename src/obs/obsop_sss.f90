@@ -80,7 +80,6 @@ PROGRAM obsop_sss
   !-----------------------------------------------------------------------------
   ! Instantiations specific to this observation type:
   !-----------------------------------------------------------------------------
-  INTEGER :: min_quality_level=3  ! CDA
   INTEGER :: typ = id_sss_obs
   LOGICAL :: DO_SUPEROBS = .false.
   REAL(r_size), DIMENSION(:,:), ALLOCATABLE :: superobs, delta, M2 ! for online computation of the mean and variance
@@ -103,9 +102,8 @@ PROGRAM obsop_sss
   !-----------------------------------------------------------------------------
   ! Read observations from file
   !-----------------------------------------------------------------------------
-  CALL read_jpl_smap_l2_sss_h5(trim(obsinfile), min_quality_level, obs_data, nobs)
+  CALL read_jpl_smap_l2_sss_h5(trim(obsinfile), obs_data, nobs)
 
-  stop "cda_sss: read_jpl_smap_sss_h5"
 
   ALLOCATE( elem(nobs) )
   ALLOCATE( rlon(nobs) )
@@ -122,7 +120,7 @@ PROGRAM obsop_sss
     elem(i) = obs_data(i)%typ
     rlon(i) = obs_data(i)%x_grd(1)
     rlat(i) = obs_data(i)%x_grd(2)
-!   rlev(i) = obs_data(i)%x_grd(3) !STEVE: not applicable for SST
+!   rlev(i) = obs_data(i)%x_grd(3) !not applicable for SSS
     odat(i) = obs_data(i)%value
     oerr(i) = obs_data(i)%oerr
     ohx(i)  = 0
@@ -446,10 +444,6 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) min_oerr
-    case('-minqc')
-      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
-      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
-      read (arg2,*) min_quality_level
     case('-debug')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)

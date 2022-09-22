@@ -21,13 +21,12 @@ MODULE read_sss
 
 CONTAINS
 
-SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile,min_quality_level,obs_data,nobs)
+SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
   USE m_h5io,    ONLY: h5_get_fid, h5_close_fid, h5_rdvarshp, h5_rdvar2d, &
                        h5_rdvar1d, h5_rdatt, &
                        HID_T, HSIZE_T, i4, r4
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: obsinfile
-  INTEGER,     INTENT(IN) :: min_quality_level
   TYPE(sss_data),ALLOCATABLE,INTENT(INOUT) :: obs_data(:)
   INTEGER,       INTENT(OUT)   :: nobs
   
