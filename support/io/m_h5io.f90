@@ -8,6 +8,9 @@ MODULE m_h5io
   PUBLIC :: HID_T   ! type for all different ids used for H5
   PUBLIC :: HSIZE_T ! type for var sizes 
 
+  PUBLIC :: i1, i2, i4, i8
+  PUBLIC :: r4, r8
+
 ! file I/O
   PUBLIC :: h5_get_fid, h5_close_fid
 
@@ -23,7 +26,6 @@ MODULE m_h5io
 ! low-level read att
   PUBLIC :: h5_rdatt_i1, h5_rdatt_i2, h5_rdatt_i4, &
             h5_rdatt_r4, h5_rdatt_r8
-
 
 ! low-level Read 1d
   PUBLIC :: h5_rdvar1d_i1, h5_rdvar1d_i2, h5_rdvar1d_i4, &
@@ -492,7 +494,6 @@ FUNCTION get_h5type(ptr) RESULT(h5type)
       call mystop(errcode%get_h5type)
   end select
 END FUNCTION
-
 
 END MODULE m_h5io
 
