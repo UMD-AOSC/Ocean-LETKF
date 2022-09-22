@@ -7,7 +7,8 @@ PROGRAM obsop_sss
   USE params_obs,                ONLY: DO_REMOVE_65N
   USE vars_obs
   USE common_obs_oceanmodel
-  USE read_sss,     ONLY: sss_data, read_jpl_smap_l2_sss_h5
+  USE read_smap,     ONLY: sss_data, read_jpl_smap_l2_sss_h5, &
+                                     read_jpl_smap_l3_sss_nc
 #ifdef DYNAMIC
   USE input_nml_oceanmodel,      ONLY: read_input_namelist
 #endif
@@ -23,6 +24,8 @@ PROGRAM obsop_sss
   CHARACTER(slen) :: obsoutfile='obsout.dat'  !OUT(default)
   REAL(r_size) :: obserr_scaling=1.0d0 !STEVE: use this to scale the input observations
   REAL(r_size) :: obs_randselect=1.0d0 !STEVE: use this to select random input observations
+  INTEGER      :: obs_level = -1       !CDA: read level-2 smap if obs_level=2,
+                                       !CDA:      level-3 smap if obs_level=3
 
   !-----------------------------------------------------------------------------
   ! Obs data arrays
@@ -102,8 +105,16 @@ PROGRAM obsop_sss
   !-----------------------------------------------------------------------------
   ! Read observations from file
   !-----------------------------------------------------------------------------
-  CALL read_jpl_smap_l2_sss_h5(trim(obsinfile), obs_data, nobs)
-
+  SELECT CASE(obs_level)
+    CASE(2)
+      CALL read_jpl_smap_l2_sss_h5(trim(obsinfile), obs_data, nobs)
+    CASE(3)
+      CALL read_jpl_smap_l3_sss_nc(trim(obsinfile), obs_data, nobs)
+    CASE DEFAULT
+      WRITE(6,*) "[err] obsop_sss.f90::Unsupported obs_level=", obs_level, &
+                 ". obs_level supported should either be 2 or 3"
+      STOP (10)
+  END SELECT
 
   ALLOCATE( elem(nobs) )
   ALLOCATE( rlon(nobs) )
@@ -448,6 +459,10 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) dodebug1
+    case('-olevel')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) obs_level
     case default
       PRINT *, "ERROR: option is not supported: ", arg1
       PRINT *, "(with value : ", trim(arg2), " )"

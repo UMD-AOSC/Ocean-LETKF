@@ -1,4 +1,20 @@
-MODULE read_sss
+!===============================================================================
+! This module includes subs to read in JPL SMAP L2/L3 salinity data
+!
+! Level-2 data are from:
+! - Data access:
+!   https://opendap.jpl.nasa.gov/opendap/hyrax/SalinityDensity/smap/L2/JPL/V5.0/contents.html
+! - Data documentation webpage:
+!   https://podaac.jpl.nasa.gov/dataset/SMAP_JPL_L2B_SSS_CAP_V5
+!
+! Level-3 data are from:
+! - Data access:
+!   https://opendap.jpl.nasa.gov/opendap/SalinityDensity/smap/L3/JPL/V5.0/8day_running/
+! - Data documentation webpage:
+!   https://podaac.jpl.nasa.gov/dataset/SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5
+!-------------------------------------------------------------------------------
+
+MODULE read_smap
   USE common,       ONLY: r_sngl, r_dble, r_size, slen
   USE params_obs,   ONLY: id_sss_obs
   IMPLICIT NONE
@@ -7,6 +23,7 @@ MODULE read_sss
 
   PUBLIC :: sss_data
   PUBLIC :: read_jpl_smap_l2_sss_h5
+  PUBLIC :: read_jpl_smap_l3_sss_nc
   PRIVATE :: inspect_obs_data
 
   TYPE sss_data
@@ -14,13 +31,195 @@ MODULE read_sss
     REAL(r_size) :: value     ! actual physical value of the parameter measured at this grid point
     REAL(r_size) :: oerr      ! observation standard error
     REAL(r_size) :: hour      ! Hour of observation
-    INTEGER :: qkey           ! Quality key
     INTEGER :: typ            ! type of observation (elem)
     LOGICAL :: kept           ! tells letkf whether this obs is kept for assimilation
   END TYPE sss_data
 
 CONTAINS
 
+!-------------------------------------------------------------------------------
+! Read JPL SMAP Level-3 8-day-runing-meaning 
+!
+! - Data access:
+!   https://opendap.jpl.nasa.gov/opendap/SalinityDensity/smap/L3/JPL/V5.0/8day_running/
+! - Data documentation webpage:
+!   https://podaac.jpl.nasa.gov/dataset/SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5
+!-------------------------------------------------------------------------------
+SUBROUTINE read_jpl_smap_l3_sss_nc(obsinfile, obs_data, nobs)
+  USE m_ncio,   ONLY: nc_get_fid, nc_close_fid, nc_rddim, nc_rdatt, &
+                      nc_rdvar1d, nc_rdvar2d
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: obsinfile
+  TYPE(sss_data),ALLOCATABLE,INTENT(INOUT) :: obs_data(:)
+  INTEGER,     INTENT(OUT) :: nobs
+
+  REAL(r_size),PARAMETER :: MAX_ALLOWED_LAND_FRACTION = 0.001_r_size ! 0.0-1.0
+  REAL(r_size),PARAMETER :: MAX_ALLOWED_ICE_FRACTION  = 0.001_r_size ! 0.0-1.0
+  INTEGER :: fid
+  INTEGER :: nlon, nlat, nt
+  REAL(r_size),ALLOCATABLE :: alon1d(:), alat1d(:) 
+  REAL(r_size),ALLOCATABLE :: sea_surface_salinity(:,:), stde(:,:) ! (nlon,nlat)
+  REAL(r_size),ALLOCATABLE :: land_fraction(:,:), ice_fraction(:,:) ! (nlon,nlat)
+  REAL(r_size),ALLOCATABLE :: sss_time(:) ! (nt)
+  LOGICAL,     ALLOCATABLE :: valid(:,:) ! (nlon,nlat)
+  REAL(r_size) :: rFillValue
+  LOGICAL :: dodebug = .true.
+  INTEGER :: obsdate(8), sdate(8)
+  REAL :: tdelta(5)
+  INTEGER :: n, i ,j 
+
+
+!-------------------------------------------------------------------------------
+! Open the nc file 
+!-------------------------------------------------------------------------------
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::obsinfile=", trim(obsinfile)
+  CALL nc_get_fid(trim(obsinfile), fid)
+  
+!-------------------------------------------------------------------------------
+! Read dimension & geo vars
+!-------------------------------------------------------------------------------
+  CALL nc_rddim(fid, "longitude", nlon)
+  CALL nc_rddim(fid, "latitude", nlat)
+  CALL nc_rddim(fid, "time",     nt)
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::nlon,nlat,nt=", nlon, nlat, nt
+
+  ALLOCATE(alon1d(nlon), alat1d(nlat))
+  CALL nc_rdvar1d(fid, "longitude", alon1d)
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::lon: min, max=", &
+             minval(alon1d), maxval(alon1d)
+  CALL nc_rdvar1d(fid, "latitude",  alat1d)
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::lat: min, max=", &
+             minval(alat1d), maxval(alat1d)
+
+!-------------------------------------------------------------------------------
+! Read obs time info
+!-------------------------------------------------------------------------------
+  ALLOCATE(sss_time(nt))
+  CALL nc_rdvar1d(fid, "time", sss_time)
+  sdate = [2015, 1, 1, 0, 0, 0, 0, 0] ! YYYY/MON/DAY/TZONE/HR/MIN/SEC/MSEC
+  tdelta = [0.0,0.0,0.0,REAL(sss_time(1)),0.0] ! DAY/HR/MIN/SEC/MSEC
+  call w3movdat(tdelta, sdate, obsdate)
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::obsdate=", &
+             obsdate(1:3),obsdate(5:7)
+
+!-------------------------------------------------------------------------------
+! Read sea surface salinity and its uncertainty
+!-------------------------------------------------------------------------------
+  ALLOCATE(valid(nlon,nlat))
+  valid = .true.
+
+  ALLOCATE(sea_surface_salinity(nlon,nlat))
+  CALL nc_rdvar2d(fid, "smap_sss", sea_surface_salinity)
+  CALL nc_rdatt(fid,   "smap_sss", "_FillValue", rFillValue)
+  if (dodebug) WRITE(6,*) "rFillValue=", rFillValue
+  where (NINT(sea_surface_salinity)==NINT(rFillValue)) 
+    valid = .false.
+  end where
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::smap_sss: min, max=", &
+             minval(sea_surface_salinity, mask=valid), &
+             maxval(sea_surface_salinity, mask=valid)
+
+  ALLOCATE(stde(nlon,nlat))
+  CALL nc_rdvar2d(fid, "smap_sss_uncertainty", stde)
+  CALL nc_rdatt(fid,   "smap_sss_uncertainty", "_FillValue", rFillValue)
+  if (dodebug) WRITE(6,*) "rFillValue=", rFillValue
+  where (NINT(stde)==NINT(rFillValue)) 
+    valid = .false.
+  end where
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::smap_sss_uncertainty: min, max=", &
+             minval(stde, mask=valid), &
+             maxval(stde, mask=valid)
+
+!-------------------------------------------------------------------------------
+! Read land & ice fraction for additional QC
+!-------------------------------------------------------------------------------
+  ALLOCATE(land_fraction(nlon,nlat))
+  CALL nc_rdvar2d(fid, "land_fraction", land_fraction)
+  CALL nc_rdatt(fid,   "land_fraction", "_FillValue", rFillValue)
+  if (dodebug) WRITE(6,*) "rFillValue=", rFillValue
+  where (NINT(land_fraction)==NINT(rFillValue)) 
+    valid = .false.
+  end where
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::land_fraction: min, max=", &
+             minval(land_fraction, mask=valid), &
+             maxval(land_fraction, mask=valid)
+
+  ALLOCATE(ice_fraction(nlon,nlat))
+  CALL nc_rdvar2d(fid, "ice_fraction", ice_fraction)
+  CALL nc_rdatt(fid,   "ice_fraction", "_FillValue", rFillValue)
+  if (dodebug) WRITE(6,*) "rFillValue=", rFillValue
+  where (NINT(ice_fraction)==NINT(rFillValue)) 
+    valid = .false.
+  end where
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc::ice_fraction: min, max=", &
+             minval(ice_fraction, mask=valid), &
+             maxval(ice_fraction, mask=valid)
+
+!-------------------------------------------------------------------------------
+! Close the nc file 
+!-------------------------------------------------------------------------------
+  CALL nc_close_fid(fid)
+
+!-------------------------------------------------------------------------------
+! Perform QC based on land & ice fraction 
+! [FIXME]: Need to determine the best fraction 
+!-------------------------------------------------------------------------------
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc:: remove obs with land_fraction >", &
+             MAX_ALLOWED_LAND_FRACTION*100, "%"
+  where (land_fraction >= MAX_ALLOWED_LAND_FRACTION)
+    valid = .false.
+  end where
+
+  WRITE(6,*) "[msg] read_jpl_smap_l3_sss_nc:: remove obs with ice_fraction >", &
+             MAX_ALLOWED_ICE_FRACTION*100, "%"
+  where (ice_fraction >= MAX_ALLOWED_ICE_FRACTION)
+    valid = .false.
+  end where
+
+!-------------------------------------------------------------------------------
+! Convert NC data to the data format required by obsop
+!-------------------------------------------------------------------------------
+  WRITE(6,*) "Finished reading NC file, formatting data..."
+! determine num of valid obs
+  nobs = 0
+  do j = 1, nlat; do i = 1, nlon
+    if (valid(i,j)) then
+       nobs = nobs + 1
+    end if
+  end do; end do
+  WRITE(6,*) "[msg] read_jpl_smap_l3_smap_h5::nobs_retained, %=", nobs, nobs*100.0/(nlon*nlat)
+
+! fill into data struct
+  ALLOCATE(obs_data(nobs))
+  n = 0
+  do j = 1, nlat
+     do i = 1, nlon
+        if (valid(i,j)) then
+           n = n + 1
+           obs_data(n)%typ      = id_sss_obs
+           obs_data(n)%x_grd(1) = alon1d(i)
+           obs_data(n)%x_grd(2) = alat1d(j)
+           obs_data(n)%hour     = 0.0  ! [FIXME]: need to determine later what hours to use here
+           obs_data(n)%value    = sea_surface_salinity(i,j)
+           obs_data(n)%oerr     = stde(i,j)
+        end if
+     end do
+  end do
+  CALL inspect_obs_data(obs_data,subname="read_jpl_smap_l2_sss_h5")
+  if (n/=nobs) then
+     WRITE(6,*) "[err] read_jpl_smap_l2_sss_h5::n/=nobs: n, nobs=", n, nobs
+     STOP (27)
+  end if
+END SUBROUTINE 
+
+!-------------------------------------------------------------------------------
+! Read JPL SMAP Level-2 SSS swath data
+!
+! - Data access:
+!   https://opendap.jpl.nasa.gov/opendap/hyrax/SalinityDensity/smap/L2/JPL/V5.0/contents.html
+! - Data documentation webpage:
+!   https://podaac.jpl.nasa.gov/dataset/SMAP_JPL_L2B_SSS_CAP_V5
+!-------------------------------------------------------------------------------
 SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
   USE m_h5io,    ONLY: h5_get_fid, h5_close_fid, h5_rdvarshp, h5_rdvar2d, &
                        h5_rdvar1d, h5_rdatt, &
@@ -46,7 +245,6 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_GOOD = 0
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_BAD  = 1
 
-
 !-------------------------------------------------------------------------------
 ! Open the hdf5 file 
 !-------------------------------------------------------------------------------
@@ -59,6 +257,19 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
   CALL h5_rdvarshp(fid, "/lon", varsizes)
   nlines = varsizes(1); npixels = varsizes(2)
   WRITE(6,*) "nlines, npixels=", nlines, npixels
+
+!-------------------------------------------------------------------------------
+! Read row time
+!-------------------------------------------------------------------------------
+   sdate = [2015, 1, 1, 0, 0, 0, 0, 0] ! YYYY/MON/DAY/TZONE/HR/MIN/SEC/MSEC
+   ALLOCATE(sss_time(nlines))
+   CALL h5_rdvar1d(fid, "/row_time", sss_time)
+   tdelta = [0.0,0.0,0.0,REAL(sss_time(1)),0.0] ! DAY/HR/MIN/SEC/MSEC
+   call w3movdat(tdelta, sdate, sss_sdate)
+   WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::start date=", sss_sdate(1:3),sss_sdate(5:7)
+   tdelta = [0.0,0.0,0.0,REAL(sss_time(nlines)),0.0] ! DAY/HR/MIN/SEC/MSEC
+   call w3movdat(tdelta, sdate, sss_edate)
+   WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::end date=", sss_edate(1:3),sss_edate(5:7)
 
 !-------------------------------------------------------------------------------
 ! Read lat & lon info
@@ -160,19 +371,6 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
               minval(quality_flag, mask=valid), maxval(quality_flag, mask=valid)
 
 !-------------------------------------------------------------------------------
-! Read row time
-!-------------------------------------------------------------------------------
-   sdate = [2015, 1, 1, 0, 0, 0, 0, 0] ! YYYY/MON/DAY/TZONE/HR/MIN/SEC/MSEC
-   ALLOCATE(sss_time(nlines))
-   CALL h5_rdvar1d(fid, "/row_time", sss_time)
-   tdelta = [0.0,0.0,0.0,REAL(sss_time(1)),0.0] ! DAY/HR/MIN/SEC/MSEC
-   call w3movdat(tdelta, sdate, sss_sdate)
-   WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::start date=", sss_sdate(1:3),sss_sdate(5:7)
-   tdelta = [0.0,0.0,0.0,REAL(sss_time(nlines)),0.0] ! DAY/HR/MIN/SEC/MSEC
-   call w3movdat(tdelta, sdate, sss_edate)
-   WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::end date=", sss_edate(1:3),sss_edate(5:7)
-
-!-------------------------------------------------------------------------------
 ! Close the hdf5 file 
 !-------------------------------------------------------------------------------
   CALL h5_close_fid(fid)
@@ -203,11 +401,10 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
            obs_data(n)%hour     = 0.0  ! [FIXME]: need to determine later what hours to use here
            obs_data(n)%value    = sea_surface_salinity(i,j)
            obs_data(n)%oerr     = stde(i,j)
-           obs_data(n)%qkey     = QUAL_FLAG_SSS_USABLE_GOOD 
         end if
      end do
   end do
-  CALL inspect_obs_data(obs_data)
+  CALL inspect_obs_data(obs_data,subname="read_jpl_smap_l2_sss_h5")
   if (n/=nobs) then
      WRITE(6,*) "[err] read_jpl_smap_l2_sss_h5::n/=nobs: n, nobs=", n, nobs
      STOP (27)
@@ -215,20 +412,20 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
 END SUBROUTINE 
 
 
-SUBROUTINE inspect_obs_data(obs_data)
+SUBROUTINE inspect_obs_data(obs_data, subname)
   IMPLICIT NONE
   TYPE(sss_data),INTENT(IN) :: obs_data(:)
+  CHARACTER(*),INTENT(IN) :: subname
 
-  WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::info"
+  WRITE(6,*) "[msg] "//trim(subname)//"::info"
   WRITE(6,*) "                nobs=", size(obs_data)
   WRITE(6,*) "  x_grd(1): min, max=", minval(obs_data(:)%x_grd(1)), maxval(obs_data(:)%x_grd(1))
   WRITE(6,*) "  x_grd(2): min, max=", minval(obs_data(:)%x_grd(2)), maxval(obs_data(:)%x_grd(2))
   WRITE(6,*) "      hour: min, max=", minval(obs_data(:)%hour), maxval(obs_data(:)%hour)
   WRITE(6,*) "     value: min, max=", minval(obs_data(:)%value), maxval(obs_data(:)%value)
   WRITE(6,*) "      oerr: min, max=", minval(obs_data(:)%oerr), maxval(obs_data(:)%oerr)
-  WRITE(6,*) "      qkey: min, max=", minval(obs_data(:)%qkey), maxval(obs_data(:)%qkey)
 
 END SUBROUTINE
 
 
-END MODULE read_sss
+END MODULE read_smap

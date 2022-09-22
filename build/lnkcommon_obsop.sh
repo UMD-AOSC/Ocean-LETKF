@@ -75,7 +75,7 @@ if [ "${model}" = "mom6" ]; then
    cp $OBSDIR/read_geostationary.f90 ./
    cp $OBSDIR/obsop_sst_geostationary.f90 ./
 
-   cp $OBSDIR/read_sss.f90 ./
+   cp $OBSDIR/read_smap.f90 ./
    cp $OBSDIR/obsop_sss.f90 ./
 fi
 
