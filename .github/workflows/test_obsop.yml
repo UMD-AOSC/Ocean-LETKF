@@ -1,0 +1,41 @@
+name: test_obsop
+
+on:
+  push:
+  pull_request:
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  test_obsop:
+    strategy:
+      matrix: 
+        model: [mom6]
+      fail-fast: false
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: "install mpi, netcdf, hdf5"
+      run: |
+           sudo apt-get update
+           sudo apt install mpich   
+           sudo apt install libnetcdf-dev libnetcdff-dev netcdf-bin
+           sudo apt install hdf5-tools libhdf5-dev
+ 
+    - name: "build"
+      run: |
+           cmake -B ${{github.workspace}}/build_ocnletkf -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_Fortran_COMPILER=gfortran -DSOLO_BUILD=ON -DMODEL=${{matrix.model}}
+           cmake --build ${{github.workspace}}/build_ocnletkf --config ${{env.BUILD_TYPE}}
+
+    - name: "test obsop if model == mom6"
+      if: matrix.model == 'mom6'
+      run: |
+           git clone https://github.com/gmao-cda/MOM6-LETKF-Data.git
+           cd MOM6-LETKF-Data && mkdir build && cd build && pwd
+           cmake .. -DMODEL=mom6 -DEXECUTABLE_DIR=${{github.workspace}}/build_ocnletkf/src -DTEST_OBSOP=ON
+           ctest --rerun-failed --output-on-failure
+
+
