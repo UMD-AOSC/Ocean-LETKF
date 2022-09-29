@@ -73,9 +73,9 @@ $F90 $OMP $F90_OPT $F90_OBJECT_FLAG compute_profile_error.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_ncoda_prep.f90
 
 #--
-$F90 $OMP $F90_OPT obsop_ncoda_3d.f90 -o ${PGM}.ncoda_3d.x *.o $NETCDF_LIB $BUFR_LIB
+$F90 $OMP $F90_OPT  obsop_ncoda_3d.f90 -o ${PGM}.ncoda_3d.x *.o $NETCDF_LIB $BUFR_LIB
 rm -f obsop_ncoda_3d.o
-$F90 $OMP $F90_OPT obsop_ncoda_ssh.f90 -o ${PGM}.ncoda_ssh.x *.o $NETCDF_LIB $BUFR_LIB
+$F90 $OMP $F90_OPT  obsop_ncoda_ssh.f90 -o ${PGM}.ncoda_ssh.x *.o $NETCDF_LIB $BUFR_LIB
 
 rm -f *.mod
 rm -f *.o

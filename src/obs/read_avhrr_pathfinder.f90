@@ -253,8 +253,8 @@ if (typ .eq. id_sst_obs) then
   ! sea_surface_temperature:add_offset = 273.15 ;
   ! sea_surface_temperature:scale_factor = 0.01 ;
   ! sea_surface_temperature:_FillValue = -32768s ;
-  sea_surface_temperature = sea_surface_temperature + 273.15
-  sea_surface_temperature = sea_surface_temperature * 0.01
+  sea_surface_temperature = sea_surface_temperature *0.01 + 273.15
+  sea_surface_temperature = cvt_temp_K2C(sea_surface_temperature) ! From K to degC, since model state uses degC
   
 elseif (typ .eq. id_sic_obs) then ! Sea ice concentration (fraction)
   ALLOCATE(sea_ice_fraction(nlons,nlats))
@@ -312,8 +312,37 @@ do j=1,nlats
   enddo
 enddo
 nobs = n
+CALL inspect_obs_data(obs_data(1:nobs))
 if (dodebug) print *, "nobs = ", nobs
 
 END SUBROUTINE read_avhrr_pathfinder_nc
+
+SUBROUTINE inspect_obs_data(obs_data)
+  IMPLICIT NONE
+  TYPE(avhrr_pathfinder_data),INTENT(IN) :: obs_data(:)
+
+  WRITE(6,*) "[msg] read_avhrr_pathfinder_nc::info"
+  WRITE(6,*) "                nobs=", size(obs_data)
+  WRITE(6,*) "  x_grd(1): min, max=", minval(obs_data(:)%x_grd(1)), maxval(obs_data(:)%x_grd(1))
+  WRITE(6,*) "  x_grd(2): min, max=", minval(obs_data(:)%x_grd(2)), maxval(obs_data(:)%x_grd(2))
+  WRITE(6,*) "      hour: min, max=", minval(obs_data(:)%hour), maxval(obs_data(:)%hour)
+  WRITE(6,*) "     value: min, max=", minval(obs_data(:)%value), maxval(obs_data(:)%value)
+  WRITE(6,*) "      oerr: min, max=", minval(obs_data(:)%oerr), maxval(obs_data(:)%oerr)
+  WRITE(6,*) "      qkey: min, max=", minval(obs_data(:)%qkey), maxval(obs_data(:)%qkey)
+
+END SUBROUTINE
+
+
+ELEMENTAL FUNCTION cvt_temp_K2C(tf) RESULT (tc)
+  IMPLICIT NONE
+
+  REAL(r_size),INTENT(IN) :: tf   ! temperature in Kelvin
+  REAL(r_size)            :: tc   ! temperature in degree Celsius
+
+  REAL(r_size),PARAMETER :: ADD_OFFSET_K2C = -273.15_r_size
+
+  tc = tf + ADD_OFFSET_K2C
+
+END FUNCTION
 
 END MODULE read_avhrr_pathfinder

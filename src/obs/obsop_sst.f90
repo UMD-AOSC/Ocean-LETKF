@@ -40,6 +40,9 @@ PROGRAM obsop_sst
   USE vars_obs
   USE common_obs_oceanmodel
   USE read_avhrr_pathfinder,     ONLY: read_avhrr_pathfinder_nc, obs_data
+#ifdef DYNAMIC
+  USE input_nml_oceanmodel,      ONLY: read_input_namelist
+#endif
 
   IMPLICIT NONE
 
@@ -118,6 +121,9 @@ PROGRAM obsop_sst
   !-----------------------------------------------------------------------------
   ! Initialize the common_oceanmodel module, and process command line options
   !-----------------------------------------------------------------------------
+#ifdef DYNAMIC
+  CALL read_input_namelist
+#endif
   CALL set_common_oceanmodel
   CALL process_command_line !(get: -obsin <obsinfile> -gues <guesfile> -obsout <obsoutfile>)
 
@@ -262,7 +268,9 @@ PROGRAM obsop_sst
     !---------------------------------------------------------------------------
     ! Convert the physical coordinate to model grid coordinate (note: real, not integer)
     !---------------------------------------------------------------------------
+    PRINT*, "IN: n, rlon, rlat=", n, rlon(n), rlat(n) ! CDA
     CALL phys2ijk(elem(n),rlon(n),rlat(n),rlev(n),ri,rj,rk) !(OCEAN)
+    PRINT*, "OUT: n, rlon, rlat=", n, rlon(n), rlat(n) ! CDA
    
     !---------------------------------------------------------------------------
     ! Filter in the tripolar region until localization is examined in the arctic !(ISSUE)
