@@ -32,6 +32,16 @@ jobs:
            rm -rf test_l2_sss
            ls -al
 
+    - name: "check: get_l3_smap_jpl.py"
+      run: |
+           cd ${{github.workspace}}/utils/obs_proc/level-3
+           pwd
+           PYTHONPATH=../../pycommon ./get_l3_smap_jpl.py --start_date 20220101 --end_date 20220102 --outdir ./ --topdir_name test_l3_sss --skip_remote_check --verbose --log
+           ls -al 
+           ls -al ./test_l3_sss/2022/202201/20220101/
+           rm -rf test_l3_sss
+           ls -al
+ 
     - name: "check: get_l2p_ghrsst_geostationary.py"
       run: |
            cd ${{github.workspace}}/utils/obs_proc/level-2

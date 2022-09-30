@@ -10,6 +10,9 @@ if (SOLO_BUILD) # build ocean-letkf with local libs. Most users should use this
     # find MPI libs
     find_package(MPI COMPONENTS Fortran REQUIRED)
 
+    # find HDF5 libs
+    find_package(HDF5 COMPONENTS Fortran REQUIRED)
+
     # find NetCDF Fortran libs
     ## download additional CMakeModules for NetCDF if FindNetCDF.cmake is not found.
     ## this is done only once
