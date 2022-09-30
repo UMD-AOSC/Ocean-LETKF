@@ -33,6 +33,7 @@ CDIR=`pwd`
 CONFIGDIR=../config
 source $CONFIGDIR/machine.sh
 source $CONFIGDIR/$MACHINE.fortran.sh
+source $CONFIGDIR/$MACHINE.netcdf.sh
 source $CONFIGDIR/$MACHINE.mpi.sh
 
 # Model name:
@@ -55,6 +56,9 @@ rm -f $BDIR/*.mod
 rm -f $BDIR/*.dat
 
 sh $CDIR/lnkcommon_obsop.sh $model $CDIR/../
+
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $NETCDF_INC m_ncio.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $NETCDF_INC w3movdat_full.f
 
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90

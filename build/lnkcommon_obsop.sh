@@ -61,13 +61,11 @@ cp $OBSDIR/read_ice_txt.f90 ./
 cp $OBSDIR/obsop_icefrac.f90 ./
 
 IODIR=$root/support/io
-if [ "${model}" = "mom6" ]; then
-   cp $OBSDIR/read_geostationary.f90 ./
-   cp $OBSDIR/obsop_sst_geostationary.f90 ./
-   cp $OBSDIR/w3movdat_full.f ./
-   cp $IODIR/m_ncio.f90 ./
-   cp $IODIR/*.f90.inc ./
-fi
+cp $OBSDIR/read_geostationary.f90 ./
+cp $OBSDIR/obsop_sst_geostationary.f90 ./
+cp $OBSDIR/w3movdat_full.f ./
+cp $IODIR/m_ncio.f90 ./
+cp $IODIR/*.f90.inc ./
 
 
 if [ "${model}" = "hycom" ]; then
