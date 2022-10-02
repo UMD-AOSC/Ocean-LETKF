@@ -30,6 +30,9 @@ set (SRCS
   ../support/io/m_ncio.f90
   ../support/io/nc_rdatt.f90.inc
   ../support/io/nc_rdvar.f90.inc
+  ../support/io/m_h5io.f90
+  ../support/io/h5_rdatt.f90.inc
+  ../support/io/h5_rdvar.f90.inc
 #--
 # from letkf/
   letkf/params_letkf.f90
@@ -55,6 +58,7 @@ set (SRCS
   obs/read_argo.f90
   obs/read_avhrr_pathfinder.f90
   obs/read_geostationary.f90
+  obs/read_smap.f90
   obs/read_aviso_adt.f90
   obs/read_ice_txt.f90
   obs/gsw_pot_to_insitu.f90
@@ -65,9 +69,9 @@ set (SRCS
 
 add_library(OCN.letkf ${SRCS})
 if (${SOLO_BUILD})
-    set (OCNLETKF_LD_LIBS NetCDF::NetCDF_Fortran MPI::MPI_Fortran)
+    set (OCNLETKF_LD_LIBS NetCDF::NetCDF_Fortran MPI::MPI_Fortran HDF5::HDF5)
 else()
-    set (OCNLETKF_LD_LIBS NetCDF::NetCDF_Fortran MPI::MPI_Fortran Threads::Threads)
+    set (OCNLETKF_LD_LIBS NetCDF::NetCDF_Fortran MPI::MPI_Fortran HDF5::HDF5 Threads::Threads)
 endif()
 target_link_libraries(OCN.letkf PUBLIC ${OCNLETKF_LD_LIBS})
 set_target_properties (OCN.letkf PROPERTIES Fortran_PREPROCESS ON) # Need to preprocess .f90 files for ifdef on next line
@@ -85,13 +89,14 @@ set(operators
   adt
   sst
   sst_geostationary
+  sss
   tprof
   sprof
   icefrac
   )
 foreach(operator ${operators})
   add_executable(OCN.obsOp_${MODEL}.${operator}.x obs/obsop_${operator}.f90)
-  target_link_libraries(OCN.obsOp_${MODEL}.${operator}.x PRIVATE OCN.letkf NetCDF::NetCDF_Fortran)
+  target_link_libraries(OCN.obsOp_${MODEL}.${operator}.x PRIVATE OCN.letkf NetCDF::NetCDF_Fortran HDF5::HDF5)
   set_target_properties (OCN.obsOp_${MODEL}.${operator}.x  PROPERTIES Fortran_PREPROCESS ON) 
   target_compile_definitions(OCN.obsOp_${MODEL}.${operator}.x PRIVATE DYNAMIC)
   install(TARGETS OCN.obsOp_${MODEL}.${operator}.x)
