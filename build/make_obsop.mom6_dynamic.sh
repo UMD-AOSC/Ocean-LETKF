@@ -67,15 +67,9 @@ rm -f $BDIR/*.dat
 
 sh $CDIR/lnkcommon_obsop.sh $model $CDIR/../
 
-#--
-# F90GIO lib
-#--
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $NETCDF_INC m_ncio.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $H5_INC     m_h5io.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG  w3movdat_full.f
-
-
-
 
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90
@@ -102,10 +96,11 @@ $F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG input_nml_${model}.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_oceanographic_toolbox.f90
 $F90 $OMP $F90_OPT $F90_DEBUG $F90_OBJECT_FLAG gsw_pot_to_insitu.f90
 #--
-$F90 $OMP $F90_OPT obsop_tprof.f90 -o ${PGM}.tprof.x *.o $NETCDF_LIB  $H5_LIB
-$F90 $OMP $F90_OPT obsop_sprof.f90 -o ${PGM}.sprof.x *.o $NETCDF_LIB  $H5_LIB
-$F90 $OMP $F90_OPT obsop_adt.f90   -o ${PGM}.adt.x   *.o $NETCDF_LIB  $H5_LIB
-$F90 $OMP $F90_OPT obsop_sst.f90   -o ${PGM}.sst.x   *.o $NETCDF_LIB  $H5_LIB
+
+$F90 $OMP $F90_OPT $F90_FPP obsop_tprof.f90 -o ${PGM}.tprof.x *.o $NETCDF_LIB  $H5_LIB
+$F90 $OMP $F90_OPT $F90_FPP obsop_sprof.f90 -o ${PGM}.sprof.x *.o $NETCDF_LIB  $H5_LIB
+$F90 $OMP $F90_OPT $F90_FPP obsop_adt.f90   -o ${PGM}.adt.x   *.o $NETCDF_LIB  $H5_LIB
+$F90 $OMP $F90_OPT $F90_FPP obsop_sst.f90   -o ${PGM}.sst.x   *.o $NETCDF_LIB  $H5_LIB
 
 $F90 $OMP $F90_OPT $F90_FPP obsop_sst_geostationary.f90   -o ${PGM}.sst_geostationary.x   *.o $NETCDF_LIB $H5_LIB
 $F90 $OMP $F90_OPT $F90_FPP obsop_sss.f90   -o ${PGM}.sss.x   *.o $NETCDF_LIB $H5_LIB

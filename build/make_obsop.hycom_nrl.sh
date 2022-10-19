@@ -33,6 +33,7 @@ CDIR=`pwd`
 CONFIGDIR=../config
 source $CONFIGDIR/machine.sh
 source $CONFIGDIR/$MACHINE.fortran.sh
+source $CONFIGDIR/$MACHINE.netcdf.sh
 source $CONFIGDIR/$MACHINE.mpi.sh
 
 # Model name:
@@ -56,6 +57,9 @@ rm -f $BDIR/*.dat
 
 sh $CDIR/lnkcommon_obsop.sh $model $CDIR/../
 
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $NETCDF_INC m_ncio.f90
+$F90 $OMP $F90_OPT $F90_DEBUG $F90_FPP $F90_OBJECT_FLAG $NETCDF_INC w3movdat_full.f
+
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG SFMT.f90
 $F90 $OMP $F90_OPT $INLINE $F90_OBJECT_FLAG common.f90
 $F90 $OMP $F90_OPT $F90_FPP $F90_OBJECT_FLAG params_model.f90
@@ -73,9 +77,9 @@ $F90 $OMP $F90_OPT $F90_OBJECT_FLAG compute_profile_error.f90
 $F90 $OMP $F90_OPT $F90_OBJECT_FLAG $NETCDF_INC read_ncoda_prep.f90
 
 #--
-$F90 $OMP $F90_OPT obsop_ncoda_3d.f90 -o ${PGM}.ncoda_3d.x *.o $NETCDF_LIB $BUFR_LIB
+$F90 $OMP $F90_OPT  obsop_ncoda_3d.f90 -o ${PGM}.ncoda_3d.x *.o $NETCDF_LIB $BUFR_LIB
 rm -f obsop_ncoda_3d.o
-$F90 $OMP $F90_OPT obsop_ncoda_ssh.f90 -o ${PGM}.ncoda_ssh.x *.o $NETCDF_LIB $BUFR_LIB
+$F90 $OMP $F90_OPT  obsop_ncoda_ssh.f90 -o ${PGM}.ncoda_ssh.x *.o $NETCDF_LIB $BUFR_LIB
 
 rm -f *.mod
 rm -f *.o

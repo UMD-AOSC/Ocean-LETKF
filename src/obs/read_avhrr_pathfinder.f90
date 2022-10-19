@@ -59,9 +59,8 @@ SUBROUTINE read_avhrr_pathfinder_nc(infile,typ,min_quality_level,obs_data,nobs)
 !===============================================================================
 ! Read the argo profile data
 !===============================================================================
-
-USE netcdf
-
+  USE m_ncio,     ONLY: nc_get_fid, nc_close_fid, nc_rddim, nc_rdvar2d, nc_rdvar1d, &
+                        nc_rdatt, nc_fndvar
 IMPLICIT NONE
 
 CHARACTER(*), INTENT(IN) :: infile
@@ -75,9 +74,8 @@ REAL(r_size) :: scale_error = 2.0 !STEVE: scale the sst_dtime as an estimate of 
 REAL(r_sngl) :: err
 INTEGER :: i,j,k,n
 INTEGER :: cnt
-INTEGER :: ncid,istat,varid,dimid1,dimid2
-CHARACTER(NF90_MAX_NAME) :: dimname
-INTEGER :: time
+INTEGER :: ncid,istat,varid
+INTEGER :: time(1)
 REAL(r_size), ALLOCATABLE, DIMENSION(:) :: alon, alat
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: sea_surface_temperature
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: sea_ice_fraction
@@ -85,48 +83,32 @@ REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: dt_analysis
 REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: stde
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: quality_level
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: sst_dtime
+LOGICAL, ALLOCATABLE, DIMENSION(:,:) :: valid
 REAL(r_size) :: val
+REAL(r_size) :: rFillValue
+INTEGER :: iFillValue
 INTEGER :: nlons,nlats
 REAL(r_size) :: hour
-LOGICAL :: dodebug=.false.
+REAL(r_size) :: add_offset, scale_factor
+INTEGER :: obsdate(8), refdate(8)
+REAL :: tdelta(5)
+LOGICAL :: dodebug=.true.
 
 !-------------------------------------------------------------------------------
 ! Open netcdf file
 !-------------------------------------------------------------------------------
-istat = NF90_OPEN(infile,NF90_NOWRITE,ncid)
-if (istat /= NF90_NOERR) then
-  WRITE(6,'(A)') 'netCDF OPEN ERROR on ', infile
-  STOP
-endif
+CALL nc_get_fid(trim(infile), ncid)
 
 !-------------------------------------------------------------------------------
 ! Read the dimension of the lon/lat grid
 !-------------------------------------------------------------------------------
-istat = NF90_INQ_DIMID(ncid,'lon',dimid1)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_DIMID lon failed"
-  STOP
-endif
-istat = NF90_INQUIRE_DIMENSION(ncid,dimid1,dimname,nlons)
-if (istat /= NF90_NOERR) then
-  print *, "lon NF90_INQUIRE_DIMENSION failed"
-  STOP
-endif
+CALL nc_rddim(ncid, "lon", nlons)
 print *, "**************************"
 print *, "lon dimension is = ", nlons
 print *, "**************************"
 
 !-------------------------------------------------------------------------------
-istat = NF90_INQ_DIMID(ncid,'lat',dimid2)
-if (istat /= NF90_NOERR) then 
-  print *, "NF90_INQ_DIMID lat failed"
-  STOP
-endif
-istat = NF90_INQUIRE_DIMENSION(ncid,dimid2,dimname,nlats)
-if (istat /= NF90_NOERR) then
-  print *, "lat NF90_INQUIRE_DIMENSION failed"
-  STOP
-endif
+CALL nc_rddim(ncid, "lat", nlats)
 print *, "**************************"
 print *, "lat dimension is = ", nlats
 print *, "**************************"
@@ -135,57 +117,36 @@ print *, "**************************"
 ! Read the longitude coordinates
 !-------------------------------------------------------------------------------
 ALLOCATE(alon(nlons))
-istat = NF90_INQ_VARID(ncid,'lon',varid)  
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID lon failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,alon)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR lon failed"
-  STOP
-endif
+CALL nc_rdvar1d(ncid, "lon", alon)
+print*, "[msg] read_avhrr_pathfinder_nc::lon: min, max=", &
+        minval(alon), maxval(alon)
 
 !-------------------------------------------------------------------------------
 ! Read the latitude coordinates
 !-------------------------------------------------------------------------------
 ALLOCATE(alat(nlats))
-istat = NF90_INQ_VARID(ncid,'lat',varid)   
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID lat failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,alat)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR lat failed"
-  STOP
-endif
+CALL nc_rdvar1d(ncid, "lat", alat)
+print*, "[msg] read_avhrr_pathfinder_nc::lat: min, max=", &
+        minval(alat), maxval(alat)
+
+!-------------------------------------------------------------------------------
+! allocate vars to filter out grids with missing values for any vars
+!-------------------------------------------------------------------------------
+ALLOCATE(valid(nlons,nlats))
+valid = .true.
 
 !-------------------------------------------------------------------------------
 ! Read the base time and time offset
 !-------------------------------------------------------------------------------
-istat = NF90_INQ_VARID(ncid,'time',varid)   
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID time failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,time)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR time failed"
-  STOP
-endif
+CALL nc_rdvar1d(ncid, "time", time)
+refdate = [1981, 1, 1, 0, 0, 0, 0, 0] ! YYYY/MON/DAY/TZONE/HR/MIN/SEC/MSEC
+tdelta  = [0.0, 0.0, 0.0, REAL(time(1)), 0.0] ! DAY/HR/MIN/SEC/MSEC
+CALL w3movdat(tdelta, refdate, obsdate)
+print*, "[msg] read_avhrr_pathfinder_nc::obs time=", obsdate(1:3), obsdate(5:7)
 
 ALLOCATE(sst_dtime(nlons,nlats))
-istat = NF90_INQ_VARID(ncid,'sst_dtime',varid)   
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID sst_dtime failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,sst_dtime)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR sst_dtime failed"
-  STOP
-endif
+CALL nc_rdvar2d(ncid, "sst_dtime", sst_dtime)
+CALL nc_rdatt(  ncid, "sst_dtime", "_FillValue", iFillValue)
 
 !-------------------------------------------------------------------------------
 ! Read the Quality Key
@@ -202,78 +163,66 @@ endif
 ! \n The original Pathfinder quality level is recorded in the optional variable pathfinder_quality_level."
 !-------------------------------------------------------------------------------
 ALLOCATE(quality_level(nlons,nlats))
-istat = NF90_INQ_VARID(ncid,'quality_level',varid)   
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID quality_level failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,quality_level)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR quality_level failed"
-  STOP
-else
-  print *, "quality_level(1,1) = ", quality_level(1,1)
-endif
+CALL nc_rdvar2d(ncid, "quality_level", quality_level)
+CALL nc_rdatt(  ncid, "quality_level", "_FillValue", iFillValue)
+where (quality_level == iFillValue)
+    valid = .false.
+end where
+print*, "[msg] read_avhrr_pathfinder_nc::quality_level: min, max=", &
+        minval(quality_level,mask=valid), maxval(quality_level,mask=valid)
 
 !-------------------------------------------------------------------------------
 ! Read the change from yesterday, as a proxy for error estimate
 !-------------------------------------------------------------------------------
 ALLOCATE(dt_analysis(nlons,nlats))
-istat = NF90_INQ_VARID(ncid,'dt_analysis',varid)   
-if (istat /= NF90_NOERR) then
-  print *, "NF90_INQ_VARID dt_analysis failed"
-  STOP
-endif
-istat = NF90_GET_VAR(ncid,varid,dt_analysis)
-if (istat /= NF90_NOERR) then
-  print *, "NF90_GET_VAR dt_analysis failed"
-  STOP
-else
-  print *, "dt_analysis(1,1) = ", dt_analysis(1,1)
-endif
-
-!STEVE: read these attributes from file:
-! dt_analysis:scale_factor = 0.1 ;
-dt_analysis = dt_analysis * 0.1
+CALL nc_rdvar2d(ncid, "dt_analysis", dt_analysis)
+CALL nc_rdatt(  ncid, "dt_analysis", "scale_factor", scale_factor)
+CALL nc_rdatt(  ncid, "dt_analysis", "_FillValue", iFillValue)
+dt_analysis = dt_analysis * scale_factor
+where (dt_analysis == iFillValue)
+    valid = .false.
+end where
+print*, "[msg] read_avhrr_pathfinder::dt_analysis: min, max=", &
+        minval(dt_analysis,mask=valid), maxval(dt_analysis,mask=valid)
 
 !-------------------------------------------------------------------------------
 ! Read the observed SST data
 !-------------------------------------------------------------------------------
 if (typ .eq. id_sst_obs) then
   ALLOCATE(sea_surface_temperature(nlons,nlats))
-  istat = NF90_INQ_VARID(ncid,'sea_surface_temperature',varid)   
-  if (istat /= NF90_NOERR) then
-    print *, "NF90_INQ_VARID sea_surface_temperature failed"
-    STOP
-  endif
-  istat = NF90_GET_VAR(ncid,varid,sea_surface_temperature)
-  if (dodebug) print *, "sea_surface_temperature(1,1) = ", sea_surface_temperature(1,1)
-
-  !STEVE: read these attributes from file:
-  ! sea_surface_temperature:add_offset = 273.15 ;
-  ! sea_surface_temperature:scale_factor = 0.01 ;
-  ! sea_surface_temperature:_FillValue = -32768s ;
-  sea_surface_temperature = sea_surface_temperature + 273.15
-  sea_surface_temperature = sea_surface_temperature * 0.01
+  CALL nc_rdvar2d(ncid, "sea_surface_temperature", sea_surface_temperature)
+  CALL nc_rdatt(  ncid, "sea_surface_temperature", "scale_factor", scale_factor)
+  CALL nc_rdatt(  ncid, "sea_surface_temperature", "add_offset",   add_offset)
+  CALL nc_rdatt(  ncid, "sea_surface_temperature", "_FillValue",   iFillValue)
+  sea_surface_temperature = sea_surface_temperature * scale_factor + add_offset
+  sea_surface_temperature = cvt_temp_K2C(sea_surface_temperature) ! From K to degC, since model state uses degC
+  where (NINT(sea_surface_temperature)==iFillValue)
+       valid = .false.
+  end where
+  print*, "[msg] read_avhrr_pathfinder::sea_surface_temperature: min, max=", &
+           minval(sea_surface_temperature,mask=valid), &
+           maxval(sea_surface_temperature,mask=valid)
   
 elseif (typ .eq. id_sic_obs) then ! Sea ice concentration (fraction)
   ALLOCATE(sea_ice_fraction(nlons,nlats))
-  istat = NF90_INQ_VARID(ncid,'sea_ice_fraction',varid)   
-  if (istat /= NF90_NOERR) then
-    print *, "NF90_INQ_VARID sea_ice_fraction failed"
-    STOP
-  endif
-  istat = NF90_GET_VAR(ncid,varid,sea_ice_fraction)
-  if (dodebug) print *, "sea_ice_fraction(1,1) = ", sea_ice_fraction(1,1)
+  CALL nc_rdvar2d(ncid, "sea_ice_fraction", sea_ice_fraction)
+  CALL nc_rdatt(  ncid, "sea_ice_fraction", "scale_factor", scale_factor)
+  CALL nc_rdatt(  ncid, "sea_ice_fraction", "add_offset",   add_offset)
+  CALL nc_rdatt(  ncid, "sea_ice_fraction", "_FillValue",   iFillValue)
+  sea_ice_fraction = sea_ice_fraction * scale_factor + add_offset
+  where (NINT(sea_ice_fraction)==iFillValue)
+        valid = .false.
+  end where
+  print*, "[msg] read_avhrr_pathfinder::sea_ice_fraction: min, max=", &
+           minval(sea_ice_fraction,mask=valid), &
+           maxval(sea_ice_fraction,mask=valid)
 endif
-if (istat /= NF90_NOERR) STOP
 
 !-------------------------------------------------------------------------------
 ! Close the netcdf file
 !-------------------------------------------------------------------------------
 print *, "Finished reading netCDF file, closing..."
-istat = NF90_CLOSE(ncid)
-if (istat /= NF90_NOERR) STOP
+CALL nc_close_fid(ncid)
 
 !-------------------------------------------------------------------------------
 ! STEVE: need to compute the standard error by some logical means in the calling function
@@ -300,7 +249,7 @@ do j=1,nlats
     if (quality_level(i,j) >= min_quality_level) then
       n = n+1
       hour = ( sst_dtime(i,j) ) / 3600.0d0
-      if (dodebug) print *, "n,lon,lat,hour,val,err,qkey = ", n,alon(i),alat(j),hour,val,err,quality_level(i,j)
+      !if (dodebug) print *, "n,lon,lat,hour,val,err,qkey = ", n,alon(i),alat(j),hour,val,err,quality_level(i,j)
       obs_data(n)%typ = typ
       obs_data(n)%x_grd(1) = alon(i)
       obs_data(n)%x_grd(2) = alat(j)
@@ -312,8 +261,37 @@ do j=1,nlats
   enddo
 enddo
 nobs = n
+CALL inspect_obs_data(obs_data(1:nobs))
 if (dodebug) print *, "nobs = ", nobs
 
 END SUBROUTINE read_avhrr_pathfinder_nc
+
+SUBROUTINE inspect_obs_data(obs_data)
+  IMPLICIT NONE
+  TYPE(avhrr_pathfinder_data),INTENT(IN) :: obs_data(:)
+
+  print*, "[msg] read_avhrr_pathfinder_nc::info"
+  print*, "                nobs=", size(obs_data)
+  print*, "  x_grd(1): min, max=", minval(obs_data(:)%x_grd(1)), maxval(obs_data(:)%x_grd(1))
+  print*, "  x_grd(2): min, max=", minval(obs_data(:)%x_grd(2)), maxval(obs_data(:)%x_grd(2))
+  print*, "      hour: min, max=", minval(obs_data(:)%hour), maxval(obs_data(:)%hour)
+  print*, "     value: min, max=", minval(obs_data(:)%value), maxval(obs_data(:)%value)
+  print*, "      oerr: min, max=", minval(obs_data(:)%oerr), maxval(obs_data(:)%oerr)
+  print*, "      qkey: min, max=", minval(obs_data(:)%qkey), maxval(obs_data(:)%qkey)
+
+END SUBROUTINE
+
+
+ELEMENTAL FUNCTION cvt_temp_K2C(tf) RESULT (tc)
+  IMPLICIT NONE
+
+  REAL(r_size),INTENT(IN) :: tf   ! temperature in Kelvin
+  REAL(r_size)            :: tc   ! temperature in degree Celsius
+
+  REAL(r_size),PARAMETER :: ADD_OFFSET_K2C = -273.15_r_size
+
+  tc = tf + ADD_OFFSET_K2C
+
+END FUNCTION
 
 END MODULE read_avhrr_pathfinder

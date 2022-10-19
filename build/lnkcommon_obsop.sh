@@ -44,40 +44,37 @@ fi
 
 
 OBSDIR=$root/src/obs
+cp $OBSDIR/w3movdat_full.f ./
+
 cp $OBSDIR/params_obs.f90 ./
 cp $OBSDIR/compute_profile_error.f90 ./
 cp $OBSDIR/read_argo.f90 ./
 cp $OBSDIR/read_avhrr_pathfinder.f90 ./
 cp $OBSDIR/read_aviso_adt.f90 ./
 cp $OBSDIR/read_bufr.f90 ./
+cp $OBSDIR/read_geostationary.f90 ./
+cp $OBSDIR/read_smap.f90 ./
 cp $OBSDIR/obsop_bufr_tprof.f90 ./
 cp $OBSDIR/obsop_bufr_sprof.f90 ./
 cp $OBSDIR/obsop_tprof.f90 ./
 cp $OBSDIR/obsop_sprof.f90 ./
 cp $OBSDIR/obsop_sst.f90 ./
+cp $OBSDIR/obsop_sst_geostationary.f90 ./
+cp $OBSDIR/obsop_sss.f90 ./
 cp $OBSDIR/obsop_adt.f90 ./
 cp $OBSDIR/gsw_pot_to_insitu.f90 ./
 cp $OBSDIR/read_ice_txt.f90 ./
 cp $OBSDIR/obsop_icefrac.f90 ./
 
+
 IODIR=$root/support/io
-if [ "${model}" = "mom6" ]; then
-   # io utils
-   cp $IODIR/m_ncio.f90 ./
-   cp $IODIR/nc_*.f90.inc ./
-   cp $IODIR/m_h5io.f90 ./
-   cp $IODIR/h5_*.f90.inc ./
+cp $IODIR/m_ncio.f90 ./
+cp $IODIR/*.f90.inc ./
+cp $IODIR/m_h5io.f90 ./
+cp $IODIR/h5_*.f90.inc ./
+   
+      
 
-   # obsop utils
-   cp $OBSDIR/w3movdat_full.f ./
-
-   # obsop
-   cp $OBSDIR/read_geostationary.f90 ./
-   cp $OBSDIR/obsop_sst_geostationary.f90 ./
-
-   cp $OBSDIR/read_smap.f90 ./
-   cp $OBSDIR/obsop_sss.f90 ./
-fi
 
 
 if [ "${model}" = "hycom" ]; then
