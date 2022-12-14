@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 import argparse
 import os, sys
 import numpy as np
@@ -18,7 +18,7 @@ def parseCommandLine():
     print(args)
     return args
 
-def write_nc_file(fnout, lat1d, lon1d, v2d_list, month_list, v2d_name="unfilled"):
+def write_nc_file(fnout, lat1d, lon1d, v2d_list, month_list, v2d_name="SALT"):
     print("write out netcdf file: {}".format(fnout))
     if os.path.exists(fnout):
         raise Exception("fnout already exists at: {}".format(fnout))
@@ -63,7 +63,7 @@ def main(args):
             raise Exception("WOA monthly file does not exist at: {}".format(fin_path))
             sys.exit(2)
         f = Dataset(fin_path)
-        sss_grd_in = np.squeeze(f.variables['s_an'][:])[0,:,:] # use the 1st layer
+        sss_grd_in = np.squeeze(f.variables['s_an'][:])[2,:,:] # use the 10m depth salinity
         if month == args.start_month:
             lat1d_grd_in = f.variables['lat'][:]
             lon1d_grd_in = f.variables['lon'][:]
