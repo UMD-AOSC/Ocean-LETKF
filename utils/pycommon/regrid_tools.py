@@ -1,7 +1,6 @@
 import numpy as np
 from numba import jit
 
-#
 @jit(nopython=True)
 def fill_nan_grds_aux(v2d, aux2d, radius):
     nlat, nlon = v2d.shape
