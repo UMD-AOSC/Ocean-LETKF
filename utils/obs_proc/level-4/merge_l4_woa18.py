@@ -106,6 +106,7 @@ def woa_month_to_day(woa_12mn, date):
     ndays_total = calendar.monthrange(date.year,date.month)[1]
     wts_prev = 1.0 - (date.day-1)/ndays_total
     wts_next = 1.0 - wts_prev
+    print("odate, wts_prev, wts_next=", date, wts_prev, wts_next)
 
     woa_daily = wts_prev*woa_12mn[imn_prev,:,:] + wts_next*woa_12mn[imn_next,:,:]
 
