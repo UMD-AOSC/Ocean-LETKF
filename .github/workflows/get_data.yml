@@ -16,6 +16,7 @@ jobs:
 
     - name: "install packages"
       run: |
+           sudo apt-get update
            sudo apt install wget
 
     - name: "check version and envs"
@@ -51,4 +52,24 @@ jobs:
            ls -al ./test_l2p_sst/ABI_G17/2022/202201/20220111/
            ls -al ./test_l2p_sst/ABI_G17/nav
            rm -rf test_l2p_sst
+
+    - name: "check: get_monthly_woa18.py"
+      run: |
+           cd ${{github.workspace}}/utils/obs_proc/woa
+           pwd
+           PYTHONPATH=../../pycommon ./get_monthly_woa18.py test_sal_woa18 --start_month 1 --end_month 2 --res 5 --dvar salinity --verbose
+           PYTHONPATH=../../pycommon ./get_monthly_woa18.py test_temp_woa18 --start_month 1 --end_month 2 --res 5 --dvar temperature --verbose
+           ls -al 
+           ls -al ./test_sal_woa18
+           ls -al ./test_temp_woa18
+
+
+    - name: "check: get_l4_sss_esacci.py"
+      run: |
+           cd ${{github.workspace}}/utils/obs_proc/level-4
+           pwd
+           PYTHONPATH=../../pycommon ./get_l4_sss_esacci.py --topdir_name test_l4sss_esacci --start_date 20180101 --end_date 20180102 --log --verbose
+           ls -al 
+           ls -al ./test_l4sss_esacci/2018/201801/20180101
+ 
  
