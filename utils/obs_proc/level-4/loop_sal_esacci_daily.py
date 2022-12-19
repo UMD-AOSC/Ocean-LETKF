@@ -22,7 +22,7 @@ while cdate <= edate:
     l4_sss_path = l4_sss_daily_dir + "/" + l4_sss_daily_file_name
 
     cmd = \
-    f""" time PYTHONPATH=../../pycommon ./merge_l4_woa18.py \
+    f""" time PYTHONPATH=../../pycommon ./merge_sal_esacci_woa18.py \
         --regridder_l4_to_woa_path wts_l4sss_to_woa18.nc \
         --regridder_woa_to_mom_path wts_woa18_to_mom_p25.nc \
         --woa_grid_path ../../test_data/woa18_decav_s01_04.nc \
