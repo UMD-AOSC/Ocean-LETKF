@@ -1,6 +1,53 @@
 import numpy as np
 from numba import jit
 
+@jit(nopython=True)
+def fill_nan_grds_aux(v2d, aux2d, radius):
+    nlat, nlon = v2d.shape
+    wk2d = v2d.copy()
+
+    n_replaced = 0
+
+    for j in range(0,nlat):
+        jpn = j + radius
+        jmn = j - radius
+
+        for i in range(0,nlon):
+            ipn = i + radius
+            imn = i - radius
+
+            if not np.isnan( v2d[j,i] ):
+                continue
+
+            js = jmn if jmn>=0 else 0
+            je = jpn if jpn<nlat else nlat-1
+            n_total = 0
+            n_nan = 0
+            for j2 in range(js,je+1):
+                for i2 in range(imn,ipn+1):
+                    n_total += 1
+
+                    if i2>=0 and i2<nlon:
+                        i2_prdc = i2
+                    elif i2<0:
+                        i2_prdc = nlon + i2
+                    elif i2>=nlon:
+                        i2_prdc = i2 - nlon
+                    else:
+                        raise Exception("ERROR: fill_nan_grds_aux")
+
+                    if np.isnan(v2d[j2,i2_prdc]):
+                        n_nan += 1
+
+            if n_nan == n_total:
+                wk2d[j,i] = aux2d[j,i]
+                n_replaced += 1
+
+
+    print("n_replaced = ", n_replaced)
+    return wk2d
+
+
 # functions from https://github.com/NCAR/WOA_MOM6/blob/master/fill.py
 # originally written by Gustavo Marques
 @jit(nopython=True)

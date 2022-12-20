@@ -69,7 +69,7 @@ def main(args):
     # load SSS_filled file
     #
     f = Dataset(args.sss_filled_path)
-    sss_filled = f.variables['unfilled'][:]
+    sss_filled = f.variables['SALT'][:]
     print("shape(sss_filled)=",sss_filled.shape, np.min(sss_filled), np.max(sss_filled))
     f.close()
 
