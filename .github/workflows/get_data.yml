@@ -70,6 +70,13 @@ jobs:
            pwd
            PYTHONPATH=../../pycommon ./get_l4_sss_esacci.py --topdir_name test_l4sss_esacci --start_date 20180101 --end_date 20180102 --log --verbose
            ls -al 
-           ls -al ./test_l4sss_esacci/2018/201801/20180101
+           ls -al ./test_l4sss_esacci/2018/201801/20180102
  
+    - name: "check: get_l4_sst_ostia_v1.py"
+      run: |
+           cd ${{github.workspace}}/utils/obs_proc/level-4
+           pwd
+           PYTHONPATH=../../pycommon  ./get_l4_sst_ostia_v1.py --topdir_name test_l4_sst_ostia_v1 --start_date 20190101 --start_date 20180101 --end_date 20180102 --log --verbose
+           ls -al 
+           ls -al ./test_l4_sst_ostia_v1/2018/201801/20180102
  
