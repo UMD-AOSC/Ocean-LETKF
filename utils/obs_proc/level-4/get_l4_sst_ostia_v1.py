@@ -28,7 +28,7 @@ def parseCommandLine():
 
     parser = argparse.ArgumentParser(description=("Script to download Global SST & Sea Ice Analysis, L4 OSTIA, 0.05 deg daily (METOFFICE-GLO-SST-L4-NRT-OBS-SST-V2)"))
     parser.add_argument("--start_date", default="20190101", metavar="YYYYMMDD",required=True, help=("start date"))
-    parser.add_argument("--end_date", default="20190101", metavar="YYYYMMDD", required=False, help=("end date"))
+    parser.add_argument("--end_date", default=None, metavar="YYYYMMDD", required=False, help=("end date"))
     parser.add_argument("--outdir", default="./", required=False, help=("output directory. downloaded data will be stored under outdir/topdir_name/YYYY/YYYYMM/YYYYMMDD"))
     parser.add_argument("--topdir_name", default="l4_sst_ostia_v1", required=False, help=("top subdirectory name under outdir"))
     parser.add_argument("--show", action="store_true", required=False, help=("display all the input arguments w/o running the script"))
