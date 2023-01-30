@@ -51,11 +51,10 @@ def fill_nan_grds_aux(v2d, aux2d, radius):
 # functions from https://github.com/NCAR/WOA_MOM6/blob/master/fill.py
 # originally written by Gustavo Marques
 @jit(nopython=True)
-def iterative_fill_POP_core(var, fillmask, missing_value, tol=1.e-4, ltripole=True):
+def iterative_fill_POP_core(var, fillmask, missing_value, tol=1.e-4, ltripole=True, nitermax = 10000):
 
     done = False
     niter = 0
-    nitermax = 100000
     nlat,nlon = var.shape
 
     work = np.empty((nlat, nlon))
@@ -63,6 +62,7 @@ def iterative_fill_POP_core(var, fillmask, missing_value, tol=1.e-4, ltripole=Tr
         done = True
         niter += 1
         if niter > nitermax:
+            print("[warning]: reach the maximum iteration: ", nitermax)
             break
 
         # assume bottom row is land, so skip it
