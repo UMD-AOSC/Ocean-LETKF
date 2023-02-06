@@ -57,8 +57,6 @@ def parseCommandLine():
     parser = argparse.ArgumentParser(description=(""))
     parser.add_argument("--config_path", required=True, help=(
                 "yaml file for storing all configure files"))
-    parser.add_argument("--restore_template_path", required=True, help=(
-                "yaml file for the restore file template"))
     parser.add_argument("--sst_file_path",required=True,type=str,help=(
                 "original L4 SST data"))
     parser.add_argument("--remapped_file_path", required=True, type=str, help=(
