@@ -1,0 +1,111 @@
+---
+dimensions:
+  time:
+    len_from_file: null
+    unlimited: True
+  i:
+    len_from_file: null
+    unlimited: False
+  j:
+    len_from_file: null
+    unlimited: False
+  IQ:
+    len_from_file: null
+    unlimited: False
+  JQ: 
+    len_from_file: null
+    unlimited: False
+
+variables:
+  i:
+   type: "f4"
+   dims: ["i",]
+   _FillValue: .nan
+   atts:
+         long_name: "Grid position along first dimension"
+         cartesian_axis: "X"
+  j:
+   type: "f4"
+   dims: ["j",]
+   _FillValue: .nan
+   atts:
+         long_name: "Grid position along second dimension"
+         cartesian_axis: "Y"
+  lon:
+   type: "f4"
+   dims: ["j","i"]
+   _FillValue: .nan
+   atts:
+         long_name: "Longitude of cell centers"
+         standard_name: "longitude"
+         units: "degrees_east"
+  lat:
+   type: "f4"
+   dims: ["j","i"]
+   _FillValue: .nan
+   atts:
+         long_name: "Latitude of cell centers"
+         standard_name: "latitude"
+         units: "degrees_north"
+  wet:
+    type: "f4"
+    dims: ["j","i"]
+    _FillValue: .nan
+    atts:
+          long_name: "0 if land, 1 if ocean at tracer points"
+          info: "copied from ocean_static.nc->wet"
+  area:
+    type: "f8"
+    dims: ["j","i"]
+    _FillValue: .nan
+    atts:
+          long_name: "Surface area of tracer (T) cells"
+          info: "copied from ocean_static.nc->area_t"
+  IQ:
+   type: "f4"
+   dims: ["IQ",]
+   _FillValue: .nan
+   atts:
+         long_name: "Grid position along first dimension"
+  JQ:
+   type: "f4"
+   dims: ["JQ",]
+   _FillValue: .nan
+   atts:
+         long_name: "Grid position along second dimension"
+  lon_crnr:
+   type: "f4"
+   dims: ["JQ","IQ"]
+   _FillValue: .nan
+   atts:
+         long_name: "Longitude of mesh nodes"
+         standard_name: "longitude"
+         units: "degrees_east"
+  lat_crnr:
+    type: "f4"
+    dims: ["JQ","IQ"]
+    _FillValue: .nan
+    atts:
+         long_name: "Latitude of mesh nodes"
+         standard_name: "latitude"
+         units: "degrees_north"
+  time:
+    type: "f4"
+    dims: ["time",]
+    _FillValue: .nan
+    atts:
+          long_name: "Hour of year"
+          cartesian_axis: "T"
+          modulo: " "
+          calendar_type: "gregorian"
+          calendar: "gregorian"
+          units: "hours since 1900-01-01 00:00:00"
+  SALT:
+    type: "f4"
+    dims: ["time","j","i"]
+    _FillValue: -9999.9
+    atts:
+          mesh_coordinates: "lon_crnr lat_crnr"
+          long_name: "Salinity, modified 10m average"
+          units: "psu"
+          coordinates: "lon lat"

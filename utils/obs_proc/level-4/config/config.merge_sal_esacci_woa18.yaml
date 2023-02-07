@@ -1,0 +1,35 @@
+regrid:
+    ocean_static_path: "TEST_DATA/mom_input/ocean_static.nc"
+    mom_lat_var: "geolat"
+    mom_lon_var: "geolon"
+    woa_grid_path: "../../test_data/woa18_decav_s01_04.nc"
+    woa_lat_var: "lat"
+    woa_lon_var: "lon"
+    regridder_file_path: "TEST_DATA/wts/wts_woa_to_mom_p25_v2.nc"
+
+regrid2:
+    woa_grid_path: "../../test_data/woa18_decav_s01_04.nc"
+    woa_lat_var: "lat"
+    woa_lon_var: "lon"
+    l4_grid_path: "TEST_DATA/l4_sss_esacci/2015/201501/20150101/ESACCI-SEASURFACESALINITY-L4-SSS-MERGED_OI_7DAY_RUNNINGMEAN_DAILY_25km-20150101-fv3.21.nc"
+    l4_lat_var: "lat"
+    l4_lon_var: "lon"
+    regridder_file_path: "TEST_DATA/wts/wts_l4sss_to_woa18_v2.nc"
+    
+
+merge:
+    restore_template_path:  "fix/S_restore_file.yaml"
+    ocean_static_path: "TEST_DATA/mom_input/ocean_static.nc"
+    ocean_hgrid_path: "TEST_DATA/mom_input/ocean_hgrid.nc"
+    mom_lat_var: "geolat"
+    mom_lon_var: "geolon"
+    mom_wet_var: "wet"
+    woa_grid_path: "../woa/filled_SALT_s01_e12.nc"
+    woa_lat_var: "lat"
+    woa_lon_var: "lon"
+    l4_lat_var: "lat"
+    l4_lon_var: "lon"
+    sss_var_renamed: "SALT"
+    new_time_units: "hours since 1900-01-01 00:00:00" # need to be the same as the restore file tpl
+    regridder_l4_to_woa_path: "TEST_DATA/wts/wts_l4sss_to_woa18_v2.nc" 
+    regridder_woa_to_mom_path: "TEST_DATA/wts/wts_woa_to_mom_p25_v2.nc"
