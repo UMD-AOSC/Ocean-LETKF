@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-import os, sys, argparse, yaml
+import os, sys, argparse
 import numpy as np
 import datetime as dt
 import xesmf as xe
 from netCDF4 import Dataset, num2date
 from regrid_tools import iterative_fill_POP_core
 from mom6_tools import RestoreTemplate, parse_time_units
+from config_tools import Config
 
-class ConfigFill:
+class ConfigFill(Config):
     def __init__(self):
         # static config applied for each processing
         self.regridder_file_path = "xesmf_wts.nc"
@@ -23,35 +24,6 @@ class ConfigFill:
         self.sst_var_renamed = "SST"
         self.new_time_units = "days since 1900-01-01 00:00:00"
 
-    def __str__(self):
-        info=f"""
-        regridder_file_path = {self.regridder_file_path}
-        restore_template_path = {self.restore_template_path}
-        ocean_static_path = {self.ocean_static_path}
-        ocean_hgrid_path = {self.ocean_hgrid_path}
-        mom_lat_var = {self.mom_lat_var}
-        mom_lon_var = {self.mom_lon_var}
-        mom_wet_var = {self.mom_wet_var}
-        sst_lat_var = {self.sst_lat_var}
-        sst_lon_var = {self.sst_lon_var}
-        sst_sst_var = {self.sst_sst_var}
-        sst_var_renamed = {self.sst_var_renamed}
-        new_time_units = {self.new_time_units}
-        """
-        return info
-
-    def read_cfg(self, fnin, namelist="fill"):
-        with open(fnin,"r") as f:
-            self.cfg = yaml.safe_load(f)
-        
-        for att in self.cfg[namelist].keys(): 
-            if hasattr(self, att):
-               setattr(self, att, self.cfg[namelist][att])
-            else:
-               raise RuntimeError("ConfigFill does not have attribute ({})".format(att)) 
-               exit(11)
-        print(self)
-
 def parseCommandLine():
     
     parser = argparse.ArgumentParser(description=(""))
@@ -59,7 +31,7 @@ def parseCommandLine():
                 "yaml file for storing all configure files"))
     parser.add_argument("--sst_file_path",required=True,type=str,help=(
                 "original L4 SST data"))
-    parser.add_argument("--remapped_file_path", required=True, type=str, help=(
+    parser.add_argument("--output_file_path", required=True, type=str, help=(
                 "output SST remapped to MOM6 tripolar grids"))
     parser.add_argument("--debug_file_path", required=False, default=None, help=(
                 "file with addtional debug info"))
@@ -203,7 +175,7 @@ def main(args):
 
     input_vars[cfg.sst_var_renamed] = np.expand_dims(sst_remapped,axis=0)
     input_vars['time'] = np.array([new_dtime])
-    tpl.create_restore(args.remapped_file_path, input_dims, input_vars)
+    tpl.create_restore(args.output_file_path, input_dims, input_vars)
 
     #
     # write out the daily original/filled/remapped sst

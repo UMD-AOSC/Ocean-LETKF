@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
 import datetime as dt
-import calendar, argparse, os, sys, yaml
+import calendar, argparse, os, sys
 import numpy as np
 import xesmf as xe
 from netCDF4 import Dataset, num2date
 from regrid_tools import fill_nan_grds_aux, iterative_fill_POP_core
 from mom6_tools import RestoreTemplate, parse_time_units
+from config_tools import Config
 
-class ConfigMerge:
+class ConfigMerge(Config):
     def __init__(self):
         # static config applied for each processing
         self.regridder_l4_to_woa_path  = "wts_l4sss_to_woa.nc"
@@ -26,39 +27,6 @@ class ConfigMerge:
         self.l4_lon_var = "lon"
         self.sss_var_renamed = "SALT"
         self.new_time_units = "days since 1900-01-01 00:00:00"
-
-    def __str__(self):
-        info=f"""
-        regridder_l4_to_woa_path = {self.regridder_l4_to_woa_path}
-        regridder_woa_to_mom_path = {self.regridder_woa_to_mom_path}
-        restore_template_path = {self.restore_template_path}
-        ocean_static_path = {self.ocean_static_path}
-        ocean_hgrid_path = {self.ocean_hgrid_path}
-        mom_lat_var = {self.mom_lat_var}
-        mom_lon_var = {self.mom_lon_var}
-        mom_wet_var = {self.mom_wet_var}
-        woa_grid_path = {self.woa_grid_path}
-        woa_lat_var = {self.woa_lat_var}
-        woa_lon_var = {self.woa_lon_var}
-        l4_lat_var  = {self.l4_lat_var}
-        l4_lon_var  = {self.l4_lon_var}
-        sss_var_renamed = {self.sss_var_renamed}
-        new_time_units = {self.new_time_units}
-        """
-        return info
-
-    def read_cfg(self, fnin, namelist="merge"):
-        with open(fnin,"r") as f:
-            self.cfg = yaml.safe_load(f)
-        
-        for att in self.cfg[namelist].keys(): 
-            if hasattr(self, att):
-               setattr(self, att, self.cfg[namelist][att])
-            else:
-               raise RuntimeError("ConfigMerge does not have attribute ({})".format(att)) 
-               exit(11)
-        print(self)
-
 
 
 def parseCommandLine():

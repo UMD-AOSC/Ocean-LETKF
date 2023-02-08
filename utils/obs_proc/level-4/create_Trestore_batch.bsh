@@ -21,7 +21,7 @@ while ((Syyyymmddhh <= Eyyyymmddhh)); do
     echo "job # ${njobs} :  $Syyyymmddhh"
 
     PYTHONUNBUFFERED=1 PYTHONPATH=../../pycommon ./fill_sst_ostia_v1_daily.py \
-        --remapped_file_path TEST_DATA/remapped_l4_sst/NEW_sst_remapped_${yyyy}${mm}${dd}.nc \
+        --output_file_path TEST_DATA/remapped_l4_sst/NEW_sst_remapped_${yyyy}${mm}${dd}.nc \
         --sst_file_path TEST_DATA/OSTIA_jan2015/${yyyy}${mm}${dd}-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc \
         --config_path config/config.fill_sst_ostia_v1_daily.yaml > TEST_DATA/remapped_l4_sst/log.${yyyy}${mm}${dd} 2>&1 &
 

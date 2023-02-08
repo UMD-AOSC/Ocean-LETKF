@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse, os
-import yaml
 import numpy as np
 import xesmf as xe
 from netCDF4 import Dataset
+from config_tools import Config
 
 
-class ConfigRegrid:
+class ConfigRegrid(Config):
     def __init__(self):
         # static config applied for each processing
         self.ocean_static_path = "ocean_static.nc"
@@ -17,30 +17,6 @@ class ConfigRegrid:
         self.woa_lat_var = "lat"
         self.woa_lon_var = "lon"
         self.regridder_file_path = "xesmf_wts.nc"
-
-    def __str__(self):
-        info=f"""
-        ocean_static_path = {self.ocean_static_path}
-        mom_lat_var = {self.mom_lat_var}
-        mom_lon_var = {self.mom_lon_var}
-        woa_grid_path = {self.woa_grid_path}
-        woa_lat_var = {self.woa_lat_var}
-        woa_lon_var = {self.woa_lon_var}
-        regridder_file_path = {self.regridder_file_path}
-        """
-        return info
-
-    def read_cfg(self, fnin, namelist):
-        with open(fnin,"r") as f:
-            self.cfg = yaml.safe_load(f)
-
-        for att in self.cfg[namelist].keys():
-            if hasattr(self, att):
-               setattr(self, att, self.cfg[namelist][att])
-            else:
-               raise RuntimeError("ConfigRegrid does not have attribute ({})".format(att))
-               exit(11)
-        print(self)
 
 
 def parseCommandLine():

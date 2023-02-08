@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse, os, sys
-import yaml
 import datetime as dt
 import numpy as np
 import xesmf as xe
 from netCDF4 import Dataset
 from mom6_tools import RestoreTemplate, parse_time_units
+from config_tools import Config
 
 
-class ConfigRemap:
+class ConfigRemap(Config):
     def __init__(self):
         # static config applied for each processing
         self.regridder_file_path = "xesmf_wts.nc"
@@ -26,35 +26,6 @@ class ConfigRemap:
         self.woa_var_renamed = 'SALT'
         self.new_time_units = "days since 1900-01-01 00:00:00"
 
-    def __str__(self):
-        info=f"""
-        regridder_file_path = {self.regridder_file_path}
-        restore_template_path = {self.restore_template_path}
-        ocean_static_path = {self.ocean_static_path}
-        ocean_hgrid_path = {self.ocean_hgrid_path}
-        mom_lat_var = {self.mom_lat_var}
-        mom_lon_var = {self.mom_lon_var}
-        mom_wet_var = {self.mom_wet_var}
-        woa_grid_path = {self.woa_grid_path}
-        woa_lat_var = {self.woa_lat_var}
-        woa_lon_var = {self.woa_lon_var}
-        woa_var     = {self.woa_var}
-        woa_var_renamed = {self.woa_var_renamed}
-        new_time_units = {self.new_time_units}
-        """
-        return info
-
-    def read_cfg(self, fnin, namelist="remap"):
-        with open(fnin,"r") as f:
-            self.cfg = yaml.safe_load(f)
-
-        for att in self.cfg[namelist].keys():
-            if hasattr(self, att):
-               setattr(self, att, self.cfg[namelist][att])
-            else:
-               raise RuntimeError("ConfigRemap does not have attribute ({})".format(att))
-               exit(11)
-        print(self)
 
 def parseCommandLine():
     parser = argparse.ArgumentParser(description=("Generate regrid weight file by xesmf"))
