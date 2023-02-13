@@ -20,13 +20,15 @@ while ((Syyyymmddhh <= Eyyyymmddhh)); do
     ((njobs+=1))
     echo "job # ${njobs} :  $Syyyymmddhh"
 
-    PYTHONPATH=../../pycommon ./fill_sst_ostia_v1_daily.py \
-        --regridder_file_path wts_ostia_to_mom_p25.nc \
-        --wet_grid_path ../../test_data/ocean_topog.nc \
-        --target_grid_path ../../test_data/flood_salt_restore_PHC2.1440x1080.v20180405.nc \
-        --source_grid_path OSTIA_jan2015/${yyyy}${mm}${dd}-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc \
-        --sst_unfilled_path OSTIA_jan2015/${yyyy}${mm}${dd}-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc \
-        --remapped_file_path remapped_l4_sst/sst_remapped_${yyyy}${mm}${dd}.nc > remapped_l4_sst/log.${yyyy}${mm}${dd} 2>&1 &
+    l4_sss_path="TEST_DATA/l4_sss_esacci/${yyyy}/${yyyy}${mm}/${yyyy}${mm}${dd}/ESACCI-SEASURFACESALINITY-L4-SSS-MERGED_OI_7DAY_RUNNINGMEAN_DAILY_25km-${yyyy}${mm}${dd}-fv3.21.nc"
+
+    PYTHONPATH=../../pycommon ./merge_sal_esacci_woa18_daily.py \
+        --config_path config/config.merge_sal_esacci_woa18.yaml \
+        --woa18_filled_path ../woa/sss_woa18_10m/filled_sss_s01_e12.nc \
+        --l4_sss_path ${l4_sss_path} \
+        --radius 10 \
+        --output_file_path TEST_DATA/remapped_l4_sss_v2/NEW2_sss_remapped_${yyyy}${mm}${dd}_radius10.nc > TEST_DATA/remapped_l4_sss_v2/log.${yyyy}${mm}${dd} 2>&1 &
+
  
     if [ $njobs -ge $njobs_max ]; then
         echo "wait"

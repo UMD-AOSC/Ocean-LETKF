@@ -1,0 +1,44 @@
+#!/bin/bash
+
+Syyyymmddhh=2015010100
+Eyyyymmddhh=2015013100
+DATE_CMD="gdate" # command of linux-like "date" in the system
+njobs_max=6     
+
+inc="1 day"
+njobs=0
+while ((Syyyymmddhh <= Eyyyymmddhh)); do
+
+
+    # PARSER
+    yyyy=$(echo $Syyyymmddhh | cut -c1-4)
+      mm=$(echo $Syyyymmddhh | cut -c5-6)
+      dd=$(echo $Syyyymmddhh | cut -c7-8)
+      hh=$(echo $Syyyymmddhh | cut -c9-10)
+
+    
+    ((njobs+=1))
+    echo "job # ${njobs} :  $Syyyymmddhh"
+
+    PYTHONUNBUFFERED=1 PYTHONPATH=../../pycommon ./fill_sst_ostia_v1_daily.py \
+        --output_file_path TEST_DATA/remapped_l4_sst/NEW_sst_remapped_${yyyy}${mm}${dd}.nc \
+        --sst_file_path TEST_DATA/OSTIA_jan2015/${yyyy}${mm}${dd}-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc \
+        --config_path config/config.fill_sst_ostia_v1_daily.yaml > TEST_DATA/remapped_l4_sst/log.${yyyy}${mm}${dd} 2>&1 &
+
+ 
+    if [ $njobs -ge $njobs_max ]; then
+        echo "wait"
+        echo "---------------------------------------------"
+        wait
+        njobs=0
+    fi
+
+
+    timefmt="$yyyy/$mm/$dd $hh:00:00"
+    Syyyymmddhh=$($DATE_CMD -ud "$inc $timefmt" +'%Y%m%d%H')
+
+done
+
+
+wait
+ 
