@@ -216,7 +216,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   do ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
                !NOTE: I switched the loops for ij and ilev (below) based on an indication
                !      by T. Sluka that this improved performance due to caching issues (3/22/16)
-    if (dodebug .and. doverbose) WRITE(6,*) "ij = ", ij
+    if (dodebug) WRITE(6,*) "ij, nij1, % = ", ij, nij1, ij*100.0/nij1
 
     !(OCEAN) The gridpoint is on land, so just assign undef values and CYCLE
     if (kmt1(ij) < 1) then
