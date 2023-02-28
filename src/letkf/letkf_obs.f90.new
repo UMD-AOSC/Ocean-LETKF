@@ -133,6 +133,7 @@ SUBROUTINE set_letkf_obs
   ALLOCATE( obstime(nobs_in) ) !(DRIFTERS)
   obshdxf = 0.0d0
   obserr = 0.0d0
+  obsqc0 = 0
 
   !-----------------------------------------------------------------------------
   ! LOOP of timeslots
