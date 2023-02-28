@@ -779,7 +779,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open the T/S netcdf restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  call check( NF90_OPEN(tsfile,NF90_NOWRITE,ncid) )
+  WRITE(6,*) "read_restart:: try to openfile", tsfile
+  call check( NF90_OPEN(trim(tsfile),NF90_NOWRITE,ncid) )
   WRITE(6,*) "read_restart:: just opened file ", tsfile
 
   !-----------------------------------------------------------------------------
@@ -916,7 +917,8 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   ! Open the U/V netcdf restart file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !-----------------------------------------------------------------------------
-  call check( NF90_OPEN(uvfile,NF90_NOWRITE,ncid) )
+  WRITE(6,*) "read_restart :: try to open file ", uvfile
+  call check( NF90_OPEN(trim(uvfile),NF90_NOWRITE,ncid) )
   WRITE(6,*) "read_restart :: just opened file ", uvfile
 
   !-----------------------------------------------------------------------------

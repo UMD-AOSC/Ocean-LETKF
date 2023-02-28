@@ -127,19 +127,19 @@ PUBLIC
   LOGICAL :: diag_DO_sss  = .true.
 
   ! Restart filenames
-  CHARACTER(10) :: rsrt_tsbase = 'MOM.res.nc'   !(and u, and h)
-  CHARACTER(12) :: rsrt_uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
+  CHARACTER(slen) :: rsrt_tsbase = 'MOM.res.nc'   !(and u, and h)
+  CHARACTER(slen) :: rsrt_uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
   CHARACTER(slen) :: rsrt_hbase
   ! variable names in restart file:
-  CHARACTER(4) :: rsrt_lon_name = 'lonh'
-  CHARACTER(4) :: rsrt_lat_name = 'lath'
-  CHARACTER(5) :: rsrt_lev_name = 'Layer'
-  CHARACTER(4) :: rsrt_temp_name = 'Temp'
-  CHARACTER(4) :: rsrt_salt_name = 'Salt'
-  CHARACTER(1) :: rsrt_u_name = 'u'
-  CHARACTER(1) :: rsrt_v_name = 'v'
-  CHARACTER(1) :: rsrt_h_name = 'h'
-  CHARACTER(7) :: rsrt_ssh_name = 'ave_ssh'
+  CHARACTER(slen_short) :: rsrt_lon_name = 'lonh'
+  CHARACTER(slen_short) :: rsrt_lat_name = 'lath'
+  CHARACTER(slen_short) :: rsrt_lev_name = 'Layer'
+  CHARACTER(slen_short) :: rsrt_temp_name = 'Temp'
+  CHARACTER(slen_short) :: rsrt_salt_name = 'Salt'
+  CHARACTER(slen_short) :: rsrt_u_name = 'u'
+  CHARACTER(slen_short) :: rsrt_v_name = 'v'
+  CHARACTER(slen_short) :: rsrt_h_name = 'h'
+  CHARACTER(slen_short) :: rsrt_ssh_name = 'ave_ssh'
 
   !STEVE: unused:
   CHARACTER(slen) :: drbase
