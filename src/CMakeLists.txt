@@ -58,6 +58,7 @@ set (SRCS
   obs/read_argo.f90
   obs/read_avhrr_pathfinder.f90
   obs/read_geostationary.f90
+  obs/read_viirs.f90
   obs/read_smap.f90
   obs/read_aviso_adt.f90
   obs/read_ice_txt.f90
@@ -89,6 +90,7 @@ set(operators
   adt
   sst
   sst_geostationary
+  sst_viirs
   sss
   tprof
   sprof
