@@ -45,7 +45,6 @@ SUBROUTINE set_common_oceanmodel
   INTEGER :: ncid,ncid2,ncid3,varid,dimid
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
-  REAL(r_size) :: dlat, dlon, d2, d3
   REAL(r_dble), ALLOCATABLE, DIMENSION(:,:) :: r8work2d
   REAL(r_size),PARAMETER :: min_layer_thickness = 1.0d-3 
 
