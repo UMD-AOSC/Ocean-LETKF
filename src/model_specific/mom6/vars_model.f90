@@ -19,8 +19,6 @@ PUBLIC
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(For irregular grids)
 
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dx !(nlon,nlat)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dy !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
@@ -43,8 +41,6 @@ PUBLIC
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lat2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: lev2d !(nlon,nlat)              !(2DGRID)(TRIPOLAR)
 
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dx !(nlon,nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dy !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
   REAL(r_size),DIMENSION(nlon,nlat,nlev),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
@@ -100,8 +96,6 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(lev(nlev))
   ALLOCATE(lon2d(nlon,nlat))
   ALLOCATE(lat2d(nlon,nlat))
-  ALLOCATE(dx(nlon,nlat))
-  ALLOCATE(dy(nlon,nlat))
   ALLOCATE(phi0(nlon,nlat))
   ALLOCATE(kmt0(nlon,nlat))
   ALLOCATE(SSHclm_m(nlon,nlat))

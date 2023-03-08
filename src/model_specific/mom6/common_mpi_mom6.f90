@@ -23,7 +23,6 @@ MODULE common_mpi_oceanmodel
   INTEGER,ALLOCATABLE,SAVE :: nij1node(:)
   REAL(r_size),ALLOCATABLE,SAVE :: phi1(:)
   REAL(r_size),ALLOCATABLE,SAVE :: kmt1(:)         !(OCEAN)
-  REAL(r_size),ALLOCATABLE,SAVE :: dx1(:),dy1(:)
   REAL(r_size),ALLOCATABLE,SAVE :: lon1(:),lat1(:)
   REAL(r_size),ALLOCATABLE,SAVE :: i1(:),j1(:)     !(OCEAN) splits grid coordinates out into list like ijs
 
@@ -38,7 +37,6 @@ CONTAINS
 SUBROUTINE set_common_mpi_oceanmodel
 
   USE params_model, ONLY: nlon, nlat
-  USE vars_model,   ONLY: dx, dy
   USE vars_model,   ONLY: lon, lat, kmt0, phi0
   USE vars_model,   ONLY: lon2d, lat2d !, lev2d !STEVE: I'm assuming I'll need this one day
 
@@ -84,8 +82,6 @@ SUBROUTINE set_common_mpi_oceanmodel
   if (dodebug) WRITE(6,*) "ALLOCATING fields to convert to vectorized form..."
   ALLOCATE(phi1(nij1))
   ALLOCATE(kmt1(nij1))               !(OCEAN)
-  ALLOCATE(dx1(nij1))
-  ALLOCATE(dy1(nij1))
   ALLOCATE(lon1(nij1))
   ALLOCATE(lat1(nij1))
   ALLOCATE(i1(nij1))                 !(OCEAN)
@@ -96,12 +92,10 @@ SUBROUTINE set_common_mpi_oceanmodel
   ALLOCATE(v2dg(nlon,nlat,nv0))
 
   ! Distribute that data to the appropriate processors
-  if (dodebug) WRITE(6,*) "Converting dx, dy, lon, lat, i, j, phi0, and kmt0 to vectorized form..."
+  if (dodebug) WRITE(6,*) "Converting lon, lat, i, j, phi0, and kmt0 to vectorized form..."
   v2dg=0.0
   do j=1,nlat
     ! 2D and 1D Data stored in first layer:
-    v2dg(:,j,1) = SNGL(dx(:,j))
-    v2dg(:,j,2) = SNGL(dy(:,j))
     ! 2D Data stored in second layer:
     v2dg(:,j,3) = SNGL(lon2d(:,j))
     v2dg(:,j,4) = SNGL(lat2d(:,j))
@@ -117,8 +111,6 @@ SUBROUTINE set_common_mpi_oceanmodel
   if (dodebug) WRITE(6,*) "Calling scatter_grd_mpi_small..."
   CALL scatter_grd_mpi_small(0,v2dg,v2d,nlon,nlat,nv0)
 
-  dx1(:)  = v2d(:,1)
-  dy1(:)  = v2d(:,2)
   lon1(:) = v2d(:,3)
   lat1(:) = v2d(:,4)
   kmt1(:) = v2d(:,5)                 !(OCEAN)
