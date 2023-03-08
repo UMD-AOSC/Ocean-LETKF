@@ -39,9 +39,6 @@ PRIVATE
                               grid_wet_name,& !
                               grid_depth_name,& !
                               grid_height_name,& !
-                              diag_lon_name,& !
-                              diag_lat_name,& !
-                              diag_lev_name,& !
                               diag_temp_name,& !
                               diag_salt_name,& !
                               diag_u_name,& !

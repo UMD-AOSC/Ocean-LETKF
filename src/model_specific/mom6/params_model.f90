@@ -103,9 +103,6 @@ PUBLIC
   CHARACTER(slen) :: diag_uvbase = 'MOM.diag.nc'  !(v and ave_ssh/sfc)
   CHARACTER(slen) :: diag_hbase
   ! variable names in diag file:
-  CHARACTER(slen_short) :: diag_lon_name = 'xh'
-  CHARACTER(slen_short) :: diag_lat_name = 'yh'
-  CHARACTER(slen_short) :: diag_lev_name = 'zl'
   CHARACTER(slen_short) :: diag_temp_name = 'temp'
   CHARACTER(slen_short) :: diag_salt_name = 'salt'
   CHARACTER(slen_short) :: diag_u_name = 'u'

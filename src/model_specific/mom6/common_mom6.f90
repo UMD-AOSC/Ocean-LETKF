@@ -136,6 +136,8 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
   WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
 
+  DEALLOCATE(r8work2d)
+
   !-----------------------------------------------------------------------------
   ! kmt data
   !-----------------------------------------------------------------------------
@@ -261,7 +263,6 @@ SUBROUTINE read_diag(infile,v3d,v2d,prec_in)
   USE params_model, ONLY: nv3d, nv2d
   USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s
   USE params_model, ONLY: iv2d_sst, iv2d_sss, iv2d_ssh
-  USE params_model, ONLY: diag_lon_name, diag_lat_name, diag_lev_name
   USE params_model, ONLY: diag_temp_name, diag_salt_name
   USE params_model, ONLY: diag_u_name, diag_v_name, diag_h_name
   USE params_model, ONLY: diag_ssh_name, diag_sst_name, diag_sss_name
