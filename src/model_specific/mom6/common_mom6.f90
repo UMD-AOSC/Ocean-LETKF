@@ -47,7 +47,7 @@ SUBROUTINE set_common_oceanmodel
   CHARACTER(NF90_MAX_NAME) :: dimname
   LOGICAL :: ex
   REAL(r_size) :: dlat, dlon, d2, d3
-  REAL(r_size), ALLOCATABLE, DIMENSION(:,:) :: work2d
+  REAL(r_dble), ALLOCATABLE, DIMENSION(:,:) :: r8work2d
   REAL(r_size),PARAMETER :: min_layer_thickness = 1.0d-3 
 
   WRITE(6,'(A)') 'Hello from set_common_oceanmodel'
@@ -120,25 +120,19 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,'(A)') '  >> accessing file: ', trim(gridfile3)
   call check( NF90_OPEN(trim(gridfile3),NF90_NOWRITE,ncid3) )
 
-  !STEVE: temporary until I figure out how to use ocean_hgrid 'supergrid' appropriately:
-  ALLOCATE(work2d(nlon2d,nlat2d))
-
+  ALLOCATE(r8work2d(nlon,nlat))
   WRITE(6,*) "Reading x coordinate (lon)..."
   call check( NF90_INQ_VARID(ncid3,trim(grid_lon2d_name),varid) )   ! Longitude for T-cell
-! call check( NF90_GET_VAR(ncid3,varid,lon2d) )
-  call check( NF90_GET_VAR(ncid3,varid,work2d) )    !STEVE: (ISSUE) ask GFDL for clarification
-  !lon2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
-  lon2d = work2d(2:nlon2d:2,2:nlat2d:2)  !CDA: geolon (lon of T-Cell) calculated from supergrid x
+  call check( NF90_GET_VAR(ncid3,varid,r8work2d) )  
+  lon2d = REAL(r8work2d, r_size)
 
   WRITE(6,*) "lon2d(1,1) = ", lon2d(1,1)
   WRITE(6,*) "lon2d(nlon,nlat) = ", lon2d(nlon,nlat)
 
   WRITE(6,*) "Reading y coordinate (lat)..."
   call check( NF90_INQ_VARID(ncid3,trim(grid_lat2d_name),varid) )   ! Latitude for T-cell
-! call check( NF90_GET_VAR(ncid3,varid,lat2d) )
-  call check( NF90_GET_VAR(ncid3,varid,work2d) )    !STEVE: (ISSUE) ask GFDL for clarification
-  !lat2d = work2d(1:nlon2d:2,1:nlat2d:2)             !STEVE: (ISSUE) ask GFDL for clarification
-  lat2d = work2d(2:nlon2d:2,2:nlat2d:2)    !CDA: geolat (lat of T-Cell) calculated from supergrid y
+  call check( NF90_GET_VAR(ncid3,varid,r8work2d) )   
+  lat2d = REAL(r8work2d, r_size)
 
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
   WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
