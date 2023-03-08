@@ -87,7 +87,7 @@ SUBROUTINE set_common_mpi_oceanmodel
   ALLOCATE(i1(nij1))                 !(OCEAN)
   ALLOCATE(j1(nij1))                 !(OCEAN)
 
-  nv0=8
+  nv0=6
   ALLOCATE(v2d(nij1,nv0))
   ALLOCATE(v2dg(nlon,nlat,nv0))
 
@@ -97,27 +97,25 @@ SUBROUTINE set_common_mpi_oceanmodel
   do j=1,nlat
     ! 2D and 1D Data stored in first layer:
     ! 2D Data stored in second layer:
-    v2dg(:,j,3) = SNGL(lon2d(:,j))
-    v2dg(:,j,4) = SNGL(lat2d(:,j))
-    v2dg(:,j,5) = SNGL(kmt0(:,j))
-    v2dg(:,j,6) = SNGL(phi0(:,j))  !STEVE: WARNING - this needs to be generalized to the specified dimensions
+    v2dg(:,j,1) = SNGL(lon2d(:,j))
+    v2dg(:,j,2) = SNGL(lat2d(:,j))
+    v2dg(:,j,3) = SNGL(kmt0(:,j))
+    v2dg(:,j,4) = SNGL(phi0(:,j))  !STEVE: WARNING - this needs to be generalized to the specified dimensions
     !STEVE: For custom localization: (need to know how the grid points are distributed per node)
     do i=1,nlon                             !(OCEAN)
-      v2dg(i,j,7) = REAL(i,r_sngl)          !(OCEAN)
+      v2dg(i,j,5) = REAL(i,r_sngl)          !(OCEAN)
     enddo                                   !(OCEAN)
-    v2dg(:,j,8) = REAL(j,r_sngl)            !(OCEAN)
-    !v2dg(:,j,9) = SNGL(lev2d(:,j))
+    v2dg(:,j,6) = REAL(j,r_sngl)            !(OCEAN)
   enddo
   if (dodebug) WRITE(6,*) "Calling scatter_grd_mpi_small..."
   CALL scatter_grd_mpi_small(0,v2dg,v2d,nlon,nlat,nv0)
 
-  lon1(:) = v2d(:,3)
-  lat1(:) = v2d(:,4)
-  kmt1(:) = v2d(:,5)                 !(OCEAN)
-  phi1(:) = v2d(:,6)                 !(OCEAN)
-  i1(:)   = v2d(:,7)                 !(OCEAN)
-  j1(:)   = v2d(:,8)                 !(OCEAN)
-  !lev1(:) = v2d(:,9)
+  lon1(:) = v2d(:,1)
+  lat1(:) = v2d(:,2)
+  kmt1(:) = v2d(:,3)                 !(OCEAN)
+  phi1(:) = v2d(:,4)                 !(OCEAN)
+  i1(:)   = v2d(:,5)                 !(OCEAN)
+  j1(:)   = v2d(:,6)                 !(OCEAN)
 
   DEALLOCATE(v2d,v2dg)
   if (dodebug) WRITE(6,*) "Finished set_common_mpi_oceanmodel..."
