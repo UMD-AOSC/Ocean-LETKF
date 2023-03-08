@@ -30,7 +30,6 @@ SUBROUTINE set_common_oceanmodel
   USE params_model, ONLY: nlon, nlat, nlev
   USE params_model, ONLY: nlon2d, nlat2d
   USE vars_model,   ONLY: SSHclm_m, lon, lat, lon2d, lat2d, lev
-  USE vars_model,   ONLY: dx, dy, area_t
   USE vars_model,   ONLY: height, kmt, depth, wet, phi0, kmt0
   USE vars_model,   ONLY: set_vars_model
   USE params_model, ONLY: initialize_params_model
@@ -108,7 +107,7 @@ SUBROUTINE set_common_oceanmodel
   WRITE(6,*) "lev(nlev) = ", lev(nlev)
 
   !-----------------------------------------------------------------------------
-  ! lon2d, lat2, dx, and dy
+  ! lon2d, lat2
   !-----------------------------------------------------------------------------
 !!STEVE:MOM6: open new gridfile (ocean_hgrid.nc, gridfile3)
   INQUIRE(FILE=trim(gridfile3),EXIST=ex)
@@ -136,35 +135,6 @@ SUBROUTINE set_common_oceanmodel
 
   WRITE(6,*) "lat2d(1,1) = ", lat2d(1,1)
   WRITE(6,*) "lat2d(nlon,nlat) = ", lat2d(nlon,nlat)
-
-  !STEVE: I don't really need this anymore with the kdtree-based search
-  if (.true.) then !STEVE: this is TEMPORARY, until I figure out how to use the ocean_hgrid.nc data
-    i=0
-    j=0
-    dx=0.0
-    dy=0.0
-    area_t=0.0
-    do j=2,nlat-1
-      dlat = (lat(j+1) - lat(j-1))/2.0
-      d2 = (sin(dlat/2.0))**2 
-      d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) )
-      dy(:,j) = re * d3
- 
-      do i=2,nlon-1
-        dlon = (lon(i+1) - lon(i-1))/2.0
-        d2 = cos(lat(j-1)) * cos(lat(j+1)) * (sin(dlon/2.0))**2
-        d3 = 2 * atan2( sqrt(d2), sqrt(1-d2) ) 
-        dx(i,j) = re * d3
-        area_t(i,j) = dx(i,j)*dy(i,j)
-      enddo
-    enddo
-  endif
-
-! WRITE(6,*) "Using dx and dy from netcdf file: ", gridfile3
-  WRITE(6,*) "dx(1,1) = ", dx(1,1)
-  WRITE(6,*) "dx(nlon,nlat) = ", dx(nlon,nlat)
-  WRITE(6,*) "dy(1,1) = ", dy(1,1)
-  WRITE(6,*) "dy(nlon,nlat) = ", dy(nlon,nlat)
 
   !-----------------------------------------------------------------------------
   ! kmt data

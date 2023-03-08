@@ -21,7 +21,6 @@ PUBLIC
 
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dx !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: dy !(nlon,nlat)
-  REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: area_t !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
   REAL(r_size),ALLOCATABLE,DIMENSION(:,:,:),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
@@ -46,7 +45,6 @@ PUBLIC
 
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dx !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: dy !(nlon,nlat)
-  REAL(r_size),DIMENSION(nlon,nlat),SAVE :: area_t !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: phi0 !(nlon,nlat)
   REAL(r_size),DIMENSION(nlon,nlat),SAVE :: kmt0 !(nlon,nlat)               !(OCEAN)
   REAL(r_size),DIMENSION(nlon,nlat,nlev),SAVE :: height !(nlon,nlat,nlev)             !(OCEAN)
@@ -115,7 +113,6 @@ SUBROUTINE initialize_vars_model
   ALLOCATE(dz(nlev))
 
   ALLOCATE(fcori2d(nlon,nlat))
-  ALLOCATE(area_t(nlon,nlat))
   ALLOCATE(height(nlon,nlat,nlev))
   ALLOCATE(wet(nlon,nlat))
   ALLOCATE(depth(nlon,nlat))
