@@ -128,9 +128,6 @@ PUBLIC
   CHARACTER(slen) :: rsrt_uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
   CHARACTER(slen) :: rsrt_hbase
   ! variable names in restart file:
-  CHARACTER(slen_short) :: rsrt_lon_name = 'lonh'
-  CHARACTER(slen_short) :: rsrt_lat_name = 'lath'
-  CHARACTER(slen_short) :: rsrt_lev_name = 'Layer'
   CHARACTER(slen_short) :: rsrt_temp_name = 'Temp'
   CHARACTER(slen_short) :: rsrt_salt_name = 'Salt'
   CHARACTER(slen_short) :: rsrt_u_name = 'u'

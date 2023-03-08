@@ -189,9 +189,8 @@ SUBROUTINE set_common_oceanmodel
   ! Close the grid files:
   !-----------------------------------------------------------------------------
   call check( NF90_CLOSE(ncid) )
-!!call check( NF90_CLOSE(ncid1) )
   call check( NF90_CLOSE(ncid2) )
-! call check( NF90_CLOSE(ncid3) )
+  call check( NF90_CLOSE(ncid3) )
 
   ! Set model variables that depend on initialization and further processing.
   ! (e.g. lon0, lat0, lonf, latf, wrapgap, ...)
@@ -701,7 +700,6 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE params_letkf, ONLY: DO_UPDATE_H
   USE vars_model,   ONLY: SSHclm_m
   USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
-  USE params_model, ONLY: rsrt_lon_name, rsrt_lat_name, rsrt_lev_name
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
   USE params_model, ONLY: rsrt_u_name, rsrt_v_name
   USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name
@@ -983,7 +981,6 @@ SUBROUTINE write_restart(outfile,v3d_in,v2d_in,prec)
   USE params_letkf, ONLY: DO_UPDATE_H, DO_SLA
   USE vars_model,   ONLY: SSHclm_m
   USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
-  USE params_model, ONLY: rsrt_lon_name, rsrt_lat_name, rsrt_lev_name
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
   USE params_model, ONLY: rsrt_u_name, rsrt_v_name
   USE params_model, ONLY: rsrt_h_name, rsrt_ssh_name

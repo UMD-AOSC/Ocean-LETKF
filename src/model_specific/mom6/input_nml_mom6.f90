@@ -55,9 +55,6 @@ PRIVATE
                               diag_DO_ssh, & !
                               diag_DO_sst, & !
                               diag_DO_sss, & !
-                              rsrt_lon_name,& !
-                              rsrt_lat_name,& !
-                              rsrt_lev_name,& !
                               rsrt_temp_name,& !
                               rsrt_salt_name,& !
                               rsrt_u_name,& !
