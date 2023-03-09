@@ -73,8 +73,7 @@ PUBLIC
 
   CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
 
-  CHARACTER(slen) :: gridfile  = 'MOM.res.nc'
-  CHARACTER(slen) :: gridfile1 = 'MOM.res_1.nc'
+  CHARACTER(slen) :: gridfile1 = 'MOM.res.nc'
   CHARACTER(slen) :: gridfile2 = 'ocean_topog.nc'
   CHARACTER(slen) :: gridfile3 = 'ocean_hgrid.nc'
 
@@ -103,9 +102,6 @@ PUBLIC
   CHARACTER(slen) :: diag_uvbase = 'MOM.diag.nc'  !(v and ave_ssh/sfc)
   CHARACTER(slen) :: diag_hbase
   ! variable names in diag file:
-  CHARACTER(slen_short) :: diag_lon_name = 'xh'
-  CHARACTER(slen_short) :: diag_lat_name = 'yh'
-  CHARACTER(slen_short) :: diag_lev_name = 'zl'
   CHARACTER(slen_short) :: diag_temp_name = 'temp'
   CHARACTER(slen_short) :: diag_salt_name = 'salt'
   CHARACTER(slen_short) :: diag_u_name = 'u'
@@ -131,9 +127,6 @@ PUBLIC
   CHARACTER(slen) :: rsrt_uvbase = 'MOM.res_1.nc' !(v and ave_ssh/sfc)
   CHARACTER(slen) :: rsrt_hbase
   ! variable names in restart file:
-  CHARACTER(slen_short) :: rsrt_lon_name = 'lonh'
-  CHARACTER(slen_short) :: rsrt_lat_name = 'lath'
-  CHARACTER(slen_short) :: rsrt_lev_name = 'Layer'
   CHARACTER(slen_short) :: rsrt_temp_name = 'Temp'
   CHARACTER(slen_short) :: rsrt_salt_name = 'Salt'
   CHARACTER(slen_short) :: rsrt_u_name = 'u'
