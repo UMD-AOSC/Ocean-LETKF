@@ -73,8 +73,7 @@ PUBLIC
 
   CHARACTER(14) :: SSHclm_file = 'aEtaCds9399.nc'
 
-  CHARACTER(slen) :: gridfile  = 'MOM.res.nc'
-  CHARACTER(slen) :: gridfile1 = 'MOM.res_1.nc'
+  CHARACTER(slen) :: gridfile1 = 'MOM.res.nc'
   CHARACTER(slen) :: gridfile2 = 'ocean_topog.nc'
   CHARACTER(slen) :: gridfile3 = 'ocean_hgrid.nc'
 

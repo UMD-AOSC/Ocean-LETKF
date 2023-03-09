@@ -12,13 +12,12 @@ PRIVATE
 #ifdef DYNAMIC
   ! Grid dimensions are set in params_model.f90, but only used in a namelist if compiled for dynamic arrays:
   NAMELIST /grid_dimensions_nml/ & 
-                              nlon, &      ! number of longitude grid points (Can be specified via namelist or in netcdf gridfile)
+                              nlon, &      ! number of longitude grid points (Can be specified via namelist or in netcdf gridfile1)
                               nlat, &      ! number of latitude grid points
                               nlev         ! number of model levels
 #endif
 
-  NAMELIST /params_model_nml/ gridfile, &  ! MOM4 grid_spec.nc file 
-                              gridfile1,&  !
+  NAMELIST /params_model_nml/ gridfile1,&  !
                               gridfile2,&  !
                               gridfile3,&  !
                               grid_nlon_name, & !
