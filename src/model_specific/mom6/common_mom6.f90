@@ -1287,7 +1287,6 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
   INTEGER :: i,k,m,n
 
 ! ALLOCATE(v3dm(nij,nlev,nv3d),v2dm(nij,nv2d))
-
   do n=1,nv3d
     do k=1,nlev
       do i=1,nij

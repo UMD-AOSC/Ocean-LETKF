@@ -77,6 +77,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   USE params_model, ONLY: iv2d_mld
   USE params_model, ONLY: iv3d_t !STEVE: for debugging
   USE params_letkf, ONLY: DO_MLD, DO_NO_VERT_LOC, DO_MLD_MAXSPRD
+  USE params_letkf, ONLY: DO_RTPP, rtpp_coeff, DO_RTPS, rtps_coeff
   USE vars_model,   ONLY: lev
   USE common_debug_oceanmodel, ONLY: debug_post_obslocal, debug_post_obslocal2d
   USE common_debug_oceanmodel, ONLY: debug_post_letkfcore, debug_ens_diversity, debug_post_anal3d
@@ -216,7 +217,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   do ij=1,nij1 !STEVE: go through every possible coordinate of the grid in list form...
                !NOTE: I switched the loops for ij and ilev (below) based on an indication
                !      by T. Sluka that this improved performance due to caching issues (3/22/16)
-    if (dodebug) WRITE(6,*) "ij, nij1, % = ", ij, nij1, ij*100.0/nij1
+    if (dodebug) then
+      if (mod(ij,int(nij1*0.1))==0) WRITE(6,*) "ij, nij1, % = ", ij, nij1, ij*100.0/nij1
+    endif
 
     !(OCEAN) The gridpoint is on land, so just assign undef values and CYCLE
     if (kmt1(ij) < 1) then
@@ -443,6 +446,18 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   endif adaptive_inflation
 
   !-------------------------------------------------------------------------
+  ! Compensate over-shrinked analysis uncertainty using relaxation
+  !-------------------------------------------------------------------------
+  ! Note gues3d/2d are perturbations while anal3d/2d are full states
+  if (DO_RTPP.and.(.not.DO_RTPS).and.rtpp_coeff>=0.0.and.rtpp_coeff<=1.0) then
+    CALL relax_rtpp(anal3d, anal2d, gues3d, gues2d, rtpp_coeff)
+  elseif (DO_RTPS.and.(.not.DO_RTPP).and.rtps_coeff>=0.0.and.rtps_coeff<=1.0) then
+    CALL relax_rtps(anal3d, anal2d, gues3d, gues2d, rtps_coeff)
+  else ! no relaxation
+    WRITE(6,'(A)') "Analysis relaxation: nothing applied"
+  endif
+
+  !-------------------------------------------------------------------------
   ! Compute and apply the additive inflation
   !-------------------------------------------------------------------------
   additive_inflation : if (sp_infl_add > 0.0d0) then
@@ -490,11 +505,98 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     enddo
   endif additive_inflation
 
-  ! STEVE: I'd like to output the mean field in the gues spot
-! gues3d(:,:,1,:) = mean3d(:,:,:)
-! gues2d(:,1,:)   = mean2d(:,:)
   DEALLOCATE(mean3d,mean2d)
 
 END SUBROUTINE das_letkf
+
+
+SUBROUTINE relax_rtpp(anal3d,anal2d,dgues3d,dgues2d, relax_coeff)
+  USE common,                ONLY: r_size
+  USE params_letkf,          ONLY: nbv
+  USE common_mpi_oceanmodel, ONLY: nij1, ensmean_grd
+  USE params_model,          ONLY: nlev, nv3d, nv2d
+  IMPLICIT NONE
+  REAL(r_size),INTENT(INOUT) :: anal3d(nij1,nlev,nbv,nv3d) ! analysis member
+  REAL(r_size),INTENT(INOUT) :: anal2d(nij1,nbv,nv2d)
+  REAL(r_size),INTENT(IN)    :: dgues3d(nij1,nlev,nbv,nv3d) ! gues perturbation (not member)
+  REAL(r_size),INTENT(IN)    :: dgues2d(nij1,nbv,nv2d)
+  REAL(r_size),INTENT(IN)    :: relax_coeff
+
+  REAL(r_size),ALLOCATABLE :: meana3d(:,:,:), meana2d(:,:)
+  INTEGER :: m
+  LOGICAL :: doverbose = .TRUE.
+    
+  if (doverbose) WRITE(6,'(A,F10.4)') "Analysis relaxation: RTPP applied with a coeff =", relax_coeff
+
+  ALLOCATE(meana3d(nij1,nlev,nv3d))
+  ALLOCATE(meana2d(nij1,nv2d))
+
+  CALL ensmean_grd(nbv,nij1,anal3d,anal2d,meana3d,meana2d)
+  do m=1,nbv
+     anal3d(:,:,m,:) = (1.0d0-relax_coeff) * (anal3d(:,:,m,:)-meana3d) + &
+                       relax_coeff*dgues3d(:,:,m,:) + &
+                       meana3d(:,:,:)
+     anal2d(:,m,:) = (1.0d0-relax_coeff) * (anal2d(:,m,:)-meana2d) + &
+                     relax_coeff*dgues2d(:,m,:) + &
+                     meana2d(:,:)
+  end do
+  DEALLOCATE(meana3d,meana2d)
+
+END SUBROUTINE relax_rtpp
+
+
+SUBROUTINE relax_rtps(anal3d,anal2d,dgues3d,dgues2d, relax_coeff)
+  USE common,                ONLY: r_size
+  USE params_letkf,          ONLY: nbv
+  USE common_mpi_oceanmodel, ONLY: nij1, ensmean_grd
+  USE params_model,          ONLY: nlev, nv3d, nv2d
+  IMPLICIT NONE
+
+  REAL(r_size),INTENT(INOUT) :: anal3d(nij1,nlev,nbv,nv3d) ! analysis member
+  REAL(r_size),INTENT(INOUT) :: anal2d(nij1,nbv,nv2d)
+  REAL(r_size),INTENT(IN)    :: dgues3d(nij1,nlev,nbv,nv3d) ! gues perturbation (not member)
+  REAL(r_size),INTENT(IN)    :: dgues2d(nij1,nbv,nv2d)
+  REAL(r_size),INTENT(IN)    :: relax_coeff
+
+  REAL(r_size),ALLOCATABLE :: meana3d(:,:,:), meana2d(:,:)
+  REAL(r_size),ALLOCATABLE :: sprda3d(:,:,:), sprda2d(:,:)
+  REAL(r_size),ALLOCATABLE :: sprdg3d(:,:,:), sprdg2d(:,:)
+  integer :: m
+  LOGICAL :: doverbose = .TRUE.
+
+  if (doverbose) WRITE(6,'(A,F10.4)') "Analysis relaxation: RTPS applied with a coeff =", relax_coeff
+
+  ALLOCATE(meana3d(nij1,nlev,nv3d)); ALLOCATE(meana2d(nij1,nv2d))
+  ALLOCATE(sprda3d(nij1,nlev,nv3d)); ALLOCATE(sprda2d(nij1,nv2d))
+  ALLOCATE(sprdg3d(nij1,nlev,nv3d)); ALLOCATE(sprdg2d(nij1,nv2d))
+
+  CALL ensmean_grd(nbv,nij1,anal3d,anal2d,meana3d,meana2d)
+
+  sprda3d=0.0_r_size; sprdg3d=0.0_r_size
+  sprda2d=0.0_r_size; sprdg2d=0.0_r_size
+  do m = 1, nbv
+     sprda3d(:,:,:) = sprda3d(:,:,:) + (anal3d(:,:,m,:)-meana3d(:,:,:))**2
+     sprda2d(:,:)   = sprda2d(:,:)   + (anal2d(:,m,:)-meana2d(:,:))**2
+     sprdg3d(:,:,:) = sprdg3d(:,:,:) + (dgues3d(:,:,m,:))**2
+     sprdg2d(:,:)   = sprdg2d(:,:)   + (dgues2d(:,m,:))**2
+  enddo
+  sprda3d = sqrt(sprda3d/(nbv-1)); sprda2d = sqrt(sprda2d/(nbv-1))
+  sprdg3d = sqrt(sprdg3d/(nbv-1)); sprdg2d = sqrt(sprdg2d/(nbv-1))
+
+  do m = 1, nbv
+     where (sprda3d < sprdg3d .and. sprda3d > 0.0_r_size)
+            anal3d(:,:,m,:) = (anal3d(:,:,m,:)-meana3d) * &
+                              (relax_coeff*(sprdg3d-sprda3d)/sprda3d+1.0_r_size) + &
+                              meana3d(:,:,:)
+     endwhere
+     where (sprda2d < sprdg2d .and. sprda2d > 0.0_r_size)
+            anal2d(:,m,:) = (anal2d(:,m,:) - meana2d) * &
+                            (relax_coeff*(sprdg2d-sprda2d)/sprda2d+1.0_r_size) + &
+                            meana2d(:,:)
+     endwhere
+  enddo
+  DEALLOCATE(meana3d,meana2d,sprda3d,sprda2d,sprdg3d,sprdg2d)
+
+END SUBROUTINE relax_rtps
 
 END MODULE letkf_tools

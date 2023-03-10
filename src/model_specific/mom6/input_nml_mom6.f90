@@ -87,7 +87,11 @@ PRIVATE
                               DO_UPDATE_H, &         ! option to update model layer thicknesses based on assimilation of observations
                               localization_method, & ! localization method to be used in letkf_local.f90
                               cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
-                              sp_infl_add            ! additive inflation factor (default none)
+                              sp_infl_add, &         ! additive inflation factor (default none)
+                              DO_RTPP,     &         ! logical flag to do relaxation-to-prior-perturbation (default=.false.)
+                              rtpp_coeff,  &         ! default=0.0
+                              DO_RTPS,     &         ! logical flag to do relaxation-to-prior-spread (default=.false.)
+                              rtps_coeff             ! default=0.0
 
 
 

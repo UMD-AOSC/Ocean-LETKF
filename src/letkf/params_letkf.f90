@@ -56,6 +56,10 @@ INTEGER :: localization_method=1 !1 !(OCEAN) =0 for uniform radius (default), =1
 ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
 REAL(r_size) :: cov_infl_mul = 1.0d0 !(NO INFLATION) !-1.0d0 => adaptive multiplicative inflation
 REAL(r_size) :: sp_infl_add = 0.d0 !additive inflation
+LOGICAL      :: DO_RTPP     = .false. ! set either DO_RTPP or DO_RTPS to .true., but not both
+REAL(r_size) :: rtpp_coeff  = 0.d0  ! 0.0 for no analysis relaxation, and 1.0 for relaxed to background completely
+LOGICAL      :: DO_RTPS     = .false. ! set either DO_RTPP or DO_RTPS to .true., but not both
+REAL(r_size) :: rtps_coeff  = 0.d0  ! 0.0 for no analysis relaxation, and 1.0 for relaxed to background completely
 
 !-------------------------------------------------------------------------------
 ! From common_model.f90
