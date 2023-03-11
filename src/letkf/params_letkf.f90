@@ -28,6 +28,7 @@ REAL(r_size),SAVE :: gross_error=3.0d0    ! number of standard deviations
 ! LETKF main options
 !-------------------------------------------------------------------------------
 LOGICAL :: DO_WRITE_ENS_MEAN_SPRD = .false.  ! Indicates whether to write the ensemble mean and spread (fcst and analysis)
+LOGICAL :: DO_WRITE_OMB_MEAN = .false. ! whether write out mean[yo-h(x_i)] and other obs diag info
 
 !-------------------------------------------------------------------------------
 ! From letkf_local.f90

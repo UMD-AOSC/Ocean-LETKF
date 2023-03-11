@@ -41,6 +41,7 @@ MODULE letkf_obs
   USE common_letkf
   USE params_letkf, ONLY: sigma_obs, sigma_obsv, sigma_obs0, gross_error, nslots, nbv
   USE params_letkf, ONLY: DO_QC_MEANDEP, DO_QC_MAXDEP
+  USE params_letkf, ONLY: DO_WRITE_OMB_MEAN
   USE params_obs    ! nobs
   USE vars_obs
 
@@ -79,6 +80,7 @@ SUBROUTINE set_letkf_obs
   INTEGER :: nj(0:nlat-1)
   INTEGER :: njs(1:nlat-1)
   CHARACTER(12) :: obsfile='obsTTNNN.dat'
+  CHARACTER(12) :: ombfile='omb_mean.dat'
   INTEGER :: nobs_in
 
   !STEVE: for adaptive observation error:
@@ -91,6 +93,8 @@ SUBROUTINE set_letkf_obs
   INTEGER :: gross_cnt,gross_2x_cnt
   !STEVE: for DO_ALTIMETRY
   REAL(r_size) :: SSH_CLM_m 
+  ! for omb diag
+  REAL(r_size),allocatable :: hx(:) ! (nobs_in)
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -399,6 +403,19 @@ endif quality_control
   WRITE(6,*) "gross_2x_cnt = ", gross_2x_cnt
 
   CALL monit_dep(nobs_in,obselm,obsdep,obsqc)
+
+  if (DO_WRITE_OMB_MEAN) then
+    if (myrank == 0) then !Assuming all members have the identical obs records
+      ALLOCATE( hx(nobs_in) ) ! mean[h(x_i)]
+      hx = obsdat - obsdep
+      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing omb info info file:', ombfile
+      call write_obs2(trim(ombfile),nobs_in, &
+                      obselm, obslon, obslat, obslev, &
+                      obsdat, obserr, hx,  obsqc, &
+                      obstime, qcflag_in=.false.)
+      DEALLOCATE(hx)
+    endif
+  endif
 
 !STEVE: maybe use this if there are enough observations...
 !
