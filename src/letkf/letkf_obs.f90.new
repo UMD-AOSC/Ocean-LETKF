@@ -410,9 +410,9 @@ endif quality_control
       hx = obsdat - obsdep
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing omb info info file:', ombfile
       call write_obs2(trim(ombfile),nobs_in, &
-                      obselm, obslon, obslat, obslev, &
-                      obsdat, obserr, hx,  obsqc, &
-                      obstime, qcflag_in=.false.)
+                      obselm, obslon, obslat, &
+                      obslev, obsdat, obserr, &
+                      hx,     obsqc,  obstime)
       DEALLOCATE(hx)
     endif
   endif
