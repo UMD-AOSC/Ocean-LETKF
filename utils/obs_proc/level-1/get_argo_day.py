@@ -73,7 +73,6 @@ def main(args):
             roi = args.domain + args.pres + [cdate.strftime('%Y-%m-%d'), edate.strftime('%Y-%m-%d')]
             try:
                 ds = argo_loader_p.region(roi).to_xarray()
-                fpath = cdir+'argo_global_{}.nc'.format(cdate.strftime('%Y-%m-%d'))
                 ds.to_netcdf(fpath)
             except Exception as e:
                 print(f'caught {type(e)}: {e}')
