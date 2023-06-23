@@ -9,6 +9,7 @@ env:
 
 jobs:
   get_data:
+    if: false
     runs-on: ubuntu-22.04
 
     steps:
