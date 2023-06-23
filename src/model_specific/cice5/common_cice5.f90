@@ -390,7 +390,8 @@ subroutine check(status)
   integer, intent (in) :: status
   if(status /= nf90_noerr) then 
     print *, trim(nf90_strerror(status))
-    stop "Stopped"
+    print *, "Stopped"
+    stop (23)
   end if
 end subroutine check
 
