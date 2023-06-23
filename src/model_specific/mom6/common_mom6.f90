@@ -1320,7 +1320,7 @@ subroutine check(status)
   if(status /= nf90_noerr) then 
     print *, trim(nf90_strerror(status))
     print *, "Stopped"
-    stop(23)
+    stop (23)
   end if
 end subroutine check
 
