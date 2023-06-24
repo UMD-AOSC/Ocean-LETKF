@@ -1,5 +1,7 @@
 # Ocean-LETKF:  
 [![build gfortran](https://github.com/UMD-AOSC/Ocean-LETKF/actions/workflows/build_gfortran.yml/badge.svg)](https://github.com/UMD-AOSC/Ocean-LETKF/actions/workflows/build_gfortran.yml)
+[![test_obsop](https://github.com/UMD-AOSC/Ocean-LETKF/actions/workflows/test_obsop.yml/badge.svg)](https://github.com/UMD-AOSC/Ocean-LETKF/actions/workflows/test_obsop.yml)
+[![get_data](https://github.com/UMD-AOSC/Ocean-LETKF/actions/workflows/get_data.yml/badge.svg)](https://github.com/UMD-AOSC/Ocean-LETKF/actions/workflows/get_data.yml)
 
 Main repository for the Ocean-LETKF development
 
