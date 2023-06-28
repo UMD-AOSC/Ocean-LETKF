@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-https://podaac-opendap.jpl.nasa.gov/opendap/allData/ghrsst/data/L4/GLOB/UKMO/OSTIA/2019/003/20190103-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc.bz2.html
+https://www.ncei.noaa.gov/data/oceans/ghrsst/L4/GLOB/UKMO/OSTIA/2019/001/20190101120000-UKMO-L4_GHRSST-SSTfnd-OSTIA-GLOB-v02.0-fv02.0.nc
 """
 
 import common
@@ -26,11 +26,11 @@ def check_wget(logging):
 
 def parseCommandLine():
 
-    parser = argparse.ArgumentParser(description=("Script to download Global SST & Sea Ice Analysis, L4 OSTIA, 0.05 deg daily (METOFFICE-GLO-SST-L4-NRT-OBS-SST-V1)"))
+    parser = argparse.ArgumentParser(description=("Script to download Global SST & Sea Ice Analysis, L4 OSTIA, 0.05 deg daily (METOFFICE-GLO-SST-L4-NRT-OBS-SST-V2)"))
     parser.add_argument("--start_date", default="20190101", metavar="YYYYMMDD",required=True, help=("start date"))
     parser.add_argument("--end_date", default=None, metavar="YYYYMMDD", required=False, help=("end date"))
     parser.add_argument("--outdir", default="./", required=False, help=("output directory. downloaded data will be stored under outdir/topdir_name/YYYY/YYYYMM/YYYYMMDD"))
-    parser.add_argument("--topdir_name", default="l4_sst_ostia_v1", required=False, help=("top subdirectory name under outdir"))
+    parser.add_argument("--topdir_name", default="l4_sst_ostia_v2", required=False, help=("top subdirectory name under outdir"))
     parser.add_argument("--show", action="store_true", required=False, help=("display all the input arguments w/o running the script"))
     parser.add_argument("--log", action="store_true", required=False, help=("generate a text log file"))
     parser.add_argument("--verbose", action="store_true", required=False, help=("print more diag info"))
@@ -59,9 +59,9 @@ def main(args):
 
     # initialize log file
     if args.log:
-        logging = common.setupEasyLogging("get_l4_sst_ostia_v1")
+        logging = common.setupEasyLogging("get_l4_sst_ostia_v2")
     else:
-        logging = common.setupEasyLogging("get_l4_sst_ostia_v1", fileLog=False)
+        logging = common.setupEasyLogging("get_l4_sst_ostia_v2", fileLog=False)
     logging.info(" ".join(sys.argv))
 
     # check if wget exists
@@ -82,9 +82,9 @@ def main(args):
             os.makedirs(cdir)
 
         # start to download files
-        #https://podaac-opendap.jpl.nasa.gov/opendap/allData/ghrsst/data/L4/GLOB/UKMO/OSTIA/2019/003/20190103-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc.bz2.html
-        fname = "{}-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc.bz2".format(cdate.strftime("%Y%m%d"))
-        cmd_get = 'wget -c https://podaac-opendap.jpl.nasa.gov/opendap/allData/ghrsst/data/L4/GLOB/UKMO/OSTIA/{:04d}/{:03d}/{}'.format(cdate.year, julian_day, fname)
+        #https://www.ncei.noaa.gov/data/oceans/ghrsst/L4/GLOB/UKMO/OSTIA/2019/001/20190101120000-UKMO-L4_GHRSST-SSTfnd-OSTIA-GLOB-v02.0-fv02.0.nc
+        fname = "{}120000-UKMO-L4_GHRSST-SSTfnd-OSTIA-GLOB-v02.0-fv02.0.nc".format(cdate.strftime("%Y%m%d"))
+        cmd_get = 'wget -c https://www.ncei.noaa.gov/data/oceans/ghrsst/L4/GLOB/UKMO/OSTIA/{:04d}/{:03d}/{}'.format(cdate.year, julian_day, fname)
         if args.verbose:
             logging.debug(cmd_get)
         proc = sp.Popen(cmd_get, shell=True, cwd=cdir, stdout=sp.PIPE, stderr=sp.PIPE)
@@ -95,10 +95,6 @@ def main(args):
             sys.exit(3)
         
         logging.info("finish downloading {}".format(cdate.strftime("%Y-%m-%d")))
-
-        # rename the downloaded file, because those *.bz2 file from PODAAC are actually netcdf files
-        fname_new = "{}-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc".format(cdate.strftime("%Y%m%d"))
-        os.rename(os.path.join(cdir,fname),os.path.join(cdir,fname_new))
 
         cdate +=dt.timedelta(days=1)
 
