@@ -12,20 +12,17 @@ PRIVATE
 #ifdef DYNAMIC
   ! Grid dimensions are set in params_model.f90, but only used in a namelist if compiled for dynamic arrays:
   NAMELIST /grid_dimensions_nml/ & 
-                              nlon, &      ! number of longitude grid points (Can be specified via namelist or in netcdf gridfile)
+                              nlon, &      ! number of longitude grid points (Can be specified via namelist or in netcdf gridfile1)
                               nlat, &      ! number of latitude grid points
                               nlev         ! number of model levels
 #endif
 
-  NAMELIST /params_model_nml/ gridfile, &  ! MOM4 grid_spec.nc file 
-                              gridfile1,&  !
+  NAMELIST /params_model_nml/ gridfile1,&  !
                               gridfile2,&  !
                               gridfile3,&  !
                               grid_nlon_name, & !
                               grid_nlat_name, & !
                               grid_nlev_name, & !
-                              tsbase,& !
-                              uvbase,& !
                               grid_lon_name,& !
                               grid_lat_name,& !
                               grid_lev_name,& !
@@ -39,9 +36,6 @@ PRIVATE
                               grid_wet_name,& !
                               grid_depth_name,& !
                               grid_height_name,& !
-                              diag_lon_name,& !
-                              diag_lat_name,& !
-                              diag_lev_name,& !
                               diag_temp_name,& !
                               diag_salt_name,& !
                               diag_u_name,& !
@@ -58,9 +52,9 @@ PRIVATE
                               diag_DO_ssh, & !
                               diag_DO_sst, & !
                               diag_DO_sss, & !
-                              rsrt_lon_name,& !
-                              rsrt_lat_name,& !
-                              rsrt_lev_name,& !
+                              rsrt_tsbase, & !
+                              rsrt_uvbase, & !
+                              rsrt_hbase, & !
                               rsrt_temp_name,& !
                               rsrt_salt_name,& !
                               rsrt_u_name,& !
@@ -81,6 +75,7 @@ PRIVATE
                               sigma_obst, &          ! Sigma-radius for temporal localization (not activated)
                               gross_error, &         ! number of standard deviations for quality control (all outside removed)
                               DO_WRITE_ENS_MEAN_SPRD, &  ! logical flag to write the ensemble mean and spread for the forecast and analysis fields
+                              DO_WRITE_OMB_MEAN,      &  ! logical flag to write the obs info (omb,qc,...)
                               DO_DRIFTERS, &         ! logical flag to do lagrangian drifters assimilation
                               DO_ALTIMETRY, &        ! logical flag to do altimetry data assimilation
                               DO_SLA, &              ! logical flag to use SLA for altimetry
@@ -94,7 +89,11 @@ PRIVATE
                               DO_UPDATE_H, &         ! option to update model layer thicknesses based on assimilation of observations
                               localization_method, & ! localization method to be used in letkf_local.f90
                               cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
-                              sp_infl_add            ! additive inflation factor (default none)
+                              sp_infl_add, &         ! additive inflation factor (default none)
+                              DO_RTPP,     &         ! logical flag to do relaxation-to-prior-perturbation (default=.false.)
+                              rtpp_coeff,  &         ! default=0.0
+                              DO_RTPS,     &         ! logical flag to do relaxation-to-prior-spread (default=.false.)
+                              rtps_coeff             ! default=0.0
 
 
 
