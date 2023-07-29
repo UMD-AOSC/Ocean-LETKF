@@ -35,7 +35,7 @@ SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
 
   REAL(r_size),ALLOCATABLE :: alon2d(:,:), alat2d(:,:)
   REAL(r_size),ALLOCATABLE :: sea_surface_temperature(:,:), stde(:,:), sst_dtime(:,:)
-  INTEGER(4),  ALLOCATABLE :: quality_level(:,:)
+  INTEGER(4),  ALLOCATABLE :: quality_level(:,:), l2p_flags_acc(:,:)
   INTEGER(1),  ALLOCATABLE :: i1buf2d(:,:)
   INTEGER(2),  ALLOCATABLE :: i2buf2d(:,:)
   LOGICAL,     ALLOCATABLE :: valid(:,:) ! .true. if no missing info at this grid by checking different FillValues in nc file
@@ -80,6 +80,7 @@ SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
 
   ALLOCATE(i1buf2d(ni,nj))
   ALLOCATE(i2buf2d(ni,nj))
+  ALLOCATE(l2p_flags_acc(ni,nj))
 
 
   CALL nc_rdvar2d(fid, "sea_surface_temperature", i2buf2d)
@@ -148,6 +149,35 @@ SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
   WRITE(6,*) "[msg] read_viirs_nc::sst_dtime: min, max=", &
              minval(sst_dtime), maxval(sst_dtime), &
              minval(sst_dtime, mask=valid),maxval(sst_dtime, mask=valid)
+
+!-------------------------------------------------------------------------------
+! Read the l2p_flags (ASCPO writes additional QC flags into it)
+!L2P common flags in bits 1-6 and data provider flags (from ACSPO mask) in bits 9-16: 
+!0:      bit01 (0=IR: 1=microwave); 
+!1:   Y  bit02 (0=ocean; 1=land); 
+!2:   Y  bit03 (0=no ice; 1=ice); 
+!3-7:    bits04-08 (reserved,set to 0); 
+!8:   Y  bit09 (0=radiance valid; 1=invalid); 
+!9:      bit10 (0=night; 1=day); 
+!10:  Y  bit11 (0=ocean; 1=land); 
+!11:  Y  bit12 (0=good quality data; 1=degraded quality data due to \"twilight\" region); 
+!12:  Y  bit13 (0=no glint; 1=glint); 
+!13:  Y  bit14 (0=no snow/ice; 1=snow/ice); 
+!14:  Y  bits15-16 (00=clear; 01=probably clear; 10=cloudy; 11=clear-sky mask undefined)" ;
+!-------------------------------------------------------------------------------
+  CALL nc_rdvar2d(fid, "l2p_flags", i2buf2d)
+  l2p_flags_acc = 0 
+  l2p_flags_acc = l2p_flags_acc + ibits(i2buf2d,1,1) + & ! skip land
+                                  ibits(i2buf2d,2,1) + & ! skip ice
+                                  ibits(i2buf2d,8,1) + & ! skip invalid rad
+                                  ibits(i2buf2d,10,1) + & ! skip land
+                                  ibits(i2buf2d,11,1) + & ! skip twlight
+                                  ibits(i2buf2d,12,1) + & ! skip glint
+                                  ibits(i2buf2d,13,1) + & ! skip snow/ice
+                                  abs(ibits(i2buf2d,14,2))  ! skip non-clear
+  where (l2p_flags_acc /= 0) 
+      valid = .false.
+  end where
 
 !-------------------------------------------------------------------------------
 ! Read the Quality Key (5 is best quality; 0 missing data)

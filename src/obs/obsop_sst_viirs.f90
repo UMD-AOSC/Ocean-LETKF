@@ -86,7 +86,7 @@ PROGRAM obsop_sst_viirs
   INTEGER, DIMENSION(:,:), ALLOCATABLE :: supercnt
   INTEGER :: idx
   INTEGER :: cnt_obs_thinning = 0
-  REAL(r_size) :: min_oerr = 1.0 
+  REAL(r_size) :: min_oerr = 0.2 !(K)
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_oceanmodel module, and process command line options
@@ -97,7 +97,6 @@ PROGRAM obsop_sst_viirs
   CALL set_common_oceanmodel
   CALL process_command_line !(get: -obsin <obsinfile> -gues <guesfile> -obsout <obsoutfile>)
 
-  ALLOCATE(superobs(nlon,nlat),delta(nlon,nlat),M2(nlon,nlat),supercnt(nlon,nlat))
 
   !-----------------------------------------------------------------------------
   ! Read observations from file
@@ -145,23 +144,30 @@ PROGRAM obsop_sst_viirs
   ! Bin the obs and estimate the obs error based on bin standard deviations
   !-----------------------------------------------------------------------------
   if (DO_SUPEROBS) then
+    ALLOCATE(superobs(nlon,nlat),delta(nlon,nlat),M2(nlon,nlat),supercnt(nlon,nlat))
+    superobs=0.0; delta = 0.0; M2 = 0.0; supercnt = 0
+
     print *, "Computing superobs..."
-    supercnt = 0
-    superobs = 0.0d0
 
     !STEVE: (ISSUE) this may have problems in the arctic for the tripolar grid,
     !               or for any irregular grid in general.
     do n=1,nobs ! for each ob,
 !     if (dodebug1) print *, "n = ", n
-      ! Scan the longitudes
-      do i=1,nlon-1
-        if (lon(i+1) > rlon(n)) exit
-      enddo
-      ! Scan the latitudes
-      do j=1,nlat-1
-        if (lat(j+1) > rlat(n)) exit 
-      enddo
 
+      !! Scan the longitudes
+      !do i=1,nlon-1
+      !  if (lon(i+1) > rlon(n)) exit
+      !enddo
+      !! Scan the latitudes
+      !do j=1,nlat-1
+      !  if (lat(j+1) > rlat(n)) exit 
+      !enddo
+      CALL phys2ijk(elem(n),rlon(n),rlat(n),rlev(n),ri,rj,rk) !(OCEAN)
+      if (DO_REMOVE_65N .and. rlat(n) > 65) CYCLE
+      if (CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) CYCLE
+      if (CEILING(rj) < 2 .OR. nlat < CEILING(rj)) CYCLE
+
+      i = NINT(ri); j = NINT(rj)
       supercnt(i,j) = supercnt(i,j) + 1
       delta(i,j) = odat(n) - superobs(i,j)
       superobs(i,j) = superobs(i,j) + delta(i,j)/supercnt(i,j)
@@ -383,7 +389,15 @@ PROGRAM obsop_sst_viirs
   !-----------------------------------------------------------------------------
   ! Write the observations and their associated innovations to file
   !-----------------------------------------------------------------------------
-  CALL write_obs2(obsoutfile,nobs,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr)
+  CALL write_obs2(obsoutfile,nobs,elem(1:nobs), &
+                                  rlon(1:nobs), &
+                                  rlat(1:nobs), &
+                                  rlev(1:nobs), &
+                                  odat(1:nobs), &
+                                  oerr(1:nobs), &
+                                   ohx(1:nobs), &
+                                   oqc(1:nobs), &
+                                  obhr(1:nobs) )
 
   DEALLOCATE( elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,v3d,v2d )
 
