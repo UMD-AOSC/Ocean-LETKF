@@ -21,7 +21,7 @@ MODULE read_viirs
 
 CONTAINS
 
-SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
+SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs, Syyyymmddhh, delta_seconds)
   USE m_ncio,     ONLY: nc_get_fid, nc_close_fid, nc_rddim, nc_rdvar2d, nc_rdvar1d, &
                         nc_rdatt, nc_fndvar
   IMPLICIT NONE
@@ -30,11 +30,15 @@ SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
   INTEGER,     INTENT(IN) :: min_quality_level
   TYPE(sst_viirs_data),ALLOCATABLE,INTENT(INOUT) :: obs_data(:)
   INTEGER,     INTENT(OUT) :: nobs
+  CHARACTER(10),INTENT(IN), OPTIONAL :: Syyyymmddhh
+                              !1234567890
+  INTEGER,      INTENT(IN), OPTIONAL :: delta_seconds  ! qc'ed if abs(obstime-Syyyymmddhh)>delta_seconds 
 
   INTEGER :: fid, ni, nj, i, j, n, qlev
 
   REAL(r_size),ALLOCATABLE :: alon2d(:,:), alat2d(:,:)
   REAL(r_size),ALLOCATABLE :: sea_surface_temperature(:,:), stde(:,:), sst_dtime(:,:)
+  INTEGER,ALLOCATABLE :: sst_time_in_seconds_since19780101(:,:)
   INTEGER(4),  ALLOCATABLE :: quality_level(:,:), l2p_flags_acc(:,:)
   INTEGER(1),  ALLOCATABLE :: i1buf2d(:,:)
   INTEGER(2),  ALLOCATABLE :: i2buf2d(:,:)
@@ -42,9 +46,10 @@ SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
   INTEGER :: FillValue ! missing value indicated by vars in nc file
   REAL(r_size) :: offset, scale_factor
   LOGICAL :: dodebug = .true.
-  INTEGER :: obsdate(8), sdate(8)
+  INTEGER :: obsdate(8), sdate(8), sdate_in_seconds_since19780101, sdate_in_min_since19780101
+  INTEGER :: qcdate(5), qcdate_in_seconds_since19780101, qcdate_in_min_since19780101
   REAL :: tdelta(5)
-  INTEGER :: time(1)
+  INTEGER :: time(1), sst_time
 
 !-------------------------------------------------------------------------------
 ! Read dimension & geo info:
@@ -129,10 +134,14 @@ SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
 !-------------------------------------------------------------------------------
   CALL nc_rdvar1d(fid, "time", time)
   WRITE(6,*) "[msg] read_viirs_nc::time=",time(1)
+  sst_time = time(1)
   sdate = [1981, 1, 1, 0, 0, 0, 0, 0] ! YYYY/MON/DAY/TZONE/HR/MIN/SEC/MSEC
   tdelta = [0.0,0.0,0.0,REAL(time(1)),0.0] ! DAY/HR/MIN/SEC/MSEC
   CALL w3movdat(tdelta, sdate, obsdate)
   WRITE(6,*) "[msg] read_viirs_nc::obstime=", obsdate(1:3),obsdate(5:7)
+  call W3FS21(sdate(1:5), sdate_in_min_since19780101)
+  sdate_in_seconds_since19780101 = 60 * sdate_in_min_since19780101
+  WRITE(6,*) "[msg] read_viirs_nc::obstime_since_19780101=", sdate_in_seconds_since19780101
 
 ! sst_dtime
   CALL nc_rdvar2d(fid, "sst_dtime", i2buf2d)
@@ -149,6 +158,32 @@ SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
   WRITE(6,*) "[msg] read_viirs_nc::sst_dtime: min, max=", &
              minval(sst_dtime), maxval(sst_dtime), &
              minval(sst_dtime, mask=valid),maxval(sst_dtime, mask=valid)
+
+  ALLOCATE(sst_time_in_seconds_since19780101(ni,nj))
+  sst_time_in_seconds_since19780101 = NINT(sst_dtime) + sst_time + &
+                                      sdate_in_seconds_since19780101
+  WRITE(6,*) "[msg] read_viirs_nc::sst_dtime_since19780101: min, max=", &
+             minval(sst_time_in_seconds_since19780101, mask=valid), &
+             maxval(sst_time_in_seconds_since19780101, mask=valid)
+
+  if (PRESENT(Syyyymmddhh) .and. PRESENT(delta_seconds)) then
+     ! convert qc center time
+     qcdate = 0
+     READ(Syyyymmddhh,"(I4,I2,I2,I2)") qcdate(1),qcdate(2),qcdate(3),qcdate(4)
+     WRITE(6,*) "[msg] read_viirs_nc::Syyyymmddhh=", Syyyymmddhh, &
+                "qcdate(:)=",qcdate(:)
+     call W3FS21(qcdate,qcdate_in_min_since19780101)
+     qcdate_in_seconds_since19780101 = 60 * qcdate_in_min_since19780101
+     WRITE(6,*) "[msg] read_viirs_nc::qcdate_in_seconds_since19780101, delta_seconds=", &
+                qcdate_in_seconds_since19780101, delta_seconds
+
+     ! calculate time difference 
+     where (ABS(sst_time_in_seconds_since19780101 - &
+                  qcdate_in_seconds_since19780101) > delta_seconds)
+        valid = .false.
+     end where
+
+  end if
 
 !-------------------------------------------------------------------------------
 ! Read the l2p_flags (ASCPO writes additional QC flags into it)
@@ -242,7 +277,7 @@ SUBROUTINE read_viirs_nc(obsinfile, min_quality_level, obs_data, nobs)
            obs_data(n)%typ      = id_sst_obs
            obs_data(n)%x_grd(1) = alon2d(i,j)
            obs_data(n)%x_grd(2) = alat2d(i,j)
-           obs_data(n)%hour     = sst_dtime(i,j)/3600.0
+           obs_data(n)%hour     = sst_time_in_seconds_since19780101(i,j)/3600.
            obs_data(n)%value    = sea_surface_temperature(i,j)
            obs_data(n)%oerr     = stde(i,j)
            obs_data(n)%qkey     = quality_level(i,j)

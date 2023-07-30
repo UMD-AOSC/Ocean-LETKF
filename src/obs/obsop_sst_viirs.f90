@@ -26,6 +26,9 @@ PROGRAM obsop_sst_viirs
   !-----------------------------------------------------------------------------
   ! Obs data arrays
   !-----------------------------------------------------------------------------
+  LOGICAL :: BINARY_INPUT = .FALSE.
+  CHARACTER(10) :: Syyyymmddhh = "YYYYMMDDHH"
+  INTEGER :: delta_seconds = -999
   TYPE(sst_viirs_data), ALLOCATABLE :: obs_data(:)
 
   REAL(r_size), ALLOCATABLE :: elem(:)
@@ -101,34 +104,74 @@ PROGRAM obsop_sst_viirs
   !-----------------------------------------------------------------------------
   ! Read observations from file
   !-----------------------------------------------------------------------------
-  CALL read_viirs_nc(trim(obsinfile), min_quality_level, obs_data, nobs)
+  call create_empty_obsfile(trim(obsoutfile))
 
-  ALLOCATE( elem(nobs) )
-  ALLOCATE( rlon(nobs) )
-  ALLOCATE( rlat(nobs) )
-  ALLOCATE( rlev(nobs) )
-  ALLOCATE( odat(nobs) )
-  ALLOCATE( oerr(nobs) )
-  ALLOCATE( ohx(nobs) )
-  ALLOCATE( oqc(nobs) )
-  ALLOCATE( obhr(nobs) )
+  if (BINARY_INPUT) then ![processed binary input]
+     print *, "obsop_sst_viirs.f90:: reading binary file=",trim(obsinfile)
+     CALL get_nobs(trim(obsinfile),8,nobs)
 
-  print *, "obsop_sst.f90:: starting nobs = ", nobs
-  do i=1,nobs
-    elem(i) = obs_data(i)%typ
-    rlon(i) = obs_data(i)%x_grd(1)
-    rlat(i) = obs_data(i)%x_grd(2)
-!   rlev(i) = obs_data(i)%x_grd(3) !STEVE: not applicable for SST
-    odat(i) = obs_data(i)%value
-    oerr(i) = obs_data(i)%oerr
-    ohx(i)  = 0
-    oqc(i)  = 0
-    obhr(i) = obs_data(i)%hour
-  enddo
-  DEALLOCATE(obs_data)
+     if (nobs<0) then
+        print*, "obsop_sst_viirs.f90: nobs<=0. Exit now..."
+        STOP (0)
+     endif
+
+     ALLOCATE( elem(nobs) )
+     ALLOCATE( rlon(nobs) )
+     ALLOCATE( rlat(nobs) )
+     ALLOCATE( rlev(nobs) )
+     ALLOCATE( odat(nobs) )
+     ALLOCATE( oerr(nobs) )
+     ALLOCATE( ohx(nobs) )
+     ALLOCATE( oqc(nobs) )
+     ALLOCATE( obhr(nobs) )
+
+     CALL read_obs3(trim(obsinfile), nobs, elem, rlon, rlat, rlev, odat, oerr, obhr)
+     oqc(:) = 0    ! now set all obs as bad. 
+     ohx(:) = 0.d0
+  else ! [nc input]
+     print *, "obsop_sst_viirs.f90:: reading nc file=",trim(obsinfile)
+     if (delta_seconds>0) then
+        CALL read_viirs_nc(trim(obsinfile), min_quality_level, obs_data, nobs, &
+                           Syyyymmddhh, delta_seconds)
+     else
+        CALL read_viirs_nc(trim(obsinfile), min_quality_level, obs_data, nobs)
+     end if
+
+     if (nobs<0) then
+        print*, "obsop_sst_viirs.f90: nobs<=0. Exit now..."
+        STOP (0)
+     endif
+
+     ALLOCATE( elem(nobs) )
+     ALLOCATE( rlon(nobs) )
+     ALLOCATE( rlat(nobs) )
+     ALLOCATE( rlev(nobs) )
+     ALLOCATE( odat(nobs) )
+     ALLOCATE( oerr(nobs) )
+     ALLOCATE( ohx(nobs) )
+     ALLOCATE( oqc(nobs) )
+     ALLOCATE( obhr(nobs) )
+
+     print *, "obsop_sst_viirs.f90:: starting nobs = ", nobs
+     do i=1,nobs
+        elem(i) = obs_data(i)%typ
+        rlon(i) = obs_data(i)%x_grd(1)
+        rlat(i) = obs_data(i)%x_grd(2)
+        rlev(i) = 0.d0
+        odat(i) = obs_data(i)%value
+        oerr(i) = obs_data(i)%oerr
+        ohx(i)  = 0.d0
+        oqc(i)  = 0
+        obhr(i) = obs_data(i)%hour
+     enddo
+     DEALLOCATE(obs_data)
+  end if
 
   if (print1st) then  
-    print *, "elem(1),rlon(1),rlat(1),obhr(1) = ", elem(1),rlon(1),rlat(1),obhr(1)
+    i=1
+    print *, "i, elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr = ", i, elem(i),rlon(i),rlat(i),rlev(i),odat(i),oerr(i),ohx(i),oqc(i),obhr(i)
+    i=nobs
+    print *, "i, elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr = ", i, elem(i),rlon(i),rlat(i),rlev(i),odat(i),oerr(i),ohx(i),oqc(i),obhr(i)
     print *, "odat(1:40) = ", odat(1:40)
     print *, "oerr(1:40) = ", oerr(1:40)
   endif
@@ -154,6 +197,7 @@ PROGRAM obsop_sst_viirs
     do n=1,nobs ! for each ob,
 !     if (dodebug1) print *, "n = ", n
 
+      if (DO_REMOVE_65N .and. rlat(n) > 65) CYCLE
       !! Scan the longitudes
       !do i=1,nlon-1
       !  if (lon(i+1) > rlon(n)) exit
@@ -162,16 +206,17 @@ PROGRAM obsop_sst_viirs
       !do j=1,nlat-1
       !  if (lat(j+1) > rlat(n)) exit 
       !enddo
-      CALL phys2ijk(elem(n),rlon(n),rlat(n),rlev(n),ri,rj,rk) !(OCEAN)
-      if (DO_REMOVE_65N .and. rlat(n) > 65) CYCLE
-      if (CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) CYCLE
-      if (CEILING(rj) < 2 .OR. nlat < CEILING(rj)) CYCLE
+      !CALL phys2ijk(elem(n),rlon(n),rlat(n),rlev(n),ri,rj,rk) !(OCEAN)
+      CALL phys2ij_nearest(rlon(n),rlat(n),ri,rj) ! OCEAN
+
+      if (CEILING(ri) < 1 .OR. nlon < CEILING(ri)) CYCLE
+      if (CEILING(rj) < 1 .OR. nlat < CEILING(rj)) CYCLE
 
       i = NINT(ri); j = NINT(rj)
       supercnt(i,j) = supercnt(i,j) + 1
-      delta(i,j) = odat(n) - superobs(i,j)
+      delta(i,j)    = odat(n) - superobs(i,j)
       superobs(i,j) = superobs(i,j) + delta(i,j)/supercnt(i,j)
-      M2(i,j) = M2(i,j) + delta(i,j)*(odat(n) - superobs(i,j))
+      M2(i,j)       = M2(i,j) + delta(i,j)*(odat(n) - superobs(i,j))
 !     if (dodebug1) print *, "supercnt(",i,",",j,") = ", supercnt(i,j)
     enddo
     !"superobs" contains the mean
@@ -181,14 +226,14 @@ PROGRAM obsop_sst_viirs
     idx=0
     do j=1,nlat-1
       do i=1,nlon-1
-        if (supercnt(i,j) > 1) then
+        if (supercnt(i,j) > 1 .and. wet(i,j)>0.5) then ! only retain ocn pts defined by MOM
           idx = idx+1
           if (dodebug1) print *, "idx = ", idx
           odat(idx) = superobs(i,j)
           oerr(idx) = obserr_scaling*(min_oerr + SQRT(M2(i,j)))
-          rlon(idx) = (lon(i+1)+lon(i))/2.0d0
-          rlat(idx) = (lat(j+1)+lat(j))/2.0d0
-          rlev(idx) = 0
+          rlon(idx) = lon(i) !(lon(i+1)+lon(i))/2.0d0
+          rlat(idx) = lat(j) !(lat(j+1)+lat(j))/2.0d0
+          rlev(idx) = 0.d0
           elem(idx) = id_sst_obs
           if (dodebug1) print *, "odat(idx) = ", odat(idx)
           if (dodebug1) print *, "oerr(idx) = ", oerr(idx)
@@ -370,7 +415,7 @@ PROGRAM obsop_sst_viirs
   !-----------------------------------------------------------------------------
   ! Print out the counts of observations removed for various reasons
   !-----------------------------------------------------------------------------
-  WRITE(6,*) "In obsop_sst_acspo.f90::"
+  WRITE(6,*) "In obsop_sst_viirs.f90::"
   WRITE(6,*) "observations at start = ", nobs
   WRITE(6,*) "== observations removed for: =="
   WRITE(6,*) "cnt_obs_thinning = ", cnt_obs_thinning
@@ -397,7 +442,8 @@ PROGRAM obsop_sst_viirs
                                   oerr(1:nobs), &
                                    ohx(1:nobs), &
                                    oqc(1:nobs), &
-                                  obhr(1:nobs) )
+                                  obhr(1:nobs), &
+                                  lappend_in = .true.)
 
   DEALLOCATE( elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,v3d,v2d )
 
@@ -417,7 +463,7 @@ INTEGER, DIMENSION(3) :: values
 ! inputs are in the format "-x xxx"
 do i=1,COMMAND_ARGUMENT_COUNT(),2
   CALL GET_COMMAND_ARGUMENT(i,arg1)
-  PRINT *, "In obsop_sst_podaac.f90::"
+  PRINT *, "In obsop_sst_viirs.f90::"
   PRINT *, "Argument ", i, " = ",TRIM(arg1)
 
   select case (arg1)
@@ -441,6 +487,10 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) DO_SUPEROBS
+    case('-binary')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) BINARY_INPUT
     case('-thin')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
@@ -457,6 +507,15 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) min_quality_level
+    case('-qcyyyymmddhh')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      !read (arg2,*) min_quality_level
+      Syyyymmddhh = arg2
+    case('-maxdt')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) delta_seconds
     case('-debug')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
