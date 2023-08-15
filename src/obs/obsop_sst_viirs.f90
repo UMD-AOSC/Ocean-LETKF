@@ -108,10 +108,10 @@ PROGRAM obsop_sst_viirs
 
   if (BINARY_INPUT) then ![processed binary input]
      print *, "obsop_sst_viirs.f90:: reading binary file=",trim(obsinfile)
-     CALL get_nobs(trim(obsinfile),8,nobs)
+     CALL get_nobs(trim(obsinfile),8,nobs,errIfNoObs=.false.)
 
-     if (nobs<0) then
-        print*, "obsop_sst_viirs.f90: nobs<=0. Exit now..."
+     if (nobs<=0) then
+        print*, "obsop_sst_viirs.f90: nobs=",nobs,"<=0. Exit now..."
         STOP (0)
      endif
 
