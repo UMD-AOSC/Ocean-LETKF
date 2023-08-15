@@ -58,6 +58,7 @@ set (SRCS
   obs/read_argo.f90
   obs/read_avhrr_pathfinder.f90
   obs/read_geostationary.f90
+  obs/read_viirs.f90
   obs/read_smap.f90
   obs/read_aviso_adt.f90
   obs/read_ice_txt.f90
@@ -89,6 +90,7 @@ set(operators
   adt
   sst
   sst_geostationary
+  sst_viirs
   sss
   tprof
   sprof
@@ -101,3 +103,25 @@ foreach(operator ${operators})
   target_compile_definitions(OCN.obsOp_${MODEL}.${operator}.x PRIVATE DYNAMIC)
   install(TARGETS OCN.obsOp_${MODEL}.${operator}.x)
 endforeach()
+
+# different observation decoders
+set(decoders
+  sst_viirs
+  )
+foreach(decoder ${decoders})
+  add_executable(OCN.decoder.${decoder}.x obs/decoder_${decoder}.f90)
+  target_link_libraries(OCN.decoder.${decoder}.x PRIVATE OCN.letkf NetCDF::NetCDF_Fortran HDF5::HDF5)
+  set_target_properties (OCN.decoder.${decoder}.x  PROPERTIES Fortran_PREPROCESS ON) 
+  target_compile_definitions(OCN.decoder.${decoder}.x PRIVATE DYNAMIC)
+  install(TARGETS OCN.decoder.${decoder}.x)
+endforeach()
+
+# superob utils
+add_executable(OCN.superob.x obs/superob.f90)
+target_link_libraries(OCN.superob.x PRIVATE OCN.letkf NetCDF::NetCDF_Fortran HDF5::HDF5)
+set_target_properties (OCN.superob.x  PROPERTIES Fortran_PREPROCESS ON) 
+target_compile_definitions(OCN.superob.x PRIVATE DYNAMIC)
+install(TARGETS OCN.superob.x)
+
+
+

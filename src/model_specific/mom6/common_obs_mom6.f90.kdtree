@@ -16,7 +16,9 @@ MODULE common_obs_oceanmodel
 
   IMPLICIT NONE
 
-  PUBLIC Trans_XtoY, phys2ijk, read_obs, get_nobs, read_obs2, write_obs2, itpl_2d, itpl_3d, monit_dep
+  PUBLIC Trans_XtoY, phys2ijk, read_obs, get_nobs, write_obs, read_obs2, write_obs2, &
+         itpl_2d, itpl_3d, monit_dep, write_obs3, read_obs3, phys2ij_nearest, &
+         create_empty_obsfile
   PUBLIC center_obs_coords
 
   PRIVATE
@@ -295,6 +297,88 @@ SUBROUTINE phys2ijk(elem,rlon,rlat,rlev,ri,rj,rk)     !(OCEAN)
   endif 
   
 END SUBROUTINE phys2ijk
+
+
+
+SUBROUTINE phys2ij_nearest(rlon,rlat,ri,rj)     !(OCEAN)
+  USE params_model, ONLY: nlon, nlat
+  USE vars_model,   ONLY: lon2d, lat2d, lev2d, lon, lat
+  USE vars_model,   ONLY: lon0, lonf, lat0, latf, wrapgap
+  REAL(r_size),INTENT(IN) :: rlon ! observation longitude
+  REAL(r_size),INTENT(IN) :: rlat ! observation latitude
+  REAL(r_size),INTENT(OUT) :: ri  ! non-integer grid coordinate for lon dimension
+  REAL(r_size),INTENT(OUT) :: rj  ! non-integer grid coordinate for lat dimension
+  REAL(r_size) :: glon,glat
+  INTEGER :: i,j,k,n, ni,nj
+
+  LOGICAL, PARAMETER :: dodebug = .false.
+
+  !-----------------------------------------------------------------------------
+  ! phys2ij_nearest: Initialize the KD-tree for the model-grid
+  !-----------------------------------------------------------------------------
+  !STEVE: NOTE: this is replicated for each process
+  if (initialized == 0) then
+    ! Allocating this was needed for some machines, possibly due to the cache size
+    ! of the machine and how the compiler handles nested function calls in memory.
+    ALLOCATE(lon2ij(nlon*nlat),lat2ij(nlon*nlat))
+    lon2ij = RESHAPE(lon2d(:,:),(/nlon*nlat/))
+    lat2ij = RESHAPE(lat2d(:,:),(/nlon*nlat/))
+
+    WRITE(6,*) "Initializing the obs_local()"
+    initialized = 1
+    call kd_init( kdtree_root, lon2ij, lat2ij )
+    WRITE(6,*) "Done constructing KD search tree."
+    WRITE(6,*) "nlon*nlat = ", nlon*nlat
+    ALLOCATE(dist(k_sought))
+    ALLOCATE( idx(k_sought))
+    prev_lon = -1e10
+    prev_lat = -1e10
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! phys2ij_nearest: query the KD-tree
+  !-----------------------------------------------------------------------------
+  if (rlon .ne. prev_lon .or. rlat .ne. prev_lat) then
+    CALL kd_search_nnearest(kdtree_root,  (/rlon, rlat/), k_sought, idx, dist, k_found, .false.)
+    prev_lon = rlon
+    prev_lat = rlat
+    if (dodebug) then
+      WRITE(6,*) "common_obs_mom6.f90::phys2ij_nearest ---------------------------- "
+      WRITE(6,*) "base observation point (lon/lat) :: ", rlon, rlat
+      WRITE(6,*) "k_sought = ", k_sought
+      WRITE(6,*) "k_found  = ", k_found
+      WRITE(6,*) "Grid points found by kd_search_nnearest = "
+      WRITE(6,*) "idx,ni,nj,lon,lat,dist"
+      do n=1,k_found
+        ni = MODULO(idx(n)-1,nlon)+1
+        nj = idx(n)/nlon+1 ! Integer division
+        WRITE(6,*) idx(n), ni,nj, lon2d(ni,nj), lat2d(ni,nj), dist(n)
+      enddo
+    endif
+  endif
+
+  !-----------------------------------------------------------------------------
+  ! phys2ij_nearest: rlon -> ri, rlat -> rj
+  !-----------------------------------------------------------------------------
+
+  ! Find the appropriate grid box containing this observation
+
+  ! First, find the index of the nearest grid point
+  ni = MODULO(idx(1)-1,nlon)+1
+  nj = FLOOR(REAL(idx(1))/REAL(nlon))+1 ! Integer division
+  if (dodebug) then
+      glon = lon2d(ni,nj)
+      glat = lat2d(ni,nj)
+      WRITE(6,*) "common_obs_mom6.f90::phys2ij_nearest ---------------------------- "
+      WRITE(6,*) "base observation point (lon/lat) :: ", rlon, rlat
+      WRITE(6,*) "base observation point (ni/nj)   :: ", ni, nj
+      WRITE(6,*) "matched model grid (lon/lat)     :: ", glon, glat
+  end if 
+
+  ri = REAL(ni,r_size)
+  rj = REAL(nj,r_size)
+
+END SUBROUTINE phys2ij_nearest
 
 
 !-----------------------------------------------------------------------
@@ -605,7 +689,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
       CASE(id_z_obs)     !(OCEAN)
         iz = iz + 1      !(OCEAN)
       END SELECT
-      if (wk(2) .ne. lon_m1 .and. wk(3) .ne. lat_m1) then
+      if ((wk(2) .ne. lon_m1) .or. (wk(3) .ne. lat_m1)) then
         nprof=nprof+1
         lon_m1 = wk(2)
         lat_m1 = wk(3)
@@ -762,13 +846,13 @@ SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
 
   do n=1,nn
-    wk(1) = REAL(elem(n),r_sngl)
-    wk(2) = REAL(rlon(n),r_sngl)
-    wk(3) = REAL(rlat(n),r_sngl)
-    wk(4) = REAL(rlev(n),r_sngl)
-    wk(5) = REAL(odat(n),r_sngl)
-    wk(6) = REAL(oerr(n),r_sngl)
-    wk(7) = REAL(obhr(n),r_sngl)
+    wk(1) = REAL(elem(n),r_sngl) ! ID for observation type
+    wk(2) = REAL(rlon(n),r_sngl) ! Ob lon
+    wk(3) = REAL(rlat(n),r_sngl) ! Ob lat
+    wk(4) = REAL(rlev(n),r_sngl) ! Ob lev
+    wk(5) = REAL(odat(n),r_sngl) ! Observed data quantity
+    wk(6) = REAL(oerr(n),r_sngl) ! Estimated obs error
+    wk(7) = REAL(obhr(n),r_sngl) ! hour
     wk(8) = -1
     wk(9) = -1
     WRITE(iunit) wk
@@ -779,7 +863,7 @@ SUBROUTINE write_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
 END SUBROUTINE write_obs
 
 
-SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag_in)
+SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag_in,lappend_in)
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nn
   REAL(r_size),INTENT(IN) :: elem(nn) ! element number
@@ -791,7 +875,9 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag
   REAL(r_size),INTENT(IN) :: ohx(nn)
   REAL(r_size),INTENT(IN) :: obhr(nn)
   LOGICAL, INTENT(IN), OPTIONAL :: qcflag_in
-  LOGICAL :: qcflag
+  LOGICAL, INTENT(IN), OPTIONAL :: lappend_in
+
+  LOGICAL :: qcflag, lappend
   INTEGER,INTENT(IN) :: oqc(nn)
   REAL(r_sngl) :: wk(9)
   INTEGER :: n,iunit
@@ -803,8 +889,20 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag
     qcflag = .false.
   endif
 
+  if (PRESENT(lappend_in)) then
+     lappend = lappend_in
+  else
+     lappend = .false.
+  endif
+
   iunit=92
-  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  if (lappend) then
+    WRITE(*,*) "write_obs2:: appending mode on"
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',ACTION="write", &
+         POSITION="append")
+  else
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',ACTION="write")
+  endif
 
   do n=1,nn
     if (qcflag .and. oqc(n)==0) CYCLE
@@ -824,6 +922,110 @@ SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,ohx,oqc,obhr,qcflag
   CLOSE(iunit)
 
 END SUBROUTINE write_obs2
+
+! CDA: for superob & decoders
+SUBROUTINE read_obs3(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr)
+  CHARACTER(*),INTENT(IN) :: cfile
+  INTEGER,INTENT(IN) :: nn
+  REAL(r_size),INTENT(OUT) :: elem(nn) ! element number
+  REAL(r_size),INTENT(OUT) :: rlon(nn)
+  REAL(r_size),INTENT(OUT) :: rlat(nn)
+  REAL(r_size),INTENT(OUT) :: rlev(nn)
+  REAL(r_size),INTENT(OUT) :: odat(nn)
+  REAL(r_size),INTENT(OUT) :: oerr(nn)
+  REAL(r_size),INTENT(OUT) :: obhr(nn)
+  !INTEGER,INTENT(OUT) :: oqc(nn)
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: n,iunit
+
+  iunit=94
+  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',ACTION="read")
+
+  do n=1,nn
+    READ(iunit) wk
+    elem(n) = REAL(wk(1),r_size)
+    rlon(n) = REAL(wk(2),r_size)
+    rlat(n) = REAL(wk(3),r_size)
+    rlev(n) = REAL(wk(4),r_size)
+    odat(n) = REAL(wk(5),r_size)
+    oerr(n) = REAL(wk(6),r_size)
+    obhr(n) = REAL(wk(7),r_size)
+  end do
+
+  CLOSE(iunit)
+
+ 
+END SUBROUTINE read_obs3
+
+SUBROUTINE create_empty_obsfile(cfile)
+  CHARACTER(*),INTENT(IN) :: cfile
+  INTEGER :: iunit
+  iunit=93
+  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',ACTION="write")
+  CLOSE(iunit)
+
+END SUBROUTINE create_empty_obsfile
+
+
+
+! CDA: used for decoder & superob
+SUBROUTINE write_obs3(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,obhr,oqc,qcflag_in, &
+                      lappend_in)
+  CHARACTER(*),INTENT(IN) :: cfile
+  INTEGER,INTENT(IN) :: nn
+  REAL(r_size),INTENT(IN) :: elem(nn) ! element number
+  REAL(r_size),INTENT(IN) :: rlon(nn)
+  REAL(r_size),INTENT(IN) :: rlat(nn)
+  REAL(r_size),INTENT(IN) :: rlev(nn)
+  REAL(r_size),INTENT(IN) :: odat(nn)
+  REAL(r_size),INTENT(IN) :: oerr(nn)
+  REAL(r_size),INTENT(IN) :: obhr(nn)
+  INTEGER,INTENT(IN),OPTIONAL :: oqc(nn)
+  LOGICAL,INTENT(IN),OPTIONAL :: qcflag_in, lappend_in
+
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: n,iunit
+  LOGICAL :: qcflag, lappend
+
+  if (PRESENT(qcflag_in)) then
+    qcflag = qcflag_in
+  else
+    qcflag = .false.
+  endif
+
+  if (PRESENT(lappend_in)) then
+     lappend = lappend_in
+  else
+     lappend = .false.
+  endif
+
+
+  iunit=93
+  if (lappend) then
+     WRITE(*,*) "write_obs2:: appending mode on"
+     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',ACTION="write", &
+          POSITION="append")
+  else
+     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',ACTION="write")
+  endif
+
+
+  do n=1,nn
+    if (qcflag .and. oqc(n)==0) CYCLE
+    wk(1) = REAL(elem(n),r_sngl) ! ID for observation type
+    wk(2) = REAL(rlon(n),r_sngl) ! Ob lon
+    wk(3) = REAL(rlat(n),r_sngl) ! Ob lat
+    wk(4) = REAL(rlev(n),r_sngl) ! Ob lev
+    wk(5) = REAL(odat(n),r_sngl) ! Observed data quantity
+    wk(6) = REAL(oerr(n),r_sngl) ! Estimated obs error
+    wk(7) = REAL(obhr(n),r_sngl) ! hour
+    wk(8) = REAL(1.0,    r_sngl) ! CDA: reserved for platform(e.g., VIIRS, AHI, ABI)
+    WRITE(iunit) wk
+  enddo
+
+  CLOSE(iunit)
+
+END SUBROUTINE write_obs3
 
 
 SUBROUTINE center_obs_coords(rlon,oerr,nn)

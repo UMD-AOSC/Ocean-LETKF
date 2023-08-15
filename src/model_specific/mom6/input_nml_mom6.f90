@@ -23,8 +23,6 @@ PRIVATE
                               grid_nlon_name, & !
                               grid_nlat_name, & !
                               grid_nlev_name, & !
-                              tsbase,& !
-                              uvbase,& !
                               grid_lon_name,& !
                               grid_lat_name,& !
                               grid_lev_name,& !
@@ -54,6 +52,9 @@ PRIVATE
                               diag_DO_ssh, & !
                               diag_DO_sst, & !
                               diag_DO_sss, & !
+                              rsrt_tsbase, & !
+                              rsrt_uvbase, & !
+                              rsrt_hbase, & !
                               rsrt_temp_name,& !
                               rsrt_salt_name,& !
                               rsrt_u_name,& !
