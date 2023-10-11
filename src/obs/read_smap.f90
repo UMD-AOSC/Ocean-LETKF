@@ -251,6 +251,8 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta
   LOGICAL :: dodebug = .true.
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_GOOD = 0
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_BAD  = 1
+  INTEGER,PARAMETER :: QUAL_FLAG_SSS_HAS_LAND    = 1
+  INTEGER,PARAMETER :: QUAL_FLAG_SSS_HAS_ICE     = 1
 
 !-------------------------------------------------------------------------------
 ! Open the hdf5 file 
@@ -361,13 +363,34 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta
    where (NINT(sea_surface_salinity)==NINT(r4FillValue))
       valid = .false.
    end where
+   CALL h5_rdatt(fid, "/smap_sss", "valid_max", r4FillValue)
+   WRITE(6,*) "valid_max_yo=", r4FillValue
+   where(sea_surface_salinity > r4FillValue)
+      valid = .false.
+   end where
+   CALL h5_rdatt(fid, "/smap_sss", "valid_min", r4FillValue)
+   WRITE(6,*) "valid_min_yo=", r4FillValue
+   where( sea_surface_salinity < r4FillValue)
+      valid = .false.
+   endwhere
+ 
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::smap_sss: min, max=", &
               minval(sea_surface_salinity, mask=valid), &
               maxval(sea_surface_salinity, mask=valid)
 
    CALL h5_rdvar2d(fid, "/smap_sss_uncertainty", stde)
    CALL h5_rdatt(fid,   "/smap_sss_uncertainty", "_FillValue", r4FillValue)
-   where (NINT(stde)==NINT(r4FillValue))
+   where (NINT(stde)==NINT(r4FillValue)) ! 
+      valid = .false.
+   end where
+   CALL h5_rdatt(fid, "/smap_sss_uncertainty", "valid_max", r4FillValue)
+   WRITE(6,*) "valid_max_error=", r4FillValue
+   where(stde > r4FillValue)
+      valid = .false.
+   end where
+   CALL h5_rdatt(fid, "/smap_sss_uncertainty", "valid_min", r4FillValue)
+   WRITE(6,*) "valid_min_error=", r4FillValue
+   where(stde < r4FillValue)
       valid = .false.
    end where
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::smap_sss_uncertainty: min, max=", &
@@ -419,7 +442,10 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta
    CALL h5_rdvar2d(fid, "/quality_flag", quality_flag)
    CALL h5_rdatt(fid,   "/quality_flag", "_FillValue", i4FillValue)
    if (dodebug) WRITE(6,*) "i4FillValue", i4FillValue
-   where (quality_flag == i4FillValue .or. IBITS(quality_flag,0,1)==QUAL_FLAG_SSS_USABLE_BAD) ! or BIT 0 QC FLAG is bad
+   where (quality_flag == i4FillValue .or. &
+          IBITS(quality_flag,0,1)==QUAL_FLAG_SSS_USABLE_BAD .or. &   ! overall bad
+          IBITS(quality_flag,7,1)==QUAL_FLAG_SSS_HAS_LAND .or. &   ! has land
+          IBITS(quality_flag,8,1)==QUAL_FLAG_SSS_HAS_ICE ) !      ! has ice
      valid = .false.
    end where
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::quality_flag: min, max=", &

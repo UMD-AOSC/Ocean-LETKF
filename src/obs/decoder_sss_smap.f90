@@ -88,7 +88,7 @@ PROGRAM decoder_sss_smap
   ALLOCATE( oqc(nobs) )
   ALLOCATE( obhr(nobs) )
 
-  print *, "obsop_sst.f90:: starting nobs = ", nobs
+  print *, "decoder_sss_smap.f90:: starting nobs = ", nobs
   do i=1,nobs
     elem(i) = obs_data(i)%typ
     rlon(i) = obs_data(i)%x_grd(1)
