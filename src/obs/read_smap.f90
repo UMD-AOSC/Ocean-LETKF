@@ -205,7 +205,7 @@ SUBROUTINE read_jpl_smap_l3_sss_nc(obsinfile, obs_data, nobs)
         end if
      end do
   end do
-  CALL inspect_obs_data(obs_data,subname="read_jpl_smap_l2_sss_h5")
+  CALL inspect_obs_data(obs_data,subname="read_jpl_smap_l3_sss_h5")
   if (n/=nobs) then
      WRITE(6,*) "[err] read_jpl_smap_l2_sss_h5::n/=nobs: n, nobs=", n, nobs
      STOP (27)
@@ -220,7 +220,7 @@ END SUBROUTINE
 ! - Data documentation webpage:
 !   https://podaac.jpl.nasa.gov/dataset/SMAP_JPL_L2B_SSS_CAP_V5
 !-------------------------------------------------------------------------------
-SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
+SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta_seconds)
   USE m_h5io,    ONLY: h5_get_fid, h5_close_fid, h5_rdvarshp, h5_rdvar2d, &
                        h5_rdvar1d, h5_rdatt, &
                        HID_T, HSIZE_T, i4, r4
@@ -228,22 +228,31 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
   CHARACTER(*),INTENT(IN) :: obsinfile
   TYPE(sss_data),ALLOCATABLE,INTENT(INOUT) :: obs_data(:)
   INTEGER,       INTENT(OUT)   :: nobs
+  CHARACTER(10),INTENT(IN), OPTIONAL :: Syyyymmddhh
+                                        !1234567890
+  INTEGER,      INTENT(IN), OPTIONAL :: delta_seconds  ! qc'ed if abs(obstime-Syyyymmddhh)>delta_seconds
   
   INTEGER(HID_T) :: fid
   INTEGER(HSIZE_T),allocatable :: varsizes(:)  ! (2)
   REAL(r_size),ALLOCATABLE :: alon2d(:,:), alat2d(:,:)              ! (nlines,npixels)
   REAL(r_size),ALLOCATABLE :: sea_surface_salinity(:,:), stde(:,:)  ! (nlines,npixels)
   REAL(r_size),ALLOCATABLE :: sss_time(:)                          ! (nlines) 
+  INTEGER,ALLOCATABLE :: sss_time_in_seconds_since19780101(:)      ! (nlines)
   INTEGER(i4), ALLOCATABLE :: quality_flag(:,:)                     ! (nlines,npixels), need to ensure bits>16. Use 32bits here.
   LOGICAL,     ALLOCATABLE :: valid(:,:) ! .true. if no missing info at this grid by checking different FillValues in ncfile
   REAL(r4)     :: r4FillValue ! need to ensure bits=32
   INTEGER(i4)  :: i4FillValue ! need to ensure bits>16. Use 32bits here
-  INTEGER :: sss_sdate(8), sss_edate(8), sdate(8)
+  INTEGER :: sss_sdate(8), sss_edate(8)
+  INTEGER :: sdate(8), sdate_in_seconds_since19780101, sdate_in_min_since19780101
+  INTEGER :: qc_sdate(8), qc_edate(8)
+  INTEGER :: qcdate(5), qcdate_in_seconds_since19780101, qcdate_in_min_since19780101
   REAL :: tdelta(5)
   INTEGER :: nlines, npixels, i, j, n, istat
   LOGICAL :: dodebug = .true.
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_GOOD = 0
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_BAD  = 1
+  INTEGER,PARAMETER :: QUAL_FLAG_SSS_HAS_LAND    = 1
+  INTEGER,PARAMETER :: QUAL_FLAG_SSS_HAS_ICE     = 1
 
 !-------------------------------------------------------------------------------
 ! Open the hdf5 file 
@@ -258,26 +267,74 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
   nlines = varsizes(1); npixels = varsizes(2)
   WRITE(6,*) "nlines, npixels=", nlines, npixels
 
+  ALLOCATE(alon2d(nlines,npixels), alat2d(nlines,npixels))
+  ALLOCATE(valid(nlines,npixels))
+  valid = .true.
 !-------------------------------------------------------------------------------
 ! Read row time
 !-------------------------------------------------------------------------------
    sdate = [2015, 1, 1, 0, 0, 0, 0, 0] ! YYYY/MON/DAY/TZONE/HR/MIN/SEC/MSEC
+   CALL W3FS21(sdate(1:5), sdate_in_min_since19780101)
+   sdate_in_seconds_since19780101 = 60 * sdate_in_min_since19780101
+
    ALLOCATE(sss_time(nlines))
-   CALL h5_rdvar1d(fid, "/row_time", sss_time)
+   ALLOCATE(sss_time_in_seconds_since19780101(nlines))
+
+   CALL h5_rdvar1d(fid, "/row_time", sss_time) ! elapse seconds since sdate
    tdelta = [0.0,0.0,0.0,REAL(sss_time(1)),0.0] ! DAY/HR/MIN/SEC/MSEC
-   call w3movdat(tdelta, sdate, sss_sdate)
+   CALL w3movdat(tdelta, sdate, sss_sdate)
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::start date=", sss_sdate(1:3),sss_sdate(5:7)
    tdelta = [0.0,0.0,0.0,REAL(sss_time(nlines)),0.0] ! DAY/HR/MIN/SEC/MSEC
-   call w3movdat(tdelta, sdate, sss_edate)
+   CALL w3movdat(tdelta, sdate, sss_edate)
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::end date=", sss_edate(1:3),sss_edate(5:7)
+
+   sss_time_in_seconds_since19780101(:) = sdate_in_seconds_since19780101 + &
+                                          CEILING(sss_time(:))
+   WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::sss_dtime_since19780101: min, max=", &
+             minval(sss_time_in_seconds_since19780101), &
+             maxval(sss_time_in_seconds_since19780101)
+
+  ! time filtering
+  if (PRESENT(Syyyymmddhh) .and. PRESENT(delta_seconds)) then
+     ! convert qc center time
+     qcdate = 0
+     READ(Syyyymmddhh,"(I4,I2,I2,I2)") qcdate(1),qcdate(2),qcdate(3),qcdate(4)
+     WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::Syyyymmddhh=", Syyyymmddhh, &
+                "qcdate(:)=",qcdate(:)
+     call W3FS21(qcdate,qcdate_in_min_since19780101)
+     qcdate_in_seconds_since19780101 = 60 * qcdate_in_min_since19780101
+     WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::qcdate_in_seconds_since19780101, delta_seconds=", &
+                qcdate_in_seconds_since19780101, delta_seconds
+     
+     sdate =  [1978, 1, 1, 0, 0, 0, 0, 0] ! YYYY/MON/DAY/TZONE/HR/MIN/SEC/MSEC
+     tdelta = [0.0, &
+                REAL((qcdate_in_seconds_since19780101-delta_seconds)/3600), &
+                0.0, &
+                REAL(mod(qcdate_in_seconds_since19780101-delta_seconds,3600)), &
+                0.0]
+     CALL w3movdat(tdelta, sdate, qc_sdate)
+     tdelta = [0.0,&
+               REAL((qcdate_in_seconds_since19780101+delta_seconds)/3600), &
+               0.0,&
+               REAL(mod(qcdate_in_seconds_since19780101+delta_seconds,3600)),&
+               0.0]
+     CALL w3movdat(tdelta, sdate, qc_edate)
+     WRITE(6,*) "[DEBUG]: qc_sdate=", qc_sdate(1:3), qc_sdate(5:7)
+     WRITE(6,*) "[DEBUG]: qc_edate=", qc_edate(1:3), qc_edate(5:7)
+
+     ! calculate time difference
+     do i = 1, nlines
+        if (ABS(sss_time_in_seconds_since19780101(i) - &
+               qcdate_in_seconds_since19780101) > delta_seconds) then
+           valid(i,:) = .false.
+        end if
+     end do
+  end if
+
 
 !-------------------------------------------------------------------------------
 ! Read lat & lon info
 !-------------------------------------------------------------------------------
-  ALLOCATE(alon2d(nlines,npixels), alat2d(nlines,npixels))
-  ALLOCATE(valid(nlines,npixels))
-  valid = .true.
-
   CALL h5_rdvar2d(fid, "/lon", alon2d)
   CALL h5_rdatt(fid,   "/lon", "_FillValue", r4FillValue)
   if (dodebug) WRITE(6,*) "_FillValue=", NINT(r4FillValue)
@@ -306,13 +363,34 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
    where (NINT(sea_surface_salinity)==NINT(r4FillValue))
       valid = .false.
    end where
+   CALL h5_rdatt(fid, "/smap_sss", "valid_max", r4FillValue)
+   WRITE(6,*) "valid_max_yo=", r4FillValue
+   where(sea_surface_salinity > r4FillValue)
+      valid = .false.
+   end where
+   CALL h5_rdatt(fid, "/smap_sss", "valid_min", r4FillValue)
+   WRITE(6,*) "valid_min_yo=", r4FillValue
+   where( sea_surface_salinity < r4FillValue)
+      valid = .false.
+   endwhere
+ 
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::smap_sss: min, max=", &
               minval(sea_surface_salinity, mask=valid), &
               maxval(sea_surface_salinity, mask=valid)
 
    CALL h5_rdvar2d(fid, "/smap_sss_uncertainty", stde)
    CALL h5_rdatt(fid,   "/smap_sss_uncertainty", "_FillValue", r4FillValue)
-   where (NINT(stde)==NINT(r4FillValue))
+   where (NINT(stde)==NINT(r4FillValue)) ! 
+      valid = .false.
+   end where
+   CALL h5_rdatt(fid, "/smap_sss_uncertainty", "valid_max", r4FillValue)
+   WRITE(6,*) "valid_max_error=", r4FillValue
+   where(stde > r4FillValue)
+      valid = .false.
+   end where
+   CALL h5_rdatt(fid, "/smap_sss_uncertainty", "valid_min", r4FillValue)
+   WRITE(6,*) "valid_min_error=", r4FillValue
+   where(stde < r4FillValue)
       valid = .false.
    end where
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::smap_sss_uncertainty: min, max=", &
@@ -364,7 +442,10 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
    CALL h5_rdvar2d(fid, "/quality_flag", quality_flag)
    CALL h5_rdatt(fid,   "/quality_flag", "_FillValue", i4FillValue)
    if (dodebug) WRITE(6,*) "i4FillValue", i4FillValue
-   where (quality_flag == i4FillValue .or. IBITS(quality_flag,0,1)==QUAL_FLAG_SSS_USABLE_BAD) ! or BIT 0 QC FLAG is bad
+   where (quality_flag == i4FillValue .or. &
+          IBITS(quality_flag,0,1)==QUAL_FLAG_SSS_USABLE_BAD .or. &   ! overall bad
+          IBITS(quality_flag,7,1)==QUAL_FLAG_SSS_HAS_LAND .or. &   ! has land
+          IBITS(quality_flag,8,1)==QUAL_FLAG_SSS_HAS_ICE ) !      ! has ice
      valid = .false.
    end where
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::quality_flag: min, max=", &
@@ -398,7 +479,7 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs)
            obs_data(n)%typ      = id_sss_obs
            obs_data(n)%x_grd(1) = alon2d(i,j)
            obs_data(n)%x_grd(2) = alat2d(i,j)
-           obs_data(n)%hour     = 0.0  ! [FIXME]: need to determine later what hours to use here
+           obs_data(n)%hour     = sss_time_in_seconds_since19780101(i)/3600.
            obs_data(n)%value    = sea_surface_salinity(i,j)
            obs_data(n)%oerr     = stde(i,j)
         end if

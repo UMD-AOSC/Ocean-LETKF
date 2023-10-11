@@ -107,6 +107,7 @@ endforeach()
 # different observation decoders
 set(decoders
   sst_viirs
+  sss_smap
   )
 foreach(decoder ${decoders})
   add_executable(OCN.decoder.${decoder}.x obs/decoder_${decoder}.f90)
