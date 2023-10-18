@@ -253,6 +253,8 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_BAD  = 1
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_HAS_LAND    = 1
   INTEGER,PARAMETER :: QUAL_FLAG_SSS_HAS_ICE     = 1
+  REAL(r_size),PARAMETER :: oerr_qc_user  = 2.0 ! psu, obs with JPL > oerr_qc_user removed
+  REAL(r_size),PARAMETER :: oerr_min_user = 0.2 ! psu, obs with JPL oerr < oerr_min_user has err oerr_min_user 
 
 !-------------------------------------------------------------------------------
 ! Open the hdf5 file 
@@ -393,6 +395,9 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta
    where(stde < r4FillValue)
       valid = .false.
    end where
+   where(stde > oerr_qc_user) ! User QC based on read-in oerr
+      valid = .false.
+   end where
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::smap_sss_uncertainty: min, max=", &
               minval(stde, mask=valid), maxval(stde, mask=valid)
  
@@ -481,7 +486,7 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta
            obs_data(n)%x_grd(2) = alat2d(i,j)
            obs_data(n)%hour     = sss_time_in_seconds_since19780101(i)/3600.
            obs_data(n)%value    = sea_surface_salinity(i,j)
-           obs_data(n)%oerr     = stde(i,j)
+           obs_data(n)%oerr     = max(stde(i,j), oerr_min_user) ! set a limit bound for error
         end if
      end do
   end do
