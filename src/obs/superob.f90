@@ -64,6 +64,8 @@ PROGRAM superob
   INTEGER, DIMENSION(:,:), ALLOCATABLE :: supercnt
   INTEGER :: idx
   REAL(r_size) :: min_oerr = 0.2 !(K)
+  REAL(r_size) :: input_oerr = 0.75 ! (K)
+  LOGICAL :: HAS_INPUT_OERR = .false.
 
   !-----------------------------------------------------------------------------
   ! Initialize the common_oceanmodel module, and process command line options
@@ -181,6 +183,10 @@ PROGRAM superob
         nobs = idx
       endif
 
+      if (HAS_INPUT_OERR) then
+         oerr(:) = input_oerr
+      endif
+
       call write_obs3(trim(obsoutfile),nobs,elem(1:nobs), &
                                             rlon(1:nobs), &
                                             rlat(1:nobs), &
@@ -243,6 +249,14 @@ do i=1,COMMAND_ARGUMENT_COUNT(),2
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
       read (arg2,*) min_quality_level
+    case('-inputoerr')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) HAS_INPUT_OERR
+    case('-useroerr')
+      CALL GET_COMMAND_ARGUMENT(i+1,arg2)
+      PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
+      read (arg2,*) input_oerr
     case('-debug')
       CALL GET_COMMAND_ARGUMENT(i+1,arg2)
       PRINT *, "Argument ", i+1, " = ",TRIM(arg2)
