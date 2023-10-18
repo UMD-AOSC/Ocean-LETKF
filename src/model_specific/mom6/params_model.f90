@@ -37,7 +37,6 @@ PUBLIC
   INTEGER,PARAMETER :: iv3d_t=3
   INTEGER,PARAMETER :: iv3d_s=4                !(OCEAN)
   INTEGER,PARAMETER :: iv3d_h=5                !(OCEAN) (MOM6)
-! LOGICAL           :: DO_UPDATE_H=.true.      !STEVE: put this in params_letkf.f90
 
   INTEGER,PARAMETER :: iv2d_ssh=1              !(OCEAN) ! time averaged thickness of top model grid cell (m) plus patm/(grav*rho0)
   INTEGER,PARAMETER :: iv2d_sst=2              !(OCEAN) ! time averaged sst (Kelvin) passed to atmosphere/ice model
