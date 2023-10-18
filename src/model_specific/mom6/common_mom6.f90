@@ -807,13 +807,13 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   endif
 ! !STEVE: end
 
-  if (DO_UPDATE_H) then
-    !---------------------------------------------------------------------------
-    !!! h
-    !---------------------------------------------------------------------------
-    varname=rsrt_h_name
-    ivid=iv3d_h
+  !---------------------------------------------------------------------------
+  !!! h
+  !---------------------------------------------------------------------------
+  varname=rsrt_h_name
+  ivid=iv3d_h
 
+  if (DO_UPDATE_H) then
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
 
     select case(prec)
@@ -839,6 +839,13 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
       enddo
     endif
 !   !STEVE: end
+  else
+    v3d(:,:,:,ivid) = 0.d0
+    if (dodebug) then
+      WRITE(6,*) "POST-H"
+      WRITE(6,*) "iv3d_h, ivid:", iv3d_h, ivid
+      WRITE(6,*) "read_restart :: skip reading H, set v3d(:,:,:,iv3d_h)=0.d0"
+    endif
   endif
 
   !-----------------------------------------------------------------------------
