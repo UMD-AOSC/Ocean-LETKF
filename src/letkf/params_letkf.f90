@@ -86,5 +86,7 @@ LOGICAL :: DO_UPDATE_H=.false.
 ! For letkf_obs.f90
 LOGICAL :: DO_QC_MEANDEP=.true.
 LOGICAL :: DO_QC_MAXDEP=.true.
+! For adaptive observation error inflation
+LOGICAL :: DO_OBSERR_AOEI = .true.
 
 END MODULE params_letkf

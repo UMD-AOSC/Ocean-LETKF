@@ -74,6 +74,7 @@ PRIVATE
                               sigma_obsv, &          ! Sigma-radius for vertical localization (m)
                               sigma_obst, &          ! Sigma-radius for temporal localization (not activated)
                               gross_error, &         ! number of standard deviations for quality control (all outside removed)
+                              DO_OBSERR_AOEI, &      ! logical flag to enable adaptive obs error inflation
                               DO_WRITE_ENS_MEAN_SPRD, &  ! logical flag to write the ensemble mean and spread for the forecast and analysis fields
                               DO_WRITE_OMB_MEAN,      &  ! logical flag to write the obs info (omb,qc,...)
                               DO_DRIFTERS, &         ! logical flag to do lagrangian drifters assimilation

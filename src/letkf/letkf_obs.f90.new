@@ -42,6 +42,7 @@ MODULE letkf_obs
   USE params_letkf, ONLY: sigma_obs, sigma_obsv, sigma_obs0, gross_error, nslots, nbv
   USE params_letkf, ONLY: DO_QC_MEANDEP, DO_QC_MAXDEP
   USE params_letkf, ONLY: DO_WRITE_OMB_MEAN
+  USE params_letkf, ONLY: DO_OBSERR_AOEI
   USE params_obs    ! nobs
   USE vars_obs
 
@@ -95,6 +96,12 @@ SUBROUTINE set_letkf_obs
   REAL(r_size) :: SSH_CLM_m 
   ! for omb diag
   REAL(r_size),allocatable :: hx(:) ! (nobs_in)
+
+  !CDA: related to AOEI
+  REAL(r_size) :: oerr_aoei
+  REAL(r_size) :: varhdxf  ! ensemble spread for h(x)
+  INTEGER :: cnt_aoei_sst, cnt_aoei_sss
+  REAL(r_size) :: max_infl_sst, max_infl_sss
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -244,6 +251,11 @@ SUBROUTINE set_letkf_obs
   cnt_obs_sss = 0
   gross_cnt = 0
   gross_2x_cnt = 0
+
+  cnt_aoei_sst = 0
+  cnt_aoei_sss = 0
+  max_infl_sst = 0.d0
+  max_infl_sss = 0.d0
   
   WRITE(6,*) "Processing obshdxf for n=1 to n=nobs=",nobs_in 
   WRITE(6,*) "and filtering bad observations..."
@@ -260,6 +272,7 @@ quality_control : if (.true.) then
       obsdep(n) = obsdep(n) + obshdxf(n,i)
     enddo
     obsdep(n) = obsdep(n) / REAL(nbv,r_size)
+    varhdxf = 0.d0
     do i=1,nbv
       !if (DO_QC_MAXDEP .and. &
       !    (id_sst_obs .ne. obselm(n)) .and. &
@@ -270,7 +283,9 @@ quality_control : if (.true.) then
         obsqc(n) = 0
       endif
       obshdxf(n,i) = obshdxf(n,i) - obsdep(n) ! Hdxf (perturbations from mean)
+      varhdxf = varhdxf + (obshdxf(n,i))**2
     enddo
+    varhdxf = varhdxf/REAL(nbv-1,r_size)
     ! Now, obsdep is defined appropriately as the obs departure from mean background
     obsdep(n) = obsdat(n) - obsdep(n) ! y-Hx
 
@@ -296,6 +311,22 @@ quality_control : if (.true.) then
         if (obsqc(n)==1) gross_cnt = gross_cnt + 1
         obsqc(n) = 0
       endif
+    endif
+
+    !CDA: AOEI for obserr
+    if (DO_OBSERR_AOEI) then
+       oerr_aoei = max(obsdep(n)**2 - varhdxf, 0.d0)
+       oerr_aoei = sqrt(oerr_aoei)
+       if (oerr_aoei > obserr(n) ) then
+          if (NINT(obselm(n)) .eq. id_sst_obs) then
+             cnt_aoei_sst = cnt_aoei_sst + 1
+             if (max_infl_sst < oerr_aoei / obserr(n)) max_infl_sst = oerr_aoei / obserr(n)
+          elseif (NINT(obselm(n)) .eq. id_sss_obs) then 
+             cnt_aoei_sss = cnt_aoei_sss + 1
+             if (max_infl_sss < oerr_aoei / obserr(n)) max_infl_sss = oerr_aoei / obserr(n)
+          endif
+          obserr(n) = oerr_aoei
+       endif
     endif
 
     !STEVE: as a check, count the number of each type of observation
@@ -419,6 +450,8 @@ endif quality_control
   WRITE(6,*) "cnt_obs_sss = ", cnt_obs_sss
   WRITE(6,*) "gross_cnt = ", gross_cnt
   WRITE(6,*) "gross_2x_cnt = ", gross_2x_cnt
+  WRITE(6,*) "cnt_aoei_sst = ", cnt_aoei_sst, "max_infl_sst=", max_infl_sst
+  WRITE(6,*) "cnt_aoei_sss = ", cnt_aoei_sss, "max_infl_sss=", max_infl_sss
 
   CALL monit_dep(nobs_in,obselm,obsdep,obsqc)
 
