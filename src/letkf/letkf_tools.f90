@@ -130,7 +130,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! In case of no obs
   !-----------------------------------------------------------------------------
   if(nobstotal == 0) then
-    WRITE(6,'(A)') 'No observation assimilated'
+    WRITE(6,'(A)') 'No observation assimilated:'
     anal3d = gues3d
     anal2d = gues2d
     RETURN ! <- return / exit the subroutine
@@ -221,11 +221,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       if (mod(ij,int(nij1*0.1))==0) WRITE(6,*) "ij, nij1, % = ", ij, nij1, ij*100.0/nij1
     endif
 
-    ! CDA_BEG
-    if (myrank==0) then 
-       write(101,*) ij, kmt1(ij)
-    endif
-    ! CDA_END
 
     !(OCEAN) The gridpoint is on land, so just assign undef values and CYCLE
     if (kmt1(ij) < 1) then
@@ -272,7 +267,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
       !(OCEAN) STEVE: it's on land, so just assign undef values and CYCLE
       !NOTE: need to define kmt1 as ocean depth during startup/initialization
-      if (kmt1(ij) < ilev) then
+      !if (kmt1(ij) < ilev) then
+      if (.false.) then ! CDA_KMT
         anal3d(ij,ilev:nlev,:,:) = 0.0
         work3d(ij,ilev:nlev,:) = 0.0
         if (ilev == 1) then
@@ -381,8 +377,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
       if (DO_NO_VERT_LOC .or. DO_MLD) then
         if (doverbose) WRITE(6,*) "===================================================================="
-        !if (doverbose) WRITE(6,*) "Doing DO_NO_VERT_LOC projection to lower levels..."
-        if (dodebug) WRITE(6,*) "Doing DO_NO_VERT_LOC projection to lower levels..., ij,nij1=",ij,nij1 
+        if (doverbose) WRITE(6,*) "Doing DO_NO_VERT_LOC projection to lower levels..."
         if (doverbose) WRITE(6,*) "===================================================================="
         !STEVE: Assimilating SSTs: I want to assimilate ONLY profiles below the mixed layer,
         !       and BOTH profiles and SSTs in the mixed layer.
@@ -394,10 +389,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         !STEVE: match up ij to ij at other vertical levels
         !STEVE: reset analysis to mean for all levels
 
-        if (DO_NO_VERT_LOC .and. .not. DO_MLD) then
-           mlev=nlev
-           WRITE(6,*) "mlev=nlev:", mlev, nlev
-        endif
+        if (DO_NO_VERT_LOC .and. .not. DO_MLD) mlev=nlev
         if (DO_MLD .and. ilev > mlev) mlev=nlev
 
         do n=1,nv3d
@@ -416,7 +408,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !             if (doverbose) WRITE(6,*) "col member: k = ", k
               do klev=ilev+1,mlev
 !              if (doverbose) WRITE(6,*) "set members: k, klev = ", k,klev
-                if (klev <= kmt1(ij)) then !STEVE: apply the weights from this level to all deeper levels equally
+                !if (klev <= kmt1(ij)) then !STEVE: apply the weights from this level to all deeper levels equally
+                if (.true.) then !CDA_KMT 
 !                 if (doverbose) WRITE(6,*) "applying weights..."
                   anal3d(ij,klev,m,n) = anal3d(ij,klev,m,n) + gues3d(ij,klev,k,n) * trans(k,m,n)
                   work3d(ij,klev,:) = work3d(ij,ilev,:)   !adaptive inflation

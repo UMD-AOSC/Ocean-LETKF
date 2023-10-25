@@ -284,7 +284,7 @@ quality_control : if (.true.) then
           if (obsqc(n)==1) obsqc(n) = 0
        endif
     elseif (NINT(obselm(n)) .eq. id_sss_obs) then
-       if ( obsdat(n) > 40.d0 ) then  ! remove SSS obs > 40 psu 
+       if ( obsdat(n) > 40.d0 .or. obsdat(n) < 29.d0 ) then  ! remove SSS obs > 40 psu or <29 psu
           if (obsqc(n)==1) obsqc(n) = 0
        endif
     endif
