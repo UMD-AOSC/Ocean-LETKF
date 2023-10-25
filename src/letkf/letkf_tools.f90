@@ -221,6 +221,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       if (mod(ij,int(nij1*0.1))==0) WRITE(6,*) "ij, nij1, % = ", ij, nij1, ij*100.0/nij1
     endif
 
+    ! CDA_BEG
+    if (myrank==0) then 
+       write(101,*) ij, kmt1(ij)
+    endif
+    ! CDA_END
+
     !(OCEAN) The gridpoint is on land, so just assign undef values and CYCLE
     if (kmt1(ij) < 1) then
       anal3d(ij,:,:,:) = 0.0
@@ -375,7 +381,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
       if (DO_NO_VERT_LOC .or. DO_MLD) then
         if (doverbose) WRITE(6,*) "===================================================================="
-        if (doverbose) WRITE(6,*) "Doing DO_NO_VERT_LOC projection to lower levels..."
+        !if (doverbose) WRITE(6,*) "Doing DO_NO_VERT_LOC projection to lower levels..."
+        if (dodebug) WRITE(6,*) "Doing DO_NO_VERT_LOC projection to lower levels..., ij,nij1=",ij,nij1 
         if (doverbose) WRITE(6,*) "===================================================================="
         !STEVE: Assimilating SSTs: I want to assimilate ONLY profiles below the mixed layer,
         !       and BOTH profiles and SSTs in the mixed layer.
@@ -387,7 +394,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         !STEVE: match up ij to ij at other vertical levels
         !STEVE: reset analysis to mean for all levels
 
-        if (DO_NO_VERT_LOC .and. .not. DO_MLD) mlev=nlev
+        if (DO_NO_VERT_LOC .and. .not. DO_MLD) then
+           mlev=nlev
+           WRITE(6,*) "mlev=nlev:", mlev, nlev
+        endif
         if (DO_MLD .and. ilev > mlev) mlev=nlev
 
         do n=1,nv3d
@@ -513,7 +523,8 @@ END SUBROUTINE das_letkf
 SUBROUTINE relax_rtpp(anal3d,anal2d,dgues3d,dgues2d, relax_coeff)
   USE common,                ONLY: r_size
   USE params_letkf,          ONLY: nbv
-  USE common_mpi_oceanmodel, ONLY: nij1, ensmean_grd
+  USE common_mpi_oceanmodel, ONLY: nij1
+  USE common_oceanmodel,     ONLY: ensmean_grd
   USE params_model,          ONLY: nlev, nv3d, nv2d
   IMPLICIT NONE
   REAL(r_size),INTENT(INOUT) :: anal3d(nij1,nlev,nbv,nv3d) ! analysis member
@@ -548,7 +559,8 @@ END SUBROUTINE relax_rtpp
 SUBROUTINE relax_rtps(anal3d,anal2d,dgues3d,dgues2d, relax_coeff)
   USE common,                ONLY: r_size
   USE params_letkf,          ONLY: nbv
-  USE common_mpi_oceanmodel, ONLY: nij1, ensmean_grd
+  USE common_mpi_oceanmodel, ONLY: nij1
+  USE common_oceanmodel,     ONLY: ensmean_grd
   USE params_model,          ONLY: nlev, nv3d, nv2d
   IMPLICIT NONE
 

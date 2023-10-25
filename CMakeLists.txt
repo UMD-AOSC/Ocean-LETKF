@@ -39,9 +39,9 @@ if (SOLO_BUILD) # build ocean-letkf with local libs. Most users should use this
            set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fallow-argument-mismatch -fallow-invalid-boz")
         endif ()
     elseif (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-        set(CMAKE_Fortran_FLAGS "-O2 -g -traceback")
-        set(CMAKE_Fortran_FLAGS_DEBUG "-O0 -traceback -check bounds")
-        set(CMAKE_Fortran_FLAGS_RELEASE "-O3")
+        set(CMAKE_Fortran_FLAGS "-O2 -g -traceback -init=zero")
+        set(CMAKE_Fortran_FLAGS_DEBUG "-O0 -traceback -check bounds -init=zero")
+        set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -init=zero")
     endif()
 
 else() # build as an application with GEOS-ESM infra

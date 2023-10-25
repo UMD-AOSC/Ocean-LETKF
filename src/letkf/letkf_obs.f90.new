@@ -104,7 +104,7 @@ SUBROUTINE set_letkf_obs
       im = myrank+1
       WRITE(obsfile(4:8),'(I2.2,I3.3)') islot,im
       WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading an obs2-formatted file ',obsfile
-      CALL get_nobs(obsfile,obs2nrec,nobslots(islot))
+      CALL get_nobs(obsfile,obs2nrec,nobslots(islot),errIfNoObs=.false.)
     enddo
   endif
 
@@ -275,8 +275,16 @@ quality_control : if (.true.) then
     obsdep(n) = obsdat(n) - obsdep(n) ! y-Hx
 
     !CDA: add obs specific qc
+    if (ABS(obslat(n))>50.d0) then ! remove obs outside 50N-S
+       if (obsqc(n)==1) obsqc(n) = 0
+    endif
+
     if (NINT(obselm(n)) .eq. id_sst_obs) then
-       if (obslat(n) < -60.d0 .or. obsdat(n) < min_t ) then  ! remove obs < 2.0oC or south of 60S
+       if ( obsdat(n) < 5.d0 ) then  ! remove SST obs <5.0oC 
+          if (obsqc(n)==1) obsqc(n) = 0
+       endif
+    elseif (NINT(obselm(n)) .eq. id_sss_obs) then
+       if ( obsdat(n) > 40.d0 ) then  ! remove SSS obs > 40 psu 
           if (obsqc(n)==1) obsqc(n) = 0
        endif
     endif

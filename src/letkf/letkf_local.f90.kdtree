@@ -232,10 +232,10 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     endif
 
     !! Skip surface obs below the mixed layer:
-    if (ilev > mlev .and. obselm(idx(n))==id_sst_obs) then
-      cnt_sst0 = cnt_sst0+1
-      CYCLE
-    endif
+    !if (ilev > mlev .and. obselm(idx(n))==id_sst_obs) then ! CDA_BEG
+    !  cnt_sst0 = cnt_sst0+1
+    !  CYCLE
+    !endif ! CDA_END
 !   if (ilev > mlev .and. obselm(idx(n))==id_ssh_obs) CYCLE
 !   if (ilev > mlev .and. obselm(idx(n))==id_sss_obs) CYCLE
        
