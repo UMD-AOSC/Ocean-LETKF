@@ -64,6 +64,8 @@ MODULE letkf_obs
   INTEGER :: cnt_yout=0, cnt_xout=0, cnt_zout=0, cnt_triout=0
   INTEGER :: cnt_rigtnlon=0, cnt_nearland=0
 
+  INTEGER :: cnt_qc_sstval=0, cnt_qc_sssval=0, cnt_qc_latrange=0
+
 CONTAINS
 
 SUBROUTINE set_letkf_obs
@@ -291,16 +293,19 @@ quality_control : if (.true.) then
 
     !CDA: add obs specific qc
     if (ABS(obslat(n))>50.d0) then ! remove obs outside 50N-S
-       if (obsqc(n)==1) obsqc(n) = 0
+       if (obsqc(n)==1) cnt_qc_latrange = cnt_qc_latrange + 1
+       obsqc(n) = 0
     endif
 
     if (NINT(obselm(n)) .eq. id_sst_obs) then
        if ( obsdat(n) < 5.d0 ) then  ! remove SST obs <5.0oC 
-          if (obsqc(n)==1) obsqc(n) = 0
+          if (obsqc(n)==1) cnt_qc_sstval = cnt_qc_sstval + 1
+          obsqc(n) = 0
        endif
     elseif (NINT(obselm(n)) .eq. id_sss_obs) then
        if ( obsdat(n) > 40.d0 .or. obsdat(n) < 29.d0 ) then  ! remove SSS obs > 40 psu or <29 psu
-          if (obsqc(n)==1) obsqc(n) = 0
+          if (obsqc(n)==1) cnt_qc_sssval = cnt_qc_sssval + 1
+          obsqc(n) = 0
        endif
     endif
 
@@ -314,7 +319,7 @@ quality_control : if (.true.) then
     endif
 
     !CDA: AOEI for obserr
-    if (DO_OBSERR_AOEI) then
+    if (obsqc(n) == 1 .and. DO_OBSERR_AOEI) then ! only inflate good obs
        oerr_aoei = max(obsdep(n)**2 - varhdxf, 0.d0)
        oerr_aoei = sqrt(oerr_aoei)
        if (oerr_aoei > obserr(n) ) then
@@ -450,8 +455,15 @@ endif quality_control
   WRITE(6,*) "cnt_obs_sss = ", cnt_obs_sss
   WRITE(6,*) "gross_cnt = ", gross_cnt
   WRITE(6,*) "gross_2x_cnt = ", gross_2x_cnt
+
   WRITE(6,*) "cnt_aoei_sst = ", cnt_aoei_sst, "max_infl_sst=", max_infl_sst
   WRITE(6,*) "cnt_aoei_sss = ", cnt_aoei_sss, "max_infl_sss=", max_infl_sss
+
+  WRITE(6,*) "QC check:"
+  WRITE(6,*) "cnt_qc_sstval   = ", cnt_qc_sstval
+  WRITE(6,*) "cnt_qc_sssval   = ", cnt_qc_sssval
+  WRITE(6,*) "cnt_qc_latrange = ", cnt_qc_latrange
+
 
   CALL monit_dep(nobs_in,obselm,obsdep,obsqc)
 
