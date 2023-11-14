@@ -696,7 +696,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   USE params_model, ONLY: nv3d, nv2d
   USE params_model, ONLY: iv3d_u, iv3d_v, iv3d_t, iv3d_s, iv2d_ssh
   USE params_model, ONLY: iv3d_h, iv2d_eta
-  USE params_letkf, ONLY: DO_UPDATE_H
+  USE params_letkf, ONLY: DO_UPDATE_H, DO_READ_H
   USE vars_model,   ONLY: SSHclm_m
   USE params_model, ONLY: rsrt_tsbase, rsrt_uvbase, rsrt_hbase
   USE params_model, ONLY: rsrt_temp_name, rsrt_salt_name
@@ -813,7 +813,7 @@ SUBROUTINE read_restart(infile,v3d,v2d,prec)
   varname=rsrt_h_name
   ivid=iv3d_h
 
-  if (DO_UPDATE_H) then
+  if (DO_UPDATE_H .or. DO_READ_H) then
     call check( NF90_INQ_VARID(ncid,trim(varname),varid) )
 
     select case(prec)

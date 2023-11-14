@@ -88,6 +88,7 @@ PRIVATE
                               DO_QC_MEANDEP, &       ! option to quality control observations based on mean departure
                               DO_QC_MAXDEP, &        ! option to quality control observation based on maximum departure across ensemble members
                               DO_UPDATE_H, &         ! option to update model layer thicknesses based on assimilation of observations
+                              DO_READ_H,   &         ! option to read in the layer thickness so that ensemble mean outputs thickness
                               localization_method, & ! localization method to be used in letkf_local.f90
                               cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
                               sp_infl_add, &         ! additive inflation factor (default none)

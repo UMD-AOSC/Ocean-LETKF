@@ -75,8 +75,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   USE params_obs,   ONLY: nobs
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_model, ONLY: iv2d_mld
-  USE params_model, ONLY: iv3d_t !STEVE: for debugging
+  USE params_model, ONLY: iv3d_t, iv3d_h
   USE params_letkf, ONLY: DO_MLD, DO_NO_VERT_LOC, DO_MLD_MAXSPRD
+  USE params_letkf, ONLY: DO_READ_H, DO_UPDATE_H
   USE params_letkf, ONLY: DO_RTPP, rtpp_coeff, DO_RTPS, rtps_coeff
   USE vars_model,   ONLY: lev
   USE common_debug_oceanmodel, ONLY: debug_post_obslocal, debug_post_obslocal2d
@@ -100,6 +101,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: work2d(:,:)
   REAL(r_sngl),ALLOCATABLE :: work3dg(:,:,:,:)
   REAL(r_sngl),ALLOCATABLE :: work2dg(:,:,:)
+  REAL(r_size),ALLOCATABLE :: gsH3d(:,:,:) ! CDA: stores gues layer thickness
   REAL(r_size) :: parm
   REAL(r_size) :: trans(nbv,nbv,nv3d+nv2d)
   LOGICAL :: ex
@@ -154,6 +156,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !-----------------------------------------------------------------------------
   ! Forecast perturbations
   !-----------------------------------------------------------------------------
+  if (DO_READ_H) then
+     ALLOCATE(gsH3d(nij1,nlev,nbv))
+     gsH3d(:,:,:) = gues3d(:,:,:,iv3d_h) ! nij1, nlev, nbv
+     if (.not.DO_UPDATE_H) then
+        gues3d(:,:,:,iv3d_h) = 0.d0
+     endif
+  endif
+
   ALLOCATE(mean3d(nij1,nlev,nv3d))
   ALLOCATE(mean2d(nij1,nv2d))
   CALL ensmean_grd(nbv,nij1,gues3d,gues2d,mean3d,mean2d)
@@ -458,6 +468,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     CALL relax_rtps(anal3d, anal2d, gues3d, gues2d, rtps_coeff)
   else ! no relaxation
     WRITE(6,'(A)') "Analysis relaxation: nothing applied"
+  endif
+
+  if (DO_READ_H .and. (.not.DO_UPDATE_H)) then
+     ! this is only to let H of anal ensemble to have same value as gues,
+     ! so that anal mean later can be non-zero value
+     anal3d(:,:,:,iv3d_h) = gsH3d(:,:,:)
+     deallocate(gsH3d)
   endif
 
   !-------------------------------------------------------------------------

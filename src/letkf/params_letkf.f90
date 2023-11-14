@@ -82,7 +82,8 @@ LOGICAL :: DO_TRIPOLAR=.true.
 LOGICAL :: DO_IRREG_GRID=.false.
 ! For (Updating model layer thickness)
 LOGICAL :: DO_UPDATE_H=.false.
-
+! For READING layer thickness and write out ensemble mean when using hybrid-coordinate 
+LOGICAL :: DO_READ_H=.false.
 ! For letkf_obs.f90
 LOGICAL :: DO_QC_MEANDEP=.true.
 LOGICAL :: DO_QC_MAXDEP=.true.
