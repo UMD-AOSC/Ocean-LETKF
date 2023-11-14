@@ -292,7 +292,7 @@ quality_control : if (.true.) then
     obsdep(n) = obsdat(n) - obsdep(n) ! y-Hx
 
     !CDA: add obs specific qc
-    if (ABS(obslat(n))>50.d0) then ! remove obs outside 50N-S
+    if (ABS(obslat(n))>60.d0) then ! remove obs outside 60N-S
        if (obsqc(n)==1) cnt_qc_latrange = cnt_qc_latrange + 1
        obsqc(n) = 0
     endif

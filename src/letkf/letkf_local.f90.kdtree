@@ -121,6 +121,7 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   !STEVE: debug
   LOGICAL :: dodebug = .false.
   INTEGER :: cnt_sst, cnt_sst0
+  INTEGER :: cnt_sss, cnt_sss0
 
   !-----------------------------------------------------------------------------
   ! Initialize the KD-tree
@@ -188,8 +189,8 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
   !  scale the weight of the observation error based on distance from gridpoint.
   !  Outside of a maximum radius, set the obs impact to zero (i.e. remove the ob)
   !-----------------------------------------------------------------------------
-  cnt_sst = 0
-  cnt_sst0 = 0
+  cnt_sst = 0; cnt_sst0 = 0
+  cnt_sss = 0; cnt_sss0 = 0
   nobsl=0        
   do n = 1, nn
     loc_h = 0.0
@@ -226,18 +227,23 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     !! vertical localization cutoff
     if (dlev > dist_zero_v) CYCLE
 
-    !STEVE: (DEBUG)
-    if (dodebug .and. obselm(idx(n))==id_sst_obs) then
-      cnt_sst = cnt_sst + 1
+    if (dodebug) then
+       if (NINT(obselm(idx(n)))==id_sst_obs) then
+          cnt_sst = cnt_sst + 1
+       elseif (NINT(obselm(idx(n)))==id_sss_obs) then
+          cnt_sss = cnt_sss + 1
+       endif
     endif
 
     !! Skip surface obs below the mixed layer:
-    !if (ilev > mlev .and. obselm(idx(n))==id_sst_obs) then ! CDA_BEG
-    !  cnt_sst0 = cnt_sst0+1
-    !  CYCLE
-    !endif ! CDA_END
-!   if (ilev > mlev .and. obselm(idx(n))==id_ssh_obs) CYCLE
-!   if (ilev > mlev .and. obselm(idx(n))==id_sss_obs) CYCLE
+    if (ilev > mlev .and. NINT(obselm(idx(n)))==id_sst_obs) then 
+      cnt_sst0 = cnt_sst0+1
+      CYCLE
+    endif
+    if (ilev > mlev .and. NINT(obselm(idx(n)))==id_sss_obs) then 
+      cnt_sss0 = cnt_sss0+1
+      CYCLE
+    endif
        
     !! Else, use this observation!
     nobsl = nobsl+1              
@@ -252,13 +258,19 @@ SUBROUTINE obs_local(ij,ilev,mlev,var_local,hdxf,rdiag,rloc,dep,nobsl,nobstotal)
     dep(nobsl)  = obsdep(idx(n))
     rdiag(nobsl) = obserr(idx(n))**2
 
-    if (dodebug) WRITE(6,*) "rloc(nobsl)  = ", rloc(nobsl)
-    if (dodebug) WRITE(6,*) "rdiag(nobsl) = ", rdiag(nobsl)
-    if (dodebug) WRITE(6,*) "dep(nobsl)   = ", dep(nobsl)
+    if (dodebug) then
+       WRITE(6,*) "rloc(nobsl)  = ", rloc(nobsl)
+       WRITE(6,*) "rdiag(nobsl) = ", rdiag(nobsl)
+       WRITE(6,*) "dep(nobsl)   = ", dep(nobsl)
+    endif
   enddo
 
-  if (dodebug) WRITE(6,*) "obs_local:: assimilated SST obs: ", cnt_sst
-  if (dodebug) WRITE(6,*) "obs_local::     skipped SST obs: ", cnt_sst0
+  if (dodebug) then
+     WRITE(6,*) "obs_local:: assimilated SST obs: ", cnt_sst
+     WRITE(6,*) "obs_local::     skipped SST obs: ", cnt_sst0
+     WRITE(6,*) "obs_local:: assimilated SSS obs: ", cnt_sss
+     WRITE(6,*) "obs_local::     skipped SSS obs: ", cnt_sss0
+  endif
 
 END SUBROUTINE obs_local
 
