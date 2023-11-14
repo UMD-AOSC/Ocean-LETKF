@@ -249,10 +249,6 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta
   REAL :: tdelta(5)
   INTEGER :: nlines, npixels, i, j, n, istat
   LOGICAL :: dodebug = .true.
-  INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_GOOD = 0
-  INTEGER,PARAMETER :: QUAL_FLAG_SSS_USABLE_BAD  = 1
-  INTEGER,PARAMETER :: QUAL_FLAG_SSS_HAS_LAND    = 1
-  INTEGER,PARAMETER :: QUAL_FLAG_SSS_HAS_ICE     = 1
   REAL(r_size),PARAMETER :: oerr_qc_user  = 2.0 ! psu, obs with JPL > oerr_qc_user removed
   REAL(r_size),PARAMETER :: oerr_min_user = 0.2 ! psu, obs with JPL oerr < oerr_min_user has err oerr_min_user 
 
@@ -448,9 +444,16 @@ SUBROUTINE read_jpl_smap_l2_sss_h5(obsinfile, obs_data, nobs, Syyyymmddhh, delta
    CALL h5_rdatt(fid,   "/quality_flag", "_FillValue", i4FillValue)
    if (dodebug) WRITE(6,*) "i4FillValue", i4FillValue
    where (quality_flag == i4FillValue .or. &
-          IBITS(quality_flag,0,1)==QUAL_FLAG_SSS_USABLE_BAD .or. &   ! overall bad
-          IBITS(quality_flag,7,1)==QUAL_FLAG_SSS_HAS_LAND .or. &   ! has land
-          IBITS(quality_flag,8,1)==QUAL_FLAG_SSS_HAS_ICE ) !      ! has ice
+          IBITS(quality_flag,0,1)==1 .or. &   ! overall bad
+          IBITS(quality_flag,1,1)==1 .or. &
+          IBITS(quality_flag,2,1)==1 .or. &
+          IBITS(quality_flag,3,1)==1 .or. &
+          IBITS(quality_flag,4,1)==1 .or. &
+          IBITS(quality_flag,5,1)==1 .or. &
+          IBITS(quality_flag,6,1)==1 .or. &
+          IBITS(quality_flag,9,1)==1 .or. &
+          IBITS(quality_flag,7,1)==1 .or. &   ! has land
+          IBITS(quality_flag,8,1)==1 ) !      ! has ice
      valid = .false.
    end where
    WRITE(6,*) "[msg] read_jpl_smap_l2_sss_h5::quality_flag: min, max=", &
