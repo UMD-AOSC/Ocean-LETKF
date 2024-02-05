@@ -749,19 +749,23 @@ END SUBROUTINE monit_dep
 !-----------------------------------------------------------------------
 ! Basic modules for observation input
 !-----------------------------------------------------------------------
-SUBROUTINE get_nobs(cfile,nrec,nn)
+SUBROUTINE get_nobs(cfile,nrec,nn,errIfNoObs)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nrec
   INTEGER,INTENT(OUT) :: nn
+  LOGICAL,INTENT(IN),OPTIONAL :: errIfNoObs
   REAL(r_sngl),ALLOCATABLE :: wk(:) 
   INTEGER :: ios
   INTEGER :: iu,iv,it,is,issh,ieta,isst,isss,ix,iy,iz !(OCEAN)
   INTEGER :: nprof !(OCEAN)
   REAL(r_sngl) :: lon_m1, lat_m1
   INTEGER :: iunit
-  LOGICAL :: ex
+  LOGICAL :: ex, errIfNoObs_
   LOGICAL, PARAMETER :: dodebug=.false.
+
+  errIfNoObs_ = .true.
+  if (PRESENT(errIfNoObs)) errIfNoObs_ = errIfNoObs
 
   ALLOCATE(wk(nrec))
   nn = 0
@@ -845,8 +849,10 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   DEALLOCATE(wk)
 
   if (nn .eq. 0) then
-    WRITE(6,*) "get_nobs:: No observations have been found. Exiting..."
-    !STOP(60)
+    if (errIfNoObs_) then
+       WRITE(6,*) "get_nobs:: No observations have been found. Exiting..."
+       STOP (60)
+    endif
   endif
 
 END SUBROUTINE get_nobs
