@@ -74,6 +74,7 @@ PRIVATE
                               sigma_obsv, &          ! Sigma-radius for vertical localization (m)
                               sigma_obst, &          ! Sigma-radius for temporal localization (not activated)
                               gross_error, &         ! number of standard deviations for quality control (all outside removed)
+                              DO_OBSERR_AOEI, &      ! logical flag to enable adaptive obs error inflation
                               DO_WRITE_ENS_MEAN_SPRD, &  ! logical flag to write the ensemble mean and spread for the forecast and analysis fields
                               DO_WRITE_OMB_MEAN,      &  ! logical flag to write the obs info (omb,qc,...)
                               DO_DRIFTERS, &         ! logical flag to do lagrangian drifters assimilation
@@ -87,6 +88,7 @@ PRIVATE
                               DO_QC_MEANDEP, &       ! option to quality control observations based on mean departure
                               DO_QC_MAXDEP, &        ! option to quality control observation based on maximum departure across ensemble members
                               DO_UPDATE_H, &         ! option to update model layer thicknesses based on assimilation of observations
+                              DO_READ_H,   &         ! option to read in the layer thickness so that ensemble mean outputs thickness
                               localization_method, & ! localization method to be used in letkf_local.f90
                               cov_infl_mul, &        ! multiplicative inflation factor (default=1.0, i.e. none)
                               sp_infl_add, &         ! additive inflation factor (default none)

@@ -143,7 +143,7 @@ PUBLIC
   ! Bounds checking (for output by common_mom4.f90::write_restart)
   LOGICAL :: do_physlimit=.true.
   REAL(r_size) :: max_t = 40.0d0 ! ºC
-  REAL(r_size) :: min_t = -4.0d0 ! ºC
+  REAL(r_size) :: min_t = -2.0d0 ! ºC  
   REAL(r_size) :: max_s = 50.0d0 ! psu
   REAL(r_size) :: min_s =  0.0d0 ! psu
   REAL(r_size) :: max_u = 99.0d0 ! m/s

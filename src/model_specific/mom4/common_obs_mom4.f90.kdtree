@@ -551,7 +551,7 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
 
 END SUBROUTINE monit_dep
 
-SUBROUTINE get_nobs(cfile,nrec,nn)
+SUBROUTINE get_nobs(cfile,nrec,nn,errIfNoObs)
 !===============================================================================
 ! Read in observation file to count the number of observations
 !===============================================================================
@@ -559,12 +559,17 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nrec
   INTEGER,INTENT(OUT) :: nn
+  LOGICAL,INTENT(IN),OPTIONAL :: errIfNoObs
   REAL(r_sngl),ALLOCATABLE :: wk(:) 
   INTEGER :: ios
   INTEGER :: iu,iv,it,is,issh,ieta,isst,isss,ix,iy,iz !(OCEAN)
   INTEGER :: iunit
-  LOGICAL :: ex
+  LOGICAL :: ex, errIfNoObs_
   LOGICAL :: dodebug=.false.
+
+  errIfNoObs_ = .true.
+  if (PRESENT(errIfNoObs)) errIfNoObs_ = errIfNoObs
+
 
   ALLOCATE(wk(nrec))
   nn = 0
@@ -637,6 +642,13 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
     WRITE(6,'(2A)') cfile,' does not exist -- skipped'
   endif
   DEALLOCATE(wk)
+
+  if (nn .eq. 0) then
+    if (errIfNoObs_) then
+        WRITE(6,*) "get_nobs:: No observations have been found. Exiting..."
+        STOP (60)
+    endif
+  endif
 
 END SUBROUTINE get_nobs
 

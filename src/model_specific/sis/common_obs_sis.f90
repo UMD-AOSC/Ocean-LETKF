@@ -457,19 +457,23 @@ END SUBROUTINE monit_dep
 !-----------------------------------------------------------------------
 ! Basic modules for observation input
 !-----------------------------------------------------------------------
-SUBROUTINE get_nobs(cfile,nrec,nn)
+SUBROUTINE get_nobs(cfile,nrec,nn,errIfNoObs)
   USE params_obs,   ONLY: id_hs_obs, id_hi_obs, id_t1_obs, id_t2_obs, id_cn_obs, id_ui_obs, id_vi_obs
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(IN) :: nrec
   INTEGER,INTENT(OUT) :: nn
+  LOGICAL,INTENT(IN),OPTIONAL :: errIfNoObs
   REAL(r_sngl),ALLOCATABLE :: wk(:) 
   INTEGER :: ios
   INTEGER :: ihs,ihi,it1,it2,icn,iui,ivi
   INTEGER :: iunit
-  LOGICAL :: ex
+  LOGICAL :: ex, errIfNoObs_
   LOGICAL, PARAMETER :: dodebug=.false.
   INTEGER :: cnt_ice, cnt_water, cnt_mix
+
+  errIfNoObs_ = .true.
+  if (PRESENT(errIfNoObs)) errIfNoObs_ = errIfNoObs
 
   ALLOCATE(wk(nrec))
   nn = 0
@@ -544,8 +548,10 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   DEALLOCATE(wk)
 
   if (nn .eq. 0) then
-    WRITE(6,*) "get_nobs:: WARNING: No observations have been found! Ensure that at least one timeslot has observations."
-!   STOP(60)
+    if (errIfNoObs_) then
+       WRITE(6,*) "get_nobs:: WARNING: No observations have been found! Ensure that at least one timeslot has observations."
+       STOP (60)
+    endif
   endif
 
 END SUBROUTINE get_nobs

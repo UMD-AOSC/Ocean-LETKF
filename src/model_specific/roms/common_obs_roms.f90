@@ -261,16 +261,27 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Basic modules for observation input
 !-----------------------------------------------------------------------
-SUBROUTINE get_nobs(cfile,nn,len)
+SUBROUTINE get_nobs(cfile,nrec,nn,errIfNoObs)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
+  INTEGER,INTENT(IN)  :: nrec
   INTEGER,INTENT(OUT) :: nn
-  INTEGER,INTENT(IN),OPTIONAL :: len
-  REAL(r_sngl) :: wk(6)
+  LOGICAL,INTENT(IN),OPTIONAL :: errIfNoObs
+
+  INTEGER,PARAMETER :: nrec_ = 6
+  REAL(r_sngl) :: wk(nrec_)
   INTEGER :: ios
   INTEGER :: iu,iv,it,is,iz
   INTEGER :: iunit
-  LOGICAL :: ex
+  LOGICAL :: ex, errIfNoObs_
+
+  if (nrec /= nrec_ ) then
+     WRITE(6,*) "nrec /= nrec_: nrec, nrec_=", nrec, nrec_, "STOP."
+     STOP (59)
+  endif
+
+  errIfNoObs_ = .true.
+  if (PRESENT(errIfNoObs)) errIfNoObs_ = errIfNoObs
 
   nn = 0
   iu = 0
@@ -310,6 +321,13 @@ SUBROUTINE get_nobs(cfile,nn,len)
     CLOSE(iunit)
   ELSE
     WRITE(6,'(2A)') cfile,' does not exist -- skipped'
+  END IF
+
+  IF (nn .eq. 0) THEN
+    IF (errIfNoObs_) THEN
+        WRITE(6,*) "get_nobs:: No observations have been found. Exiting..."
+        STOP (60)
+    END IF
   END IF
 
 END SUBROUTINE get_nobs

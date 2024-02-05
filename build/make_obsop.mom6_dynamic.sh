@@ -56,7 +56,7 @@ BDIR=$CDIR/build_obsop/$name.build
 mkdir -p $BDIR
 cd $BDIR
 
-F90_FPP="$F90_FPP -DDYNAMIC" # Fortran preprocessor
+F90_FPP="$F90_FPP -DDYNAMIC -DMOM6" # Fortran preprocessor
 
 #===============================================================================
 rm -f $BDIR/*.f90

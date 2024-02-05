@@ -75,12 +75,16 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   USE params_obs,   ONLY: nobs
   USE params_model, ONLY: nlon, nlat, nlev, nv3d, nv2d
   USE params_model, ONLY: iv2d_mld
-  USE params_model, ONLY: iv3d_t !STEVE: for debugging
+  USE params_model, ONLY: iv3d_t
   USE params_letkf, ONLY: DO_MLD, DO_NO_VERT_LOC, DO_MLD_MAXSPRD
   USE params_letkf, ONLY: DO_RTPP, rtpp_coeff, DO_RTPS, rtps_coeff
   USE vars_model,   ONLY: lev
   USE common_debug_oceanmodel, ONLY: debug_post_obslocal, debug_post_obslocal2d
   USE common_debug_oceanmodel, ONLY: debug_post_letkfcore, debug_ens_diversity, debug_post_anal3d
+#ifdef MOM6
+  USE params_model, ONLY: iv3d_h
+  USE params_letkf, ONLY: DO_READ_H, DO_UPDATE_H
+#endif
 
   IMPLICIT NONE
 
@@ -100,6 +104,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: work2d(:,:)
   REAL(r_sngl),ALLOCATABLE :: work3dg(:,:,:,:)
   REAL(r_sngl),ALLOCATABLE :: work2dg(:,:,:)
+  REAL(r_size),ALLOCATABLE :: gsH3d(:,:,:) ! CDA: stores gues layer thickness
   REAL(r_size) :: parm
   REAL(r_size) :: trans(nbv,nbv,nv3d+nv2d)
   LOGICAL :: ex
@@ -130,7 +135,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! In case of no obs
   !-----------------------------------------------------------------------------
   if(nobstotal == 0) then
-    WRITE(6,'(A)') 'No observation assimilated'
+    WRITE(6,'(A)') 'No observation assimilated:'
     anal3d = gues3d
     anal2d = gues2d
     RETURN ! <- return / exit the subroutine
@@ -154,6 +159,16 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !-----------------------------------------------------------------------------
   ! Forecast perturbations
   !-----------------------------------------------------------------------------
+#ifdef MOM6
+  if (DO_READ_H) then
+     ALLOCATE(gsH3d(nij1,nlev,nbv))
+     gsH3d(:,:,:) = gues3d(:,:,:,iv3d_h) ! nij1, nlev, nbv
+     if (.not.DO_UPDATE_H) then
+        gues3d(:,:,:,iv3d_h) = 0.d0
+     endif
+  endif
+#endif
+
   ALLOCATE(mean3d(nij1,nlev,nv3d))
   ALLOCATE(mean2d(nij1,nv2d))
   CALL ensmean_grd(nbv,nij1,gues3d,gues2d,mean3d,mean2d)
@@ -221,6 +236,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       if (mod(ij,int(nij1*0.1))==0) WRITE(6,*) "ij, nij1, % = ", ij, nij1, ij*100.0/nij1
     endif
 
+
     !(OCEAN) The gridpoint is on land, so just assign undef values and CYCLE
     if (kmt1(ij) < 1) then
       anal3d(ij,:,:,:) = 0.0
@@ -266,7 +282,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
       !(OCEAN) STEVE: it's on land, so just assign undef values and CYCLE
       !NOTE: need to define kmt1 as ocean depth during startup/initialization
-      if (kmt1(ij) < ilev) then
+      !if (kmt1(ij) < ilev) then
+      if (.false.) then ! CDA_KMT
         anal3d(ij,ilev:nlev,:,:) = 0.0
         work3d(ij,ilev:nlev,:) = 0.0
         if (ilev == 1) then
@@ -406,7 +423,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !             if (doverbose) WRITE(6,*) "col member: k = ", k
               do klev=ilev+1,mlev
 !              if (doverbose) WRITE(6,*) "set members: k, klev = ", k,klev
-                if (klev <= kmt1(ij)) then !STEVE: apply the weights from this level to all deeper levels equally
+                !if (klev <= kmt1(ij)) then !STEVE: apply the weights from this level to all deeper levels equally
+                if (.true.) then !CDA_KMT 
 !                 if (doverbose) WRITE(6,*) "applying weights..."
                   anal3d(ij,klev,m,n) = anal3d(ij,klev,m,n) + gues3d(ij,klev,k,n) * trans(k,m,n)
                   work3d(ij,klev,:) = work3d(ij,ilev,:)   !adaptive inflation
@@ -456,6 +474,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   else ! no relaxation
     WRITE(6,'(A)') "Analysis relaxation: nothing applied"
   endif
+
+#ifdef MOM6
+  if (DO_READ_H .and. (.not.DO_UPDATE_H)) then
+     ! this is only to let H of anal ensemble to have same value as gues,
+     ! so that anal mean later can be non-zero value
+     anal3d(:,:,:,iv3d_h) = gsH3d(:,:,:)
+     deallocate(gsH3d)
+  endif
+#endif
 
   !-------------------------------------------------------------------------
   ! Compute and apply the additive inflation
@@ -513,7 +540,8 @@ END SUBROUTINE das_letkf
 SUBROUTINE relax_rtpp(anal3d,anal2d,dgues3d,dgues2d, relax_coeff)
   USE common,                ONLY: r_size
   USE params_letkf,          ONLY: nbv
-  USE common_mpi_oceanmodel, ONLY: nij1, ensmean_grd
+  USE common_mpi_oceanmodel, ONLY: nij1
+  USE common_oceanmodel,     ONLY: ensmean_grd
   USE params_model,          ONLY: nlev, nv3d, nv2d
   IMPLICIT NONE
   REAL(r_size),INTENT(INOUT) :: anal3d(nij1,nlev,nbv,nv3d) ! analysis member
@@ -548,7 +576,8 @@ END SUBROUTINE relax_rtpp
 SUBROUTINE relax_rtps(anal3d,anal2d,dgues3d,dgues2d, relax_coeff)
   USE common,                ONLY: r_size
   USE params_letkf,          ONLY: nbv
-  USE common_mpi_oceanmodel, ONLY: nij1, ensmean_grd
+  USE common_mpi_oceanmodel, ONLY: nij1
+  USE common_oceanmodel,     ONLY: ensmean_grd
   USE params_model,          ONLY: nlev, nv3d, nv2d
   IMPLICIT NONE
 

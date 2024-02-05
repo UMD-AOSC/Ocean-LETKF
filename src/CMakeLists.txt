@@ -76,7 +76,7 @@ else()
 endif()
 target_link_libraries(OCN.letkf PUBLIC ${OCNLETKF_LD_LIBS})
 set_target_properties (OCN.letkf PROPERTIES Fortran_PREPROCESS ON) # Need to preprocess .f90 files for ifdef on next line
-target_compile_definitions(OCN.letkf PRIVATE DYNAMIC)
+target_compile_definitions(OCN.letkf PRIVATE DYNAMIC MOM6)
 install(TARGETS OCN.letkf)
 
 ## Programs
