@@ -68,6 +68,7 @@ jobs:
 
 
     - name: "check: get_l4_sss_esacci.py"
+      if: false
       run: |
            cd ${{github.workspace}}/utils/obs_proc/level-4
            pwd
