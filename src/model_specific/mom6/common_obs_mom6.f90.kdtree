@@ -487,6 +487,9 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
   REAL(r_size) :: rmse_u,rmse_v,rmse_t,rmse_s,rmse_ssh,rmse_eta,rmse_sst,rmse_sss !(OCEAN)
   REAL(r_size) :: bias_u,bias_v,bias_t,bias_s,bias_ssh,bias_eta,bias_sst,bias_sss !(OCEAN)
   INTEGER :: n,iu,iv,it,is,issh,ieta,isst,isss                                !(OCEAN)
+  REAL(r_size) :: rmse_sfcwnd ! (ATM)
+  REAL(r_size) :: bias_sfcwnd ! (ATM)
+  INTEGER      :: isfcwnd  ! (ATM)
 
   rmse_u = 0.0d0
   rmse_v = 0.0d0
@@ -496,6 +499,9 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
   rmse_eta = 0.0d0  !(OCEAN)
   rmse_sst = 0.0d0  !(OCEAN)
   rmse_sss = 0.0d0  !(OCEAN)
+
+  rmse_sfcwnd = 0.d0 ! (ATM)
+
   bias_u = 0.0d0
   bias_v = 0.0d0
   bias_t = 0.0d0
@@ -504,6 +510,9 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
   bias_eta = 0.0d0  !(OCEAN)
   bias_sst = 0.0d0  !(OCEAN)
   bias_sss = 0.0d0  !(OCEAN)
+
+  bias_sfcwnd = 0.d0 ! (ATM)
+
   iu = 0
   iv = 0
   it = 0
@@ -512,6 +521,9 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
   ieta = 0          !(OCEAN)
   isst = 0          !(OCEAN)
   isss = 0          !(OCEAN)
+
+  isfcwnd = 0       !(ATM)
+
   DO n=1,nn
     if (qc(n) /= 1) CYCLE
     SELECT CASE(NINT(elm(n)))
@@ -547,6 +559,10 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
       rmse_sss = rmse_sss + dep(n)**2 !(OCEAN)
       bias_sss = bias_sss + dep(n)    !(OCEAN)
       isss = isss + 1                 !(OCEAN)
+    CASE(id_sfcwnd_obs)                     ! (ATM)
+      rmse_sfcwnd = rmse_sfcwnd + dep(n)**2 ! (ATM)
+      bias_sfcwnd = bias_sfcwnd + dep(n)    ! (ATM)
+      isfcwnd = isfcwnd + 1                 ! (ATM)
     END SELECT
   enddo
   if (iu == 0) then
@@ -605,14 +621,21 @@ SUBROUTINE monit_dep(nn,elm,dep,qc)
     rmse_sss = SQRT(rmse_sss / REAL(isss,r_size))    !(OCEAN)
     bias_sss = bias_sss / REAL(isss,r_size)          !(OCEAN)
   endif
+  if (isfcwnd == 0) then                                   !(ATM)
+    rmse_sfcwnd = undef                                    !(ATM)
+    bias_sfcwnd = undef                                    !(ATM)
+  else                                                     !(ATM)
+    rmse_sfcwnd = SQRT(rmse_sfcwnd / REAL(isfcwnd,r_size)) !(ATM)
+    bias_sfcwnd = bias_sfcwnd / REAL(isfcwnd,r_size)       !(ATM)
+  endif                                                    !(ATM)
 
   WRITE(6,'(A)') '== OBSERVATIONAL DEPARTURE ============================================='
-  WRITE(6,'(7A12)') 'U','V','T','S','SSH','eta','SST','SSS'                                       !(OCEAN)
-  WRITE(6,'(7ES12.3)') bias_u,bias_v,bias_t,bias_s,bias_ssh,bias_eta,bias_sst,bias_sss               !(OCEAN)
-  WRITE(6,'(7ES12.3)') rmse_u,rmse_v,rmse_t,rmse_s,rmse_ssh,rmse_eta,rmse_sst,rmse_sss               !(OCEAN)
+  WRITE(6,'(9A12)') 'U','V','T','S','SSH','eta','SST','SSS','SFCWND'                               !(OCEAN)
+  WRITE(6,'(9ES12.3)') bias_u,bias_v,bias_t,bias_s,bias_ssh,bias_eta,bias_sst,bias_sss,bias_sfcwnd !(OCEAN)
+  WRITE(6,'(9ES12.3)') rmse_u,rmse_v,rmse_t,rmse_s,rmse_ssh,rmse_eta,rmse_sst,rmse_sss,rmse_sfcwnd !(OCEAN)
   WRITE(6,'(A)') '== NUMBER OF OBSERVATIONS TO BE ASSIMILATED ============================'
-  WRITE(6,'(7A12)') 'U','V','T','S','SSH','eta','SST','SSS'                                       !(OCEAN)
-  WRITE(6,'(7I12)') iu,iv,it,is,issh,ieta,isst,isss                                              !(OCEAN)
+  WRITE(6,'(9A12)') 'U','V','T','S','SSH','eta','SST','SSS','SFCWND' !(OCEAN)
+  WRITE(6,'(9I12)') iu,iv,it,is,issh,ieta,isst,isss,isfcwnd          !(OCEAN)
   WRITE(6,'(A)') '========================================================================'
 
 END SUBROUTINE monit_dep
@@ -630,6 +653,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn,errIfNoObs)
   INTEGER :: ios
   INTEGER :: iu,iv,it,is,issh,ieta,isst,isss,ix,iy,iz !(OCEAN)
   INTEGER :: nprof !(OCEAN)
+  INTEGER :: isfcwnd !(ATM)
   REAL(r_sngl) :: lon_m1, lat_m1
   INTEGER :: iunit
   LOGICAL :: ex, errIfNoObs_
@@ -654,6 +678,8 @@ SUBROUTINE get_nobs(cfile,nrec,nn,errIfNoObs)
   nprof = 0    !(OCEAN)
   lon_m1 = 0    !(OCEAN)
   lat_m1 = 0    !(OCEAN)
+
+  isfcwnd = 0 !(ATM)
   iunit=91
   if (dodebug) print *, "get_nobs::"
   INQUIRE(FILE=cfile,EXIST=ex)
@@ -692,6 +718,8 @@ SUBROUTINE get_nobs(cfile,nrec,nn,errIfNoObs)
         iy = iy + 1      !(OCEAN)
       CASE(id_z_obs)     !(OCEAN)
         iz = iz + 1      !(OCEAN)
+      CASE(id_sfcwnd_obs)     !(ATM)
+        isfcwnd = isfcwnd + 1 !(ATM)
       END SELECT
       if ((wk(2) .ne. lon_m1) .or. (wk(3) .ne. lat_m1)) then
         nprof=nprof+1
@@ -713,6 +741,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn,errIfNoObs)
     WRITE(6,'(A12,I10)') '          X:',ix   !(OCEAN)
     WRITE(6,'(A12,I10)') '          Y:',iy   !(OCEAN)
     WRITE(6,'(A12,I10)') '          Z:',iz   !(OCEAN)
+    WRITE(6,'(A12,I10)') '     SFCWND:',isfcwnd  !(ATM)
     CLOSE(iunit)
   else
     WRITE(6,'(2A)') cfile,' does not exist -- skipped'

@@ -19,7 +19,8 @@ IMPLICIT NONE
 PUBLIC
 
 INTEGER,SAVE :: nobs
-INTEGER,PARAMETER :: nid_obs=8 !STEVE: sets the dimension of the obs arrays - must be updated depending on choice of obs used.
+INTEGER,PARAMETER :: nid_obs=9 !STEVE: sets the dimension of the obs arrays - must be updated depending on choice of obs used.
+                               !CDA: controls which type of obs can affect anal vars, used by var_local(nv3d+nv2d+nv4d,nid_obs) in vars_letkf.90
 INTEGER,PARAMETER :: id_u_obs=2819
 INTEGER,PARAMETER :: id_v_obs=2820
 INTEGER,PARAMETER :: id_t_obs=3073
@@ -40,6 +41,8 @@ INTEGER,PARAMETER :: id_t2_obs=8925    !(SIS) layer 2 ice temperature
 INTEGER,PARAMETER :: id_cn_obs=8333    !(SIS) ice concentration
 INTEGER,PARAMETER :: id_ui_obs=8337    !(SIS) ice drift u
 INTEGER,PARAMETER :: id_vi_obs=8334    !(SIS) ice drift v
+
+INTEGER,PARAMETER :: id_sfcwnd_obs = 100001 ! (ATM) 10-meter winds
 
 !!------------------------------------------------------------
 !! unique ID's for observations in COUPLED SYSTEM

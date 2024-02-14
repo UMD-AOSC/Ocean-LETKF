@@ -41,7 +41,8 @@ MODULE vars_letkf
   !STEVE: I think this would be better in "vars_obs.f90", maybe. (ISSUE)
   SUBROUTINE get_iobs(oelm,iobs)
     USE params_obs, ONLY: id_u_obs, id_v_obs, id_t_obs, id_s_obs, &
-                          id_ssh_obs, id_ssh_obs, id_sst_obs, id_sss_obs, id_eta_obs
+                          id_ssh_obs, id_ssh_obs, id_sst_obs, id_sss_obs, id_eta_obs, &
+                          id_sfcwnd_obs
     REAL(r_size), INTENT(IN) :: oelm
     INTEGER, INTENT(OUT) :: iobs
     !---------------------------------------------------------------------------
@@ -64,6 +65,8 @@ MODULE vars_letkf
         iobs=7
     CASE(id_eta_obs) !(OCEAN)
         iobs=8
+    CASE(id_sfcwnd_obs) ! (ATM)
+        iobs=9
     CASE DEFAULT
         WRITE(6,*) "vars_letkf.f90 :: there is no variable localization for obs-type :: ", oelm
         WRITE(6,*) "vars_letkf.f90 :: FATAL ERROR, exiting..."
