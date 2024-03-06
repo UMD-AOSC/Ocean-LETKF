@@ -59,6 +59,7 @@ set (SRCS
   obs/read_avhrr_pathfinder.f90
   obs/read_geostationary.f90
   obs/read_viirs.f90
+  obs/read_sst_acspo.f90
   obs/read_smap.f90
   obs/read_aviso_adt.f90
   obs/read_ice_txt.f90
@@ -91,6 +92,7 @@ set(operators
   sst
   sst_geostationary
   sst_viirs
+  sst_acspo
   sss
   tprof
   sprof
@@ -107,6 +109,7 @@ endforeach()
 # different observation decoders
 set(decoders
   sst_viirs
+  sst_acspo
   sss_smap
   )
 foreach(decoder ${decoders})
