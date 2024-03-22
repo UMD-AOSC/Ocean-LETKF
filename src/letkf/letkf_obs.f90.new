@@ -102,8 +102,8 @@ SUBROUTINE set_letkf_obs
   !CDA: related to AOEI
   REAL(r_size) :: oerr_aoei
   REAL(r_size) :: varhdxf  ! ensemble spread for h(x)
-  INTEGER :: cnt_aoei_sst, cnt_aoei_sss
-  REAL(r_size) :: max_infl_sst, max_infl_sss
+  INTEGER :: cnt_aoei_sst, cnt_aoei_sss, cnt_aoei_sfcwnd
+  REAL(r_size) :: max_infl_sst, max_infl_sss, max_infl_sfcwnd
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -329,6 +329,9 @@ quality_control : if (.true.) then
           elseif (NINT(obselm(n)) .eq. id_sss_obs) then 
              cnt_aoei_sss = cnt_aoei_sss + 1
              if (max_infl_sss < oerr_aoei / obserr(n)) max_infl_sss = oerr_aoei / obserr(n)
+          elseif (NINT(obselm(n)) .eq. id_sfcwnd_obs) then 
+             cnt_aoei_sfcwnd = cnt_aoei_sfcwnd + 1
+             if (max_infl_sfcwnd < oerr_aoei / obserr(n)) max_infl_sfcwnd = oerr_aoei / obserr(n)
           endif
           obserr(n) = oerr_aoei
        endif
@@ -458,6 +461,7 @@ endif quality_control
 
   WRITE(6,*) "cnt_aoei_sst = ", cnt_aoei_sst, "max_infl_sst=", max_infl_sst
   WRITE(6,*) "cnt_aoei_sss = ", cnt_aoei_sss, "max_infl_sss=", max_infl_sss
+  WRITE(6,*) "cnt_aoei_sfcwnd = ", cnt_aoei_sfcwnd, "max_infl_sfcwnd=", max_infl_sfcwnd
 
   WRITE(6,*) "QC check:"
   WRITE(6,*) "cnt_qc_sstval   = ", cnt_qc_sstval

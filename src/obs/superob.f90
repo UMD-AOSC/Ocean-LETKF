@@ -81,9 +81,9 @@ PROGRAM superob
   ! Read observations from file
   !-----------------------------------------------------------------------------
   nobs = 0
-  CALL get_nobs(trim(obsinfile),8,nobs)
+  CALL get_nobs(trim(obsinfile),8,nobs, errIfNoObs=.false.)
 
-  if (nobs<0) then ! [NOBS <= 0]
+  if (nobs<=0) then ! [NOBS <= 0]
 
      print*, "[warning] superob :: nobs = 0. will output an empty file" 
      call create_empty_obsfile(trim(obsoutfile))
